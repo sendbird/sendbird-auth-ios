@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: GzipSwift
+  description: Internal repository for iOS Gzip
+  annotations:
+    github.com/project-slug: sendbird/GzipSwift
+spec:
+  type: library
+  lifecycle: production
+  owner: dep-client-platform
+  system: sendbird-internal-tools

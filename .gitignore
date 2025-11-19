@@ -1,6 +1,4 @@
 
 .build
 .swiftpm
-Gzip
-Starscream
 .DS_Store
