@@ -1,0 +1,193 @@
+//
+//  InternalDisconnectedState.swift
+//  SendbirdChat
+//
+//  Created by Minhyuk Kim on 2021/08/25.
+//
+
+import Foundation
+import Network
+
+package class InternalDisconnectedState: ConnectionStatable {
+    // For retry
+    package let error: AuthError?
+    package let task: ReconnectionTask?
+    package let shouldRetry: Bool
+    
+    // For busy state
+    package let busyEventWrapper: BusyEventWrapper?
+    
+    // For disconnect completion
+    package var completionHandler: VoidHandler?
+    
+    package var reconnectedBy: ReconnectingTrigger?
+
+    package init(
+        error: AuthError?,
+        task: ReconnectionTask?,
+        shouldRetry: Bool,
+        reconnectedBy: ReconnectingTrigger?,
+        busyEventWrapper: BusyEventWrapper? = nil,
+        completionHandler: VoidHandler? = nil
+    ) {
+        self.error = error
+        self.task = task
+        self.shouldRetry = shouldRetry
+        self.reconnectedBy = reconnectedBy
+        self.busyEventWrapper = busyEventWrapper
+        self.completionHandler = completionHandler
+    }
+    
+    package func process(context: ConnectionContext) {
+        Logger.main.debug()
+        context.disconnectSocket()
+        
+        context.eventDispatcher.dispatch(command: ConnectionStateEvent.InternalDisconnected(error: error))
+        
+        // When changed state from DelayedConnectingState
+        if let busyEventWrapper {
+            Logger.session.debug("timerStartTime=\(String(describing: busyEventWrapper.timerStartTime))")
+            return
+        }
+            
+        if let task = task {
+            if shouldRetry {
+                context.changeState(
+                    to: ReconnectingState(
+                        task: task,
+                        loginHandlers: [],
+                        reconnectedBy: self.reconnectedBy,
+                        retryCount: 0
+                    )
+                )
+            }
+        } else {
+            context.changeState(
+                to: LogoutState(
+                    error: error,
+                    userId: context.userId
+                )
+            )
+        }
+    }
+    
+    package func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+        Logger.session.debug()
+        
+        context.changeState(
+            to: ConnectingState(
+                loginKey: loginKey,
+                sessionKey: sessionKey,
+                loginHandlers: [userHandler]
+            )
+        )
+    }
+    
+    package func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
+        Logger.session.debug()
+        context.changeState(
+            to: LogoutState(
+                userId: context.userId,
+                disconnectHandler: completionHandler
+            )
+        )
+    }
+    
+    package func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+        Logger.session.debug()
+        context.changeState(
+            to: ExternalDisconnectedState(
+                completionHandler: completionHandler
+            )
+        )
+    }
+
+    package func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+        Logger.session.debug("reconnect by \(String(describing: reconnectedBy?.rawValue))")
+        
+        if let busyEventWrapper {
+            let timerStartTime = busyEventWrapper.timerStartTime
+            let currentTime = Date().timeIntervalSince1970
+            let elapsed = currentTime - timerStartTime
+            Logger.session.debug("currentTime=\(String(describing: currentTime)), startTime=\(timerStartTime), elapsed=\(elapsed)")
+            
+            let busyEvent = busyEventWrapper.busyEvent
+            if elapsed > Double(busyEvent.retryAfter) {
+                // If time is up, change to ReconnectingState
+                Logger.session.debug("Elapsed time surpassed the retryAfter seconds. Transitioning to ReconnectingState.")
+                
+                if let sessionKey {
+                    task?.sessionKey = sessionKey
+                }
+                
+                context.changeState(
+                    to: ReconnectingState(
+                        task: task,
+                        loginHandlers: [],
+                        reconnectedBy: .busyServer,
+                        retryCount: 0
+                    )
+                )
+                return true
+            } else {
+                Logger.session.debug("Elapsed time remains smaller than retryAfter seconds. Transitioning to DelayedConnectingState.")
+                let remainingSeconds = Double(busyEvent.retryAfter) - elapsed
+                let newRetryAfter = UInt(remainingSeconds.rounded())
+                let newBusyEvent = busyEvent.updateRetryAfter(newRetryAfter)
+                Logger.session.debug("remainingSeconds=\(remainingSeconds), newRetryAfter=\(newRetryAfter)")
+                
+                context.changeState(
+                    to: DelayedConnectingState(
+                        busyEvent: newBusyEvent,
+                        loginHandlers: []
+                    )
+                )
+                
+                return true 
+            }
+            
+        } else {
+            guard let task = task else {
+                return false
+            }
+            if let sessionKey {
+                task.sessionKey = sessionKey
+            }
+            
+            context.changeState(
+                to: ReconnectingState(
+                    task: task,
+                    loginHandlers: [],
+                    reconnectedBy: reconnectedBy,
+                    retryCount: 0
+                )
+            )
+            return true
+        }
+    }
+    
+    package func didEnterBackground(context: any ConnectionContext) {
+        Logger.session.debug("")
+    }
+    
+    package func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
+        Logger.session.debug()
+        // case. scenario when connected -> disconnected
+        //
+        // 1. triggered manually by calling disconnect
+        //    in this case, userId is not present so its done with calling completion
+        //
+        // 2. triggered indirectly by calling connect with new userId
+        //    in this case, socket is closed the state is changed to disconnect and
+        //    onDisconnect is handled where router is get disconnected and connect
+        //    with new url
+        
+        // case. reconnecting -> disconnected
+        //
+        // socket is not connected so won't be in this method
+        context.serviceForWebSocket? {
+            self.completionHandler?()
+            self.completionHandler = nil
+        }
+    }
+}
