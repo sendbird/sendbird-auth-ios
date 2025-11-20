@@ -21,14 +21,12 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/sendbird/sendbird-starscream", .revision("2b08226")),
-        .package(url: "https://github.com/sendbird/GzipSwift", .revision("6ade77a")),
     ],
     targets: [
         .target(
             name: "SendbirdAuth",
             dependencies: [
                 .product(name: "Starscream", package: "sendbird-starscream"),
-                .product(name: "Gzip", package: "GzipSwift"),
             ],
             swiftSettings: [
                 .unsafeFlags(["-package-name", "SendbirdInternal"]),

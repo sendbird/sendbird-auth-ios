@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Gzip
 
 /// https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 package enum ChatWebSocketStatusCode: Int {
