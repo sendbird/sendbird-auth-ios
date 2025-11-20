@@ -58,7 +58,7 @@ package class NetworkEventBroadcaster: EventBroadcaster {
 
 package class InternalConnectionEventBroadcaster {
     let service: QueueService
-    let delegates: [NSString: InternalConnectionDelegate]
+    private var delegates: [String: InternalConnectionDelegate]
     
     required package init(_ service: QueueService) {
         self.delegates = [:]
@@ -66,7 +66,33 @@ package class InternalConnectionEventBroadcaster {
         self.service = service
     }
     
-    func internalDisconnected() {
+    package func addDelegate(_ delegate: InternalConnectionDelegate, forKey key: String) {
+        service {
+            self.delegates[key] = delegate
+        }
+    }
+    
+    package func delegate(forKey: String) -> InternalConnectionDelegate? {
+        var delegate: InternalConnectionDelegate?
+        service {
+            delegate = self.delegates[forKey]
+        }
+        return delegate
+    }
+    
+    package func removeDelegate(forKey key: String) {
+        service {
+            self.delegates.removeValue(forKey: key)
+        }
+    }
+    
+    package func removeAllDelegates() {
+        service {
+            self.delegates.removeAll()
+        }
+    }
+    
+    package func internalDisconnected() {
         service { [weak self] in
             guard let self else {
                 return
@@ -80,7 +106,7 @@ package class InternalConnectionEventBroadcaster {
         }
     }
     
-    func externalDisconnected() {
+    package func externalDisconnected() {
         service { [weak self] in
             guard let self else {
                 return
