@@ -7,7 +7,6 @@
 
 import Foundation
 
-@objc(SBDInternalConnectionDelegate)
 package protocol InternalConnectionDelegate {
     func didInternalDisconnect()
     

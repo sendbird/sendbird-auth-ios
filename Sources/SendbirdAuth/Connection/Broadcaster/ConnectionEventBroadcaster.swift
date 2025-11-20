@@ -56,20 +56,41 @@ package class NetworkEventBroadcaster: EventBroadcaster {
     }
 }
 
-package class InternalConnectionEventBroadcaster: EventBroadcaster {
-    package let service: QueueService
-    package let delegates: NSMapTable<NSString, InternalConnectionDelegate>
+package class InternalConnectionEventBroadcaster {
+    let service: QueueService
+    let delegates: [NSString: InternalConnectionDelegate]
     
     required package init(_ service: QueueService) {
-        self.delegates = NSMapTable(keyOptions: .strongMemory, valueOptions: .weakMemory)
+        self.delegates = [:]
+//        NSMapTable(keyOptions: .strongMemory, valueOptions: .weakMemory)
         self.service = service
     }
     
-    package func internalDisconnected() {
-        broadcast { $0.didInternalDisconnect() }
+    func internalDisconnected() {
+        service { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            self.delegates
+                .values
+                .forEach {
+                    $0.didInternalDisconnect()
+                }
+        }
     }
     
-    package func externalDisconnected() {
-        broadcast { $0.didExternalDisconnect() }
+    func externalDisconnected() {
+        service { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            self.delegates
+                .values
+                .forEach {
+                    $0.didExternalDisconnect()
+                }
+        }
     }
 }

@@ -9,7 +9,7 @@ import Foundation
 
 /// Represents a delegate to receive network event
 @objc(SBDNetworkDelegate)
-package protocol NetworkDelegate {
+package protocol NetworkDelegate: AnyObject {
     ///  Call when reconnection succeeds
     func didReconnect()
 }
