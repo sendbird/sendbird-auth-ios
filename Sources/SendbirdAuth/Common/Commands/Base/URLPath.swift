@@ -7,33 +7,33 @@
 
 import Foundation
 
-package struct URLPath: ExpressibleByStringLiteral, ExpressibleByArrayLiteral {
-    package typealias ArrayLiteralElement = CustomStringConvertible
+public struct URLPath: ExpressibleByStringLiteral, ExpressibleByArrayLiteral {
+    public typealias ArrayLiteralElement = CustomStringConvertible
 
-    package var urlPaths: [String]
+    public var urlPaths: [String]
     
-    package var encodedPath: String {
+    public var encodedPath: String {
         "/" + urlPaths.map { $0.urlEncoded }.joined(separator: "/")
     }
     
-    package var asPath: String { self.encodedPath }
+    public var asPath: String { self.encodedPath }
     
-    package init(stringLiteral value: String) {
+    public init(stringLiteral value: String) {
         self.urlPaths = [value]
     }
  
-    package init(arrayLiteral elements: CustomStringConvertible...) {
+    public init(arrayLiteral elements: CustomStringConvertible...) {
         self.urlPaths = elements.map(\.description)
     }
     
-    package init(array elements: [CustomStringConvertible]) {
+    public init(array elements: [CustomStringConvertible]) {
         self.urlPaths = elements.map(\.description)
     }
-    package mutating func append(_ element: String) {
+    public mutating func append(_ element: String) {
         urlPaths.append(element)
     }
     
-    package func appending(_ element: String) -> URLPath {
+    public func appending(_ element: String) -> URLPath {
         var urlPath = self
         urlPath.append(element)
         return urlPath

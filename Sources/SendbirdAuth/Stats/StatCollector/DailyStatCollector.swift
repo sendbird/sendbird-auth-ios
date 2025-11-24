@@ -7,27 +7,27 @@
 
 import Foundation
 
-package class DailyStatCollector: StatCollectorContract {
-    package var statConfig: StatConfig
-    package var enabled: Bool = true
-    package var storage: DailyRecordStatStorage
-    package var sentStatCache: [DailyRecordKey] = []
+public class DailyStatCollector: StatCollectorContract {
+    public var statConfig: StatConfig
+    public var enabled: Bool = true
+    public var storage: DailyRecordStatStorage
+    public var sentStatCache: [DailyRecordKey] = []
     
-    package weak var apiClient: StatAPIClientable?
-    package weak var delegate: StatManagerDelegate?
+    public weak var apiClient: StatAPIClientable?
+    public weak var delegate: StatManagerDelegate?
     
-    package var isFlushing: Bool = false
+    public var isFlushing: Bool = false
     
-    package var queue = DispatchQueue(
+    public var queue = DispatchQueue(
         label: "com.sendbird.stat_collector.daily.\(UUID().uuidString)",
         qos: .background
     )
-    package var statCacheQueue = DispatchQueue(
+    public var statCacheQueue = DispatchQueue(
         label: "com.sendbird.stat_collector.daily.dedup_cache.\(UUID().uuidString)",
         qos: .background
     )
 
-    package required init(
+    public required init(
         statConfig: StatConfig,
         apiClient: StatAPIClientable,
         userDefaults: UserDefaults,
@@ -41,7 +41,7 @@ package class DailyStatCollector: StatCollectorContract {
         self.enabled = enabled
     }
     
-    package func appendStat(
+    public func appendStat(
         _ stat: DailyRecordStat,
         completion: VoidHandler? = nil
     ) {
@@ -65,7 +65,7 @@ package class DailyStatCollector: StatCollectorContract {
         }
     }
     
-    package func trySendStats(
+    public func trySendStats(
         fromAuth: Bool? = nil,
         completion: VoidHandler? = nil
     ) {
@@ -137,16 +137,16 @@ package class DailyStatCollector: StatCollectorContract {
         }
     }
     
-    package func removeAll() {
+    public func removeAll() {
         self.storage.removeAll()
     }
     
-    package func isSendable(fromAuth: Bool) -> Bool {
+    public func isSendable(fromAuth: Bool) -> Bool {
         // Not used.
         return true
     }
     
-    package func splitStatsByMaxStatCountPerRequest(stats: [DailyRecordStat]) -> [[DailyRecordStat]]? {
+    public func splitStatsByMaxStatCountPerRequest(stats: [DailyRecordStat]) -> [[DailyRecordStat]]? {
         if stats.count == 0 || self.statConfig.maxStatCountPerRequest == 0 {
             return nil
         }
@@ -158,7 +158,7 @@ package class DailyStatCollector: StatCollectorContract {
     /// Checks if a given `BaseStat` has already been sent by looking it up in the `sentStatDedupCache`.
     /// - Parameter stat: The `BaseStat` instance to check.
     /// - Returns: A Boolean value indicating whether the stat has been sent.
-    package func lookUpSentStatCache(_ stat: DailyRecordStat) -> Bool {
+    public func lookUpSentStatCache(_ stat: DailyRecordStat) -> Bool {
         self.statCacheQueue.sync {
             self.sentStatCache.contains(stat.key)
         }
@@ -166,7 +166,7 @@ package class DailyStatCollector: StatCollectorContract {
     
     /// Saves a `NotificationStat` to the `sentStatDedupCache` to prevent re-sending.
     /// - Parameter stat: The `BaseStat` instance to be saved.
-    package func saveSentStatToCache(_ stat: DailyRecordStat) {
+    public func saveSentStatToCache(_ stat: DailyRecordStat) {
         self.statCacheQueue.sync {
             self.sentStatCache.append(stat.key)
         }

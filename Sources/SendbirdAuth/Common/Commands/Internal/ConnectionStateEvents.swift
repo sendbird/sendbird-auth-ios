@@ -7,127 +7,127 @@
 
 import Foundation
 
-package protocol ConnectionStateEventable: InternalEvent {}
+public protocol ConnectionStateEventable: InternalEvent {}
 
-package struct ConnectionStateEvent {
-    package init() { }
+public struct ConnectionStateEvent {
+    public init() { }
     
-    package struct Connected: ConnectionStateEventable {
-        package let loginEvent: LoginEvent
-        package let isReconnected: Bool
+    public struct Connected: ConnectionStateEventable {
+        public let loginEvent: LoginEvent
+        public let isReconnected: Bool
         
-        package init(loginEvent: LoginEvent, isReconnected: Bool) {
+        public init(loginEvent: LoginEvent, isReconnected: Bool) {
             self.loginEvent = loginEvent
             self.isReconnected = isReconnected
         }
     }
     
-    package struct InternalDisconnected: ConnectionStateEventable {
-        package let error: AuthError?
+    public struct InternalDisconnected: ConnectionStateEventable {
+        public let error: AuthError?
         
-        package init(error: AuthError?) {
+        public init(error: AuthError?) {
             self.error = error
         }
     }
     
-    package struct ReconnectionFailed: ConnectionStateEventable {
-        package let error: AuthError?
+    public struct ReconnectionFailed: ConnectionStateEventable {
+        public let error: AuthError?
         
-        package init(error: AuthError?) {
+        public init(error: AuthError?) {
             self.error = error
         }
     }
     
-    package struct ReconnectingStarted: ConnectionStateEventable {
-        package let userId: String
-        package let sessionKey: String?
-        package let retryCount: Int
+    public struct ReconnectingStarted: ConnectionStateEventable {
+        public let userId: String
+        public let sessionKey: String?
+        public let retryCount: Int
         
-        package init(userId: String, sessionKey: String?, retryCount: Int) {
+        public init(userId: String, sessionKey: String?, retryCount: Int) {
             self.userId = userId
             self.sessionKey = sessionKey
             self.retryCount = retryCount
         }
     }
     
-    package struct ReconnectionCanceled: ConnectionStateEventable {
-        package init() {}
+    public struct ReconnectionCanceled: ConnectionStateEventable {
+        public init() {}
     }
     
-    package struct Logout: ConnectionStateEventable {
-        package let userId: String
-        package let error: AuthError?
+    public struct Logout: ConnectionStateEventable {
+        public let userId: String
+        public let error: AuthError?
         
-        package init(userId: String, error: AuthError?) {
+        public init(userId: String, error: AuthError?) {
             self.userId = userId
             self.error = error
         }
     }
     
-    package struct ExternalDisconnected: ConnectionStateEventable {
-        package init() {}
+    public struct ExternalDisconnected: ConnectionStateEventable {
+        public init() {}
     }
     
-    package struct Connecting: ConnectionStateEventable {
-        package let userId: String
-        package let accessToken: String?
-        package let sessionKey: String?
+    public struct Connecting: ConnectionStateEventable {
+        public let userId: String
+        public let accessToken: String?
+        public let sessionKey: String?
         
-        package init(userId: String, accessToken: String?, sessionKey: String?) {
+        public init(userId: String, accessToken: String?, sessionKey: String?) {
             self.userId = userId
             self.accessToken = accessToken
             self.sessionKey = sessionKey
         }
     }
     
-    package struct Reconnecting: ConnectionStateEventable {
-        package let userId: String
-        package let sessionKey: String
+    public struct Reconnecting: ConnectionStateEventable {
+        public let userId: String
+        public let sessionKey: String
         
-        package init(userId: String, sessionKey: String) {
+        public init(userId: String, sessionKey: String) {
             self.userId = userId
             self.sessionKey = sessionKey
         }
     }
     
-    package struct SessionRefreshed: ConnectionStateEventable {
-        package init() {}
+    public struct SessionRefreshed: ConnectionStateEventable {
+        public init() {}
     }
     
-    package struct ConnectionDelayed: ConnectionStateEventable {
-        package let retryAfter: UInt  // seconds
+    public struct ConnectionDelayed: ConnectionStateEventable {
+        public let retryAfter: UInt  // seconds
     }
 }
 
-package protocol ApplicationStateEventable: InternalEvent {}
+public protocol ApplicationStateEventable: InternalEvent {}
 
-package struct ApplicationStateEvent {
-    package init() {}
+public struct ApplicationStateEvent {
+    public init() {}
 
-    package struct Terminate: ApplicationStateEventable {
-        package init() {}
+    public struct Terminate: ApplicationStateEventable {
+        public init() {}
     }
 }
 
-package protocol AuthenticationStateEventable: InternalEvent {}
+public protocol AuthenticationStateEventable: InternalEvent {}
 
-package struct AuthenticationStateEvent {
-    package init() {}
+public struct AuthenticationStateEvent {
+    public init() {}
     
-    package struct Refresh: AuthenticationStateEventable {
-        package init() {}
+    public struct Refresh: AuthenticationStateEventable {
+        public init() {}
     }
 }
 
-package protocol SessionExpirationEventable: InternalEvent {}
+public protocol SessionExpirationEventable: InternalEvent {}
 
-package struct SessionExpirationEvent {
-    package init() {}
+public struct SessionExpirationEvent {
+    public init() {}
     
-    package struct Refreshed: SessionExpirationEventable {
-        package init() {}
+    public struct Refreshed: SessionExpirationEventable {
+        public init() {}
     }
-    package struct RefreshFailed: SessionExpirationEventable {
-        package init() {}
+    public struct RefreshFailed: SessionExpirationEventable {
+        public init() {}
     }
 }

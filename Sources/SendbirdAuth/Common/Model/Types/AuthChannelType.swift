@@ -7,7 +7,7 @@
 
 import Foundation
 
-package enum AuthChannelType {
+public enum AuthChannelType {
     /// Open channel.
     case open
     
@@ -20,11 +20,11 @@ package enum AuthChannelType {
 }
 
 extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
-    package typealias RawValue = String
+    public typealias RawValue = String
     
-    package var description: String { rawValue }
+    public var description: String { rawValue }
     
-    package var rawValue: String {
+    public var rawValue: String {
         switch self {
         case .open: return "open"
         case .group: return "group"
@@ -32,7 +32,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
         }
     }
     
-    package var intValue: Int {
+    public var intValue: Int {
         switch self {
         case .open: return 0
         case .group: return 1
@@ -40,7 +40,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
         }
     }
     
-    package init(rawValue: String) {
+    public init(rawValue: String) {
         switch rawValue {
         case "group": self = .group
         case "open": self = .open
@@ -49,7 +49,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
         }
     }
     
-    package var urlString: String {
+    public var urlString: String {
         switch self {
         case .open: return "open_channels"
         case .group, .feed: return "group_channels"
@@ -60,7 +60,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    package init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let stringValue = try container.decode(String.self)
         self.init(rawValue: stringValue)
@@ -69,7 +69,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
     /// Encodes this object.
     ///
     /// - Parameter encoder: `Encoder` instance
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(rawValue)
     }

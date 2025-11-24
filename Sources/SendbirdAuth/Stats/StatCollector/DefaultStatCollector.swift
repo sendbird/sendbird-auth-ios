@@ -7,22 +7,22 @@
 
 import Foundation
 
-package class DefaultStatCollector: StatCollectorContract {
-    package var statConfig: StatConfig
-    package var enabled: Bool = true
-    package var storage: DefaultRecordStatStorage
+public class DefaultStatCollector: StatCollectorContract {
+    public var statConfig: StatConfig
+    public var enabled: Bool = true
+    public var storage: DefaultRecordStatStorage
     
-    package weak var apiClient: StatAPIClientable?
-    package weak var delegate: StatManagerDelegate?
+    public weak var apiClient: StatAPIClientable?
+    public weak var delegate: StatManagerDelegate?
     
-    package var isFlushing: Bool = false
+    public var isFlushing: Bool = false
     
-    package var queue = DispatchQueue(
+    public var queue = DispatchQueue(
         label: "com.sendbird.stat_collector.default.\(UUID().uuidString)",
         qos: .background
     )
     
-    package required init(
+    public required init(
         statConfig: StatConfig,
         apiClient: StatAPIClientable, 
         userDefaults: UserDefaults,
@@ -36,7 +36,7 @@ package class DefaultStatCollector: StatCollectorContract {
         self.enabled = enabled
     }
     
-    package func appendStat(
+    public func appendStat(
         _ stat: DefaultRecordStat,
         completion: VoidHandler? = nil
     ) {
@@ -60,7 +60,7 @@ package class DefaultStatCollector: StatCollectorContract {
         }
     }
     
-    package func trySendStats(
+    public func trySendStats(
         fromAuth: Bool? = nil,
         completion: VoidHandler? = nil
     ) {
@@ -130,11 +130,11 @@ package class DefaultStatCollector: StatCollectorContract {
         }
     }
     
-    package func removeAll() {
+    public func removeAll() {
         self.storage.removeAll()
     }
     
-    package func isSendable(fromAuth: Bool) -> Bool {
+    public func isSendable(fromAuth: Bool) -> Bool {
         let count = self.storage.loadUnuploadedStats().count
         let lowerThreshold = self.statConfig.lowerThreshold
         
@@ -163,7 +163,7 @@ package class DefaultStatCollector: StatCollectorContract {
         }
     }
     
-    package func splitStatsByMaxStatCountPerRequest(stats: [DefaultRecordStat]) -> [[DefaultRecordStat]]? {
+    public func splitStatsByMaxStatCountPerRequest(stats: [DefaultRecordStat]) -> [[DefaultRecordStat]]? {
         if stats.count == 0 || self.statConfig.maxStatCountPerRequest == 0 {
             return nil
         }

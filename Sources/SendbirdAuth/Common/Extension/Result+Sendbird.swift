@@ -7,7 +7,7 @@
 
 import Foundation
 
-package extension Result {
+public extension Result {
     var failure: Failure? {
         switch self {
         case .failure(let error): return error

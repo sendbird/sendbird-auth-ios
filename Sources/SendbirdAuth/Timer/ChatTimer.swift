@@ -6,17 +6,17 @@
 //
 import Foundation
 
-package class SBTimer: NSObject {
+public class SBTimer: NSObject {
     // MARK: Timer
-    package var timer: Timer?
-    package let userInfo: [String: Any]?
+    public var timer: Timer?
+    public let userInfo: [String: Any]?
     
     // MARK: Timer Info
-    package let identifier: String
+    public let identifier: String
     private let queue: SafeSerialQueue
 
     // MARK: state
-    package enum State: String {
+    public enum State: String {
         case running = "Running"
         case expired = "Expired"
         case stopped = "Stopped"
@@ -26,16 +26,16 @@ package class SBTimer: NSObject {
     
     // MARK: Expiration
     private(set) var afterExpired: VoidHandler?
-    package let repeatable: Bool
+    public let repeatable: Bool
     
-    package var valid: Bool {
+    public var valid: Bool {
         self.queue.sync {
             self.state == .running
         }
     }
     
     @discardableResult
-    package init(
+    public init(
         timeInterval: TimeInterval,
         userInfo: [String: Any]?,
         // SBTimerBoard should not escape init.
@@ -99,7 +99,7 @@ package class SBTimer: NSObject {
     }
     
     @objc
-    package func abort() {
+    public func abort() {
         queue.sync { [weak self] in
             guard let self = self else { return }
             if self.state == .running {
@@ -110,7 +110,7 @@ package class SBTimer: NSObject {
     }
     
     @objc
-    package func stop(completionHandler: ErrorHandler? = nil) {
+    public func stop(completionHandler: ErrorHandler? = nil) {
         queue.sync { [weak self] in
             guard let self = self else { return }
             switch self.state {

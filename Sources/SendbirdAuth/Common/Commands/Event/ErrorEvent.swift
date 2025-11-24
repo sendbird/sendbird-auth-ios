@@ -7,20 +7,20 @@
 
 import Foundation
 
-package struct ErrorEvent: Decodable, SBCommand {
-    package let cmd: CommandType = .error
+public struct ErrorEvent: Decodable, SBCommand {
+    public let cmd: CommandType = .error
     
-    package let code: Int
-    package let message: String
-    package let timestamp: Int64
+    public let code: Int
+    public let message: String
+    public let timestamp: Int64
     
-    package let reqId: String?
+    public let reqId: String?
     
-    package let channelType: AuthChannelType?
-    package let channelId: Int?
-    package let channelURL: String?
+    public let channelType: AuthChannelType?
+    public let channelId: Int?
+    public let channelURL: String?
     
-    package init(
+    public init(
         code: Int,
         message: String,
         timestamp: Int64,
@@ -38,7 +38,7 @@ package struct ErrorEvent: Decodable, SBCommand {
         self.channelURL = channelURL
     }
     
-    package enum CodingKeys: String, CodingKey {
+    public enum CodingKeys: String, CodingKey {
         case code
         case message
         case reqId = "req_id"
@@ -48,5 +48,5 @@ package struct ErrorEvent: Decodable, SBCommand {
         case channelURL = "channel_url"
     }
     
-    package var asAuthError: AuthError { AuthError(domain: message, code: code, userInfo: nil) }
+    public var asAuthError: AuthError { AuthError(domain: message, code: code, userInfo: nil) }
 }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol RequestQueueSendable: AnyObject {
+public protocol RequestQueueSendable: AnyObject {
     var requestTimeout: TimeInterval { get }
     
     func send<R: APIRequestable>(
@@ -26,41 +26,41 @@ package protocol RequestQueueSendable: AnyObject {
     func send<R: WSRequestable>(request: R)
 }
 
-package class RequestQueue: RequestQueueSendable, Injectable {
+public class RequestQueue: RequestQueueSendable, Injectable {
     // MARK: Injectable
-    package func resolve(with dependency: (any Dependency)?) {
+    public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
     
-    package struct CodingInfoKey {
-        package static let isApi = CodingUserInfoKey(rawValue: "isApi")!
+    public struct CodingInfoKey {
+        public static let isApi = CodingUserInfoKey(rawValue: "isApi")!
     }
     
-    package weak var sessionValidator: SessionValidator?
+    public weak var sessionValidator: SessionValidator?
      
-    package var webSocketConnectionState: AuthWebSocketConnectionState { router.webSocketConnectionState }
+    public var webSocketConnectionState: AuthWebSocketConnectionState { router.webSocketConnectionState }
     
-    package var requestTimeout: TimeInterval {
+    public var requestTimeout: TimeInterval {
         config?.requestTimeout ?? SendbirdConfiguration.requestTimeoutDefault
     }
     
-    @InternalAtomic package private(set) var router: CommandRouter
-    @InternalAtomic package private(set) var connectionState: ConnectionStateEventable = ConnectionStateEvent.Logout(userId: "", error: nil)
+    @InternalAtomic public private(set) var router: CommandRouter
+    @InternalAtomic public private(set) var connectionState: ConnectionStateEventable = ConnectionStateEvent.Logout(userId: "", error: nil)
     
     private let service: DispatchQueue
     
     // MARK: Injectable
     @DependencyWrapper private var dependency: Dependency?
-    package var stateData: ConnectionStateData? { dependency?.stateData }
-    package var deviceConnectionManager: DeviceConnectionManager? { dependency?.deviceConnectionManager }
+    public var stateData: ConnectionStateData? { dependency?.stateData }
+    public var deviceConnectionManager: DeviceConnectionManager? { dependency?.deviceConnectionManager }
     private var config: SendbirdConfiguration? { dependency?.config }
 
-    package typealias QueuedRequestHandler = (() -> ProcessResult)
+    public typealias QueuedRequestHandler = (() -> ProcessResult)
     private var queuedRequests: [QueuedRequestHandler] = []
     
     private var hasSessionDelegate: Bool { deviceConnectionManager?.hasSessionDelegate ?? false }
     
-    package init(
+    public init(
         commandRouter: CommandRouter,
         sessionValidator: SessionValidator
     ) {
@@ -69,11 +69,11 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         self.service = DispatchQueue(label: "com.sendbird.chat.request_queue_\(UUID().uuidString)")
     }
     
-    package func updateConfig(_ config: CommandRouterConfiguration) {
-        router.routerConfig = config
+    public func updateConfig(_ config: CommandRouterConfiguration) {
+        router.setRouterConfig(config)
     }
     
-    package func isConnected() -> Bool {
+    public func isConnected() -> Bool {
         let connectionState = self.router.webSocketManager.state
         return connectionState is ConnectedState
     }
@@ -98,7 +98,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
     */
 
-    package func post<R: Decodable>(
+    public func post<R: Decodable>(
         path: URLPaths,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -163,7 +163,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
-    package func put<R: Decodable>(
+    public func put<R: Decodable>(
         path: URLPaths,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -228,7 +228,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
-    package func patch<R: Decodable>(
+    public func patch<R: Decodable>(
         path: URLPaths,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -291,7 +291,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
-    package func get<R: Decodable>(
+    public func get<R: Decodable>(
         path: URLPaths,
         queryParams: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -337,7 +337,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
     */
-    package func delete<R: Decodable>(
+    public func delete<R: Decodable>(
         path: URLPaths,
         body: [CodeCodingKeys: Encodable] = [:],
         multipart: [String: Encodable] = [:],
@@ -371,7 +371,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    package func send<R: APIRequestable>(
+    public func send<R: APIRequestable>(
         request: R,
         wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
         progressHandler: MultiProgressHandler? = nil,
@@ -458,7 +458,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    package func send<R: APIRequestable>(
+    public func send<R: APIRequestable>(
         request: R,
         wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
         progressHandler: MultiProgressHandler? = nil
@@ -496,7 +496,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
     /// This method should be used when theres a case to send api request immediately
     /// without queueing (i.e. recursively attempt to send request after one prior request fails)
     /// due to avoiding deadlock on queue
-    package func sendImmediately<R: APIRequestable>(
+    public func sendImmediately<R: APIRequestable>(
         request: R,
         wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
         progressHandler: MultiProgressHandler? = nil,
@@ -576,7 +576,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
     }
     #endif
     
-    package func sendWS<R: Decodable>(
+    public func sendWS<R: Decodable>(
         commandType: CommandType,
         requestId: String?,
         body: [CodeCodingKeys: Encodable] = [:],
@@ -593,7 +593,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    package func sendWS(
+    public func sendWS(
         commandType: CommandType,
         requestId: String?,
         body: [CodeCodingKeys: Encodable] = [:],
@@ -603,7 +603,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         self.send(request: request)
     }
         
-    package func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?) {
+    public func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?) {
         let timeout = requestTimeout
         
         service.async { [weak self] in
@@ -640,7 +640,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    package func send<R: WSRequestable>(request: R) {
+    public func send<R: WSRequestable>(request: R) {
         service.async { [weak self] in
             guard let self = self else { return }
             
@@ -659,7 +659,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
         
-    package func cancelTask(with requestId: String, completionHandler: BoolHandler?) {
+    public func cancelTask(with requestId: String, completionHandler: BoolHandler?) {
         router.cancelTask(with: requestId, completionHandler: completionHandler)
     }
     
@@ -672,12 +672,12 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    package enum ProcessResult: Equatable {
+    public enum ProcessResult: Equatable {
         case onHold
         case error(AuthError)
         case process
         
-        package static func == (lhs: ProcessResult, rhs: ProcessResult) -> Bool {
+        public static func == (lhs: ProcessResult, rhs: ProcessResult) -> Bool {
             switch (lhs, rhs) {
             case (.onHold, .onHold): return true
             case (.error, .error): return true
@@ -687,7 +687,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    package func apiProcessStrategy(request: any APIRequestable) -> ProcessResult {
+    public func apiProcessStrategy(request: any APIRequestable) -> ProcessResult {
         if request.isLoginRequired {
             switch sessionValidator?.state {
             case .connected:
@@ -707,7 +707,7 @@ package class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    package func wsProcessStrategy(request: WSRequestable) -> ProcessResult {
+    public func wsProcessStrategy(request: WSRequestable) -> ProcessResult {
         switch sessionValidator?.state {
         case .connected:
             if connectionState is ConnectionStateEvent.Connecting ||
@@ -742,11 +742,11 @@ package class RequestQueue: RequestQueueSendable, Injectable {
 // MARK: - EventDelegate
 
 extension RequestQueue: EventDelegate {
-    package func didReceiveSBCommandEvent(command: SBCommand) async {
+    public func didReceiveSBCommandEvent(command: SBCommand) async {
         // do-nothing
     }
     
-    package func didReceiveInternalEvent(command: InternalEvent) {
+    public func didReceiveInternalEvent(command: InternalEvent) {
         if let connectionState = command as? ConnectionStateEventable {
             self.connectionState = connectionState
         }
@@ -762,7 +762,7 @@ extension RequestQueue: EventDelegate {
 }
 
 extension Result {
-    package init(_ success: Success?, _ failure: Failure?) where Failure == AuthError {
+    public init(_ success: Success?, _ failure: Failure?) where Failure == AuthError {
         if let error = failure {
             self = .failure(error)
         } else if let value = success {

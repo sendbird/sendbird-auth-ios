@@ -7,18 +7,18 @@
 
 import Foundation
 
-package class ConnectingState: ConnectionStatable {
-    package var timerBoard: SBTimerBoard = SBTimerBoard(capacity: 1) // login timer
+public class ConnectingState: ConnectionStatable {
+    public var timerBoard: SBTimerBoard = SBTimerBoard(capacity: 1) // login timer
     
-    package let loginKey: LoginKey
-    package let sessionKey: String?
+    public let loginKey: LoginKey
+    public let sessionKey: String?
     
-    package var loginHandlers: [AuthUserHandler?]
+    public var loginHandlers: [AuthUserHandler?]
     
     private let retryCount: Int
     private let defaultConnectionRetryCount = 1
     
-    package init(
+    public init(
         loginKey: LoginKey,
         sessionKey: String?,
         loginHandlers: [AuthUserHandler?],
@@ -30,7 +30,7 @@ package class ConnectingState: ConnectionStatable {
         self.retryCount = retryCount
     }
     
-    package func process(context: ConnectionContext) {
+    public func process(context: ConnectionContext) {
         Logger.main.debug("userId: \(context.userId), hasToken: \(loginKey.authToken != nil)")
         
         if retryCount == 0 {
@@ -51,12 +51,12 @@ package class ConnectingState: ConnectionStatable {
         context.connectSocket(url: url, accessToken: loginKey.authToken, sessionKey: nil)
     }
 
-    package func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.session.debug()
         loginHandlers.append(userHandler)
     }
     
-    package func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         processLoginHandlers(context: context, error: AuthClientError.connectionCanceled.asAuthError)
         context.changeState(
@@ -67,7 +67,7 @@ package class ConnectingState: ConnectionStatable {
         )
     }
     
-    package func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         
         processLoginHandlers(context: context, error: AuthClientError.connectionCanceled.asAuthError)
@@ -88,7 +88,7 @@ package class ConnectingState: ConnectionStatable {
         }
     }
     
-    package func didSocketOpen(context: ConnectionContext) {
+    public func didSocketOpen(context: ConnectionContext) {
         Logger.session.debug("socket opened. waiting for LOGI \(context.configForWebSocket?.websocketTimeout)")
         
          _ = SBTimer(
@@ -114,7 +114,7 @@ package class ConnectingState: ConnectionStatable {
         }
     }
     
-    package func didEnterBackground(context: ConnectionContext) {
+    public func didEnterBackground(context: ConnectionContext) {
         Logger.session.verbose("called in \(Self.self) state")
         
         // INFO: (SBISSUE-14355)
@@ -147,19 +147,19 @@ package class ConnectingState: ConnectionStatable {
         }
     }
     
-    package func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
+    public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
         Logger.session.debug()
         timerBoard.stopAll()
         processError(context: context, error: AuthCoreError.networkError.asAuthError)
     }
     
-    package func didSocketFail(context: ConnectionContext, error: AuthError?) {
+    public func didSocketFail(context: ConnectionContext, error: AuthError?) {
         Logger.session.debug()
         timerBoard.stopAll()
         processError(context: context, error: error)
     }
     
-    package func didReceiveLOGI(context: ConnectionContext, command: LoginEvent) {
+    public func didReceiveLOGI(context: ConnectionContext, command: LoginEvent) {
         Logger.session.debug()
         timerBoard.stopAll()
         
@@ -170,7 +170,6 @@ package class ConnectingState: ConnectionStatable {
         guard let sessionKey = command.sessionKey,
               command.user?.userId == context.userId else {
             let error = command.error ?? AuthClientError.unknownError.asAuthError
-            
             processLoginHandlers(context: context, error: error)
             
             context.changeState(
@@ -195,7 +194,7 @@ package class ConnectingState: ConnectionStatable {
         )
     }
     
-    package func didReceiveBUSY(context: any ConnectionContext, command: BusyEvent) {
+    public func didReceiveBUSY(context: any ConnectionContext, command: BusyEvent) {
         Logger.session.debug("BusyEvent: \(command)")
         
         timerBoard.stopAll()
@@ -311,7 +310,7 @@ package class ConnectingState: ConnectionStatable {
         }
     }
     
-    package func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         return false
     }
 }

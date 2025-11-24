@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol HTTPClientInterface: NSObject, Injectable {
+public protocol HTTPClientInterface: NSObject, Injectable {
     var routerConfig: CommandRouterConfiguration { get set }
     func prefetch()
     func clear()
@@ -30,39 +30,39 @@ package protocol HTTPClientInterface: NSObject, Injectable {
     func registerObservers(identifier: String)
 }
 
-package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLSessionTaskDelegate, URLSessionDataDelegate {
-    package struct Constants {
-        package static let queueName = "com.sendbird.core.networking.queue"
-        package static let boundary = "uwhQ9Ho7y873Ha"
-        package static let newline = "\r\n"
-        package static let fileUploadTimeout: Double = 60 // timesout after 60s
+public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLSessionTaskDelegate, URLSessionDataDelegate {
+    public struct Constants {
+        public static let queueName = "com.sendbird.core.networking.queue"
+        public static let boundary = "uwhQ9Ho7y873Ha"
+        public static let newline = "\r\n"
+        public static let fileUploadTimeout: Double = 60 // timesout after 60s
     }
     
     // MARK: Injectable
     @DependencyWrapper var dependency: Dependency?
-    package var config: SendbirdConfiguration? { dependency?.config }
+    public var config: SendbirdConfiguration? { dependency?.config }
     private var statManager: StatManager? { dependency?.statManager }
     private var connectionManager: DeviceConnectionManager? { dependency?.deviceConnectionManager }
 
-    package var routerConfig: CommandRouterConfiguration
+    public var routerConfig: CommandRouterConfiguration
 
-    package var delegateQueue: OperationQueue
-    package var uploadSizeLimit: Int64 = .max
+    public var delegateQueue: OperationQueue
+    public var uploadSizeLimit: Int64 = .max
     
-    package var sharedContainerIdentifier: String?
+    public var sharedContainerIdentifier: String?
     
-    package var canceledRequests: [String: Bool] = [:] // Request Id : Canceled Status
-    package var uploadTasks: [String: Int] = [:] // Request Id : Upload Task ID
-    package var backgroundTasks: [Int: URLBackgroundTask] = [:] // Upload Task ID: Upload Task
+    public var canceledRequests: [String: Bool] = [:] // Request Id : Canceled Status
+    public var uploadTasks: [String: Int] = [:] // Request Id : Upload Task ID
+    public var backgroundTasks: [Int: URLBackgroundTask] = [:] // Upload Task ID: Upload Task
     private var cancellableTasks: SafeDictionary<String, URLSessionSafeCancellableDataTask> = [:] // UUID: URLCancellableTask
     
-    package lazy var backgroundURLSession: URLSession = {
+    public lazy var backgroundURLSession: URLSession = {
         return createBackgroundURLSession()
     }()
     
     private var urlSession: URLSession
     
-    package init(routerConfig: CommandRouterConfiguration) {
+    public init(routerConfig: CommandRouterConfiguration) {
         let queue = OperationQueue()
         queue.name = "com.sendbird.core.networking.http"
         queue.maxConcurrentOperationCount = 10
@@ -73,11 +73,11 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         urlSession = Self.createURLSession()
     }
     
-    package func getBackgroundURLSessionConfig() -> URLSessionConfiguration {
+    public func getBackgroundURLSessionConfig() -> URLSessionConfiguration {
         return self.backgroundURLSession.configuration
     }
     
-    package func createBackgroundURLSession() -> URLSession {
+    public func createBackgroundURLSession() -> URLSession {
         let config = URLSessionConfiguration.background(withIdentifier: "com.sendbird.core.networking.background_session.\(UUID().uuidString)")
         config.sharedContainerIdentifier = sharedContainerIdentifier
         config.sessionSendsLaunchEvents = true
@@ -96,7 +96,7 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         return request.urlRequest(baseURL: routerConfig.apiHost)
     }
     
-    package func send<R: APIRequestable>(
+    public func send<R: APIRequestable>(
         request: R,
         headers: [String: String] = [:],
         completionHandler: R.CommandHandler? = nil
@@ -184,7 +184,7 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         dataTask.resume()
     }
     
-    package func send(urlRequest: URLRequest, completionHandler: AnyResponseHandler?) {
+    public func send(urlRequest: URLRequest, completionHandler: AnyResponseHandler?) {
         let dataTask = urlSession.dataTask(with: urlRequest as URLRequest) { (data, response, error) in
             guard error == nil else {
                 if (error as? NSError)?.code != URLError.Code.cancelled.rawValue {
@@ -215,7 +215,7 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         dataTask.resume()
     }
     
-    package func send<R: APIRequestable>(
+    public func send<R: APIRequestable>(
         multipartRequest request: R,
         headers: [String: String] = [:],
         progressHandler: MultiProgressHandler? = nil,
@@ -293,7 +293,7 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         backgroundTask.start()
     }
     
-    package func buildHeader<R: APIRequestable>(
+    public func buildHeader<R: APIRequestable>(
         with request: URLRequest,
         underlyingRequest: R,
         headers: [String: String] = [:]
@@ -308,7 +308,7 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         return request
     }
     
-    package func cancelUpload(with requestId: String, completionHandler: BoolHandler?) {
+    public func cancelUpload(with requestId: String, completionHandler: BoolHandler?) {
         if let taskID = uploadTasks[requestId],
            let backgroundTask = backgroundTasks[taskID] {
             backgroundTask.abort()
@@ -321,12 +321,12 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         }
     }
     
-    package func addWaitingForUpload(with requestId: String) {
+    public func addWaitingForUpload(with requestId: String) {
         canceledRequests[requestId] = false
     }
     
     // reduce TLS handshaking time for later api calls
-    package func prefetch() {
+    public func prefetch() {
         let request = DummyRequest()
         guard var urlRequest = request.urlRequest(baseURL: routerConfig.apiHost) else { return }
         urlRequest = buildHeader(
@@ -339,7 +339,7 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         task.resume()
     }
         
-    package func clear() {
+    public func clear() {
         // 1. Cancel all tasks (~ oldSession)
         cancellableTasks.values.forEach { $0.cancel() }
         backgroundTasks.values.forEach { $0.abort() }
@@ -361,7 +361,7 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         }
     }
     
-    package func registerObservers(identifier: String) {
+    public func registerObservers(identifier: String) {
         
     }
     
@@ -373,16 +373,16 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         return URLSession(configuration: urlConfig)
     }
     
-    package func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+    public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         Logger.http.info("All tasks are finished.")
     }
     
-    package func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         Logger.http.info("url session data task received data. task id: \(dataTask.taskIdentifier)")
         self.backgroundTasks[dataTask.taskIdentifier]?.data = data
     }
     
-    package func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         Logger.http.info("url session task completed. task id: \(task.taskIdentifier)")
         
         guard let backgroundTask = self.backgroundTasks[task.taskIdentifier] else {
@@ -392,7 +392,7 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
         backgroundTask.finish(response: task.response, error: error)
     }
     
-    package func urlSession(
+    public func urlSession(
         _ session: URLSession,
         task: URLSessionTask,
         didSendBodyData bytesSent: Int64,
@@ -413,21 +413,21 @@ package class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URL
     }
     
     // MARK: Injectable
-    package func resolve(with dependency: (any Dependency)?) {
+    public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
 }
 
-package class URLCancellableTask {
-    package let task: URLSessionTask
-    package var cancelCompletion: VoidHandler?
+public class URLCancellableTask {
+    public let task: URLSessionTask
+    public var cancelCompletion: VoidHandler?
     
-    package init(task: URLSessionTask, cancelCompletion: @escaping VoidHandler) {
+    public init(task: URLSessionTask, cancelCompletion: @escaping VoidHandler) {
         self.task = task
         self.cancelCompletion = cancelCompletion
     }
     
-    package func cancel() {
+    public func cancel() {
         if task.state == .running {
             task.cancel()
         }
@@ -436,26 +436,26 @@ package class URLCancellableTask {
     }
 }
 
-package class URLBackgroundTask {
-    package var isFinished: Bool = false
+public class URLBackgroundTask {
+    public var isFinished: Bool = false
     
     @ImmutableDependencyWrapper private(set) var dependency: Dependency?
     private var connectionManager: DeviceConnectionManager? { dependency?.deviceConnectionManager }
     
-    package var requestId: String?
-    package var data: Data?
+    public var requestId: String?
+    public var data: Data?
     
-    package var backgroundTask: URLSessionUploadTask
-    package var transferTimeout: TimeInterval
+    public var backgroundTask: URLSessionUploadTask
+    public var transferTimeout: TimeInterval
     
-    package var progressTask: MultiProgressHandler?
+    public var progressTask: MultiProgressHandler?
     
-    package var completionTask: DataResponseHandler?
+    public var completionTask: DataResponseHandler?
     
-    package var timerQueue: DispatchQueue  // A serial queue that updates the timer.
+    public var timerQueue: DispatchQueue  // A serial queue that updates the timer.
     
     // A timer that times out if URLSessionUploadTask has no progress for 60 seconds.
-    package lazy var timer: Timer = {
+    public lazy var timer: Timer = {
         let timer = Timer(
             timeInterval: transferTimeout,
             target: self,
@@ -483,7 +483,7 @@ package class URLBackgroundTask {
         self.dependency = dependency
     }
     
-    package func start() {
+    public func start() {
         // Start the timer.
         timerQueue.async { [weak self] in
             guard let self = self else { return }
@@ -496,11 +496,11 @@ package class URLBackgroundTask {
         backgroundTask.resume()
     }
     
-    package func abort() {
+    public func abort() {
         backgroundTask.cancel()
     }
     
-    package func triggerProgress(bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+    public func triggerProgress(bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
         guard isFinished == false else { return }
         
         // Restart the timer everytime we get a progress update for the URLSessionUploadTask.
@@ -524,7 +524,7 @@ package class URLBackgroundTask {
         progressTask?(requestId, bytesSent, totalBytesSent, totalBytesExpectedToSend)
     }
     
-    package func finish(response: URLResponse?, error: Error?) {
+    public func finish(response: URLResponse?, error: Error?) {
         guard isFinished == false else { return }
         
         isFinished = true
@@ -573,7 +573,7 @@ package class URLBackgroundTask {
     }
     
     @objc
-    package func didTimerExpired() {
+    public func didTimerExpired() {
         guard isFinished == false else { return }
         
         Logger.http.info("backgroundTask expired.")
@@ -705,9 +705,9 @@ extension URLSession {
 
 #if TESTCASE
 extension HTTPClient {
-    package var dependencyForTest: Dependency? { dependency }
+    public var dependencyForTest: Dependency? { dependency }
     
-    package func createUrlRequestForTest(request: any APIRequestable) -> URLRequest? {
+    public func createUrlRequestForTest(request: any APIRequestable) -> URLRequest? {
         return createURLRequest(request: request)
     }
 }

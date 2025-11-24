@@ -7,14 +7,14 @@
 
 import Foundation
 
-package final class AuthUIKitConfigInfo: Codable {
-    package var lastUpdatedAt: Int64 = 0
+public final class AuthUIKitConfigInfo: Codable {
+    public var lastUpdatedAt: Int64 = 0
     
-    package init() {
+    public init() {
         
     }
     
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         
         try container.encodeIfPresent(lastUpdatedAt, forKey: .lastUpdatedAt)
@@ -23,7 +23,7 @@ package final class AuthUIKitConfigInfo: Codable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    package required init(from decoder: Decoder) throws {
+    public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         self.lastUpdatedAt = try container.decodeIfPresent(Int64.self, forKey: .lastUpdatedAt) ?? 0

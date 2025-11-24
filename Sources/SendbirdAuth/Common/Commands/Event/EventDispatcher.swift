@@ -7,10 +7,10 @@
 
 import Foundation
 
-package class EventDispatcher {
-    package var delegates: NSMapTable<NSString, AnyObject>
-    package var queue: SafeSerialQueue
-    package var timeout: TimeInterval = 10.0
+public class EventDispatcher {
+    public var delegates: NSMapTable<NSString, AnyObject>
+    public var queue: SafeSerialQueue
+    public var timeout: TimeInterval = 10.0
     
     private var onBeforeDispatchCommandHandler: ((Command) -> Void)?
     
@@ -18,35 +18,35 @@ package class EventDispatcher {
     /// - Since: 4.27.0
     private let wsEventDeduplicator: WSEventDeduplicator = WSEventDeduplicator()
     
-    package lazy var operationQueue: OperationQueue = {
+    public lazy var operationQueue: OperationQueue = {
         let operationQueue = OperationQueue()
         operationQueue.name = "com.sendbird.core.event_receiver.\(UUID().uuidString)"
         operationQueue.maxConcurrentOperationCount = 1
         return operationQueue
     }()
     
-    package let identifier = UUID().uuidString
+    public let identifier = UUID().uuidString
     
-    package init() {
+    public init() {
         self.delegates = NSMapTable<NSString, AnyObject>(keyOptions: .strongMemory, valueOptions: .weakMemory)
         self.queue = SafeSerialQueue(label: "com.sendbird.core.chat.commandrouter.eventreceiver.\(identifier)")
     }
     
-    package func add(receivers: [EventDelegate]) {
+    public func add(receivers: [EventDelegate]) {
         receivers.forEach {
             add(receiver: $0, forKey: "\(type(of: $0))_\(identifier)")
         }
     }
     
-    package func add(receiver: EventDelegate, forKey key: String) {
+    public func add(receiver: EventDelegate, forKey key: String) {
         delegates.setObject(receiver, forKey: key as NSString)
     }
     
-    package func remove(forKey key: String) {
+    public func remove(forKey key: String) {
         delegates.removeObject(forKey: key as NSString)
     }
     
-    package func register(deduplicationRules: [WSEventDeduplicationRule]) {
+    public func register(deduplicationRules: [WSEventDeduplicationRule]) {
         Logger.client.verbose("Register WS event deduplication rules")
         // Use semaphore to make the below Task bevahe synchronously.
         let semaphore = DispatchSemaphore(value: 0)
@@ -63,14 +63,14 @@ package class EventDispatcher {
         }
     }
     
-    package func execute(internalEvent: InternalEvent) {
+    public func execute(internalEvent: InternalEvent) {
         Logger.client.verbose("Will dispatch event: \(internalEvent)")
         
         // InternalEvent is dispatched from the thread that called dispatch for immediate propagation.
         dispatchableDelegates.forEach { $0.didReceiveInternalEvent(command: internalEvent) }
     }
     
-    package func dispatch(command: Command, completionHandler: VoidHandler? = nil) {
+    public func dispatch(command: Command, completionHandler: VoidHandler? = nil) {
         onBeforeDispatchCommandHandler?(command)
         
         // InternalEvent is dispatched from the thread that called dispatch for immediate propagation.
@@ -120,7 +120,7 @@ package class EventDispatcher {
     }
 }
 
-package extension EventDispatcher {
+public extension EventDispatcher {
     func onBeforeDispatchCommand(_ handler: ((Command) -> Void)?) {
         onBeforeDispatchCommandHandler = handler
     }

@@ -7,14 +7,15 @@
 
 import Foundation
 
-package protocol InternalConnectionDelegate {
+@objc(SBDInternalConnectionDelegate)
+public protocol InternalConnectionDelegate {
     func didInternalDisconnect()
     
     func didExternalDisconnect()
 }
 
 @objc(SBDAuthConnectionDelegate)
-package protocol AuthConnectionDelegate {
+public protocol AuthConnectionDelegate {
     @objc
     optional func didStartReconnection()
 
@@ -32,7 +33,7 @@ package protocol AuthConnectionDelegate {
     
     /// Invoked when the connecting is delayed. The connection will be automatically retried after `retryAfter` seconds.
     /// This happens when the server is busy due to being overloaded.
-    /// - Since: [NEXT_VERSION]
+    /// - Since: 4.34.0
     @objc
     optional func didDelayConnection(retryAfter: UInt)
 }

@@ -7,10 +7,10 @@
 
 import Foundation
 
-package struct AuthenticateRequest: APIRequestable {
-    package let resultType = LoginEvent.self
+public struct AuthenticateRequest: APIRequestable {
+    public let resultType = LoginEvent.self
     
-    package init(
+    public init(
         userId: String,
         applicationId: String,
         authToken: String? = nil,
@@ -35,22 +35,22 @@ package struct AuthenticateRequest: APIRequestable {
         self.configTs = requestHeaderDataSource?.configTs ?? 0
     }
     
-    package let headers: [String: String]
+    public let headers: [String: String]
     
-    package let method: HTTPMethod = .post
+    public let method: HTTPMethod = .post
     
-    package let url: URLPath
+    public let url: URLPath
 
-    package let applicationId: String
-    package let expiringSession: Bool
-    package let includeLOGI: Bool
-    package let includeExtraData: String
-    package let uikitConfig: Bool
+    public let applicationId: String
+    public let expiringSession: Bool
+    public let includeLOGI: Bool
+    public let includeExtraData: String
+    public let uikitConfig: Bool
     
-    package let useLocalCache: Bool
-    package let configTs: Int64
+    public let useLocalCache: Bool
+    public let configTs: Int64
 
-    package enum CodingKeys: String, CodingKey {
+    public enum CodingKeys: String, CodingKey {
         case applicationId = "app_id"
         case expiringSession = "expiring_session"
     

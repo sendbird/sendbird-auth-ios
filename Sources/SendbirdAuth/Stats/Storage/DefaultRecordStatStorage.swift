@@ -7,10 +7,10 @@
 
 import Foundation
 
-package final class DefaultRecordStatStorage: StatStorage {
-    package let storageHelper: StatStorageHelper<String, DefaultRecordStat>
+public final class DefaultRecordStatStorage: StatStorage {
+    public let storageHelper: StatStorageHelper<String, DefaultRecordStat>
     
-    package init(userDefaults: UserDefaults) {
+    public init(userDefaults: UserDefaults) {
         self.storageHelper = StatStorageHelper(
             statStorageKey: StorageKey(),
             userDefaults: userDefaults,
@@ -19,9 +19,9 @@ package final class DefaultRecordStatStorage: StatStorage {
 }
 
 extension DefaultRecordStatStorage {
-    package struct StorageKey: StatStorageKeyType {
-        package let lastSentAt = "com.sendbird.sdk.chat.stat.default.oldest_stat_timestamp"
-        package let wrapper = "com.sendbird.sdk.chat.stat.default_record.stats.wrapper"
-        package let queue = "com.sendbird.sdk.chat.stat.default_record.stats.queue"
+    public struct StorageKey: StatStorageKeyType {
+        public let lastSentAt = "com.sendbird.sdk.chat.stat.default.oldest_stat_timestamp"
+        public let wrapper = "com.sendbird.sdk.chat.stat.default_record.stats.wrapper"
+        public let queue = "com.sendbird.sdk.chat.stat.default_record.stats.queue"
     }
 }

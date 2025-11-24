@@ -7,11 +7,11 @@
 
 import Foundation
 
-package struct DefaultResponse: Respondable, CustomStringConvertible {
-    package let result: [String: Any]
-    package var description: String { result.description }
+public struct DefaultResponse: Respondable, CustomStringConvertible {
+    public let result: [String: Any]
+    public var description: String { result.description }
     
-    package init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let dict = (try? container.decode([String: AnyCodable].self))?.anyValue ?? [:]
         self.result = Dictionary().merging(dict, uniquingKeysWith: { (_, res) in

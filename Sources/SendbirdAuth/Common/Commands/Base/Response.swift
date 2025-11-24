@@ -7,29 +7,29 @@
 
 import Foundation
 
-package protocol RawDataRespondable {
+public protocol RawDataRespondable {
     init(from rawData: Data) throws
 }
 
-package protocol Respondable: Command, Decodable {}
+public protocol Respondable: Command, Decodable {}
 
-package struct VoidResponse: Respondable {}
+public struct VoidResponse: Respondable {}
 
 extension Command where Self: Decodable {
-    package static func decodeCommand(with data: Data?) -> Command? {
+    public static func decodeCommand(with data: Data?) -> Command? {
         guard let data = data else { return nil }
         guard let command = try? JSONDecoder().decode(Self.self, from: data) else { return nil }
         return command
     }
 }
 
-package struct EmptyResponse: Respondable {
-    package init() {}
+public struct EmptyResponse: Respondable {
+    public init() {}
 }
 
-package typealias DecodableCommand = (Command & Decodable)
+public typealias DecodableCommand = (Command & Decodable)
 
-package enum SYEVCommandType: Int {
+public enum SYEVCommandType: Int {
     case join = 10000
     case leave = 10001
     
@@ -41,7 +41,7 @@ package enum SYEVCommandType: Int {
     }
 }
 
-package enum USERCommandType: String {
+public enum USERCommandType: String {
     case ban
     case unban
 

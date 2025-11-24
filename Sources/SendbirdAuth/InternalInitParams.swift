@@ -7,23 +7,23 @@
 
 import Foundation
 
-package class InternalInitParams: NSObject {
+public class InternalInitParams: NSObject {
     /// Application ID
-    package var applicationId: String
+    public var applicationId: String
     
     /// Determines to use local caching
-    package var isLocalCachingEnabled: Bool
+    public var isLocalCachingEnabled: Bool
     
     /// Loglevel
-    package var logLevel: AuthLogLevel = .none
+    public var logLevel: AuthLogLevel = .none
     
     /// Host app version
-    package var appVersion: String?
+    public var appVersion: String?
     
-    package var customAPIHost: String?
-    package var customWSHost: String?
+    public var customAPIHost: String?
+    public var customWSHost: String?
 
-    package init(
+    public init(
         applicationId: String,
         isLocalCachingEnabled: Bool,
         logLevel: AuthLogLevel = .none,
@@ -35,7 +35,7 @@ package class InternalInitParams: NSObject {
         self.appVersion = appVersion
     }
     
-    package override func isEqual(_ object: Any?) -> Bool {
+    public override func isEqual(_ object: Any?) -> Bool {
         guard let object = object as? InternalInitParams else { return false }
         
         return applicationId == object.applicationId

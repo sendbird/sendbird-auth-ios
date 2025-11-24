@@ -6,14 +6,14 @@
 //
 
 @propertyWrapper
-package struct ImmutableDependencyWrapper<T> {
+public struct ImmutableDependencyWrapper<T> {
     @DependencyWrapper private var value: T?
     
-    package init() {
+    public init() {
         self._value = DependencyWrapper<T>()
     }
 
-    package var wrappedValue: T? {
+    public var wrappedValue: T? {
         get {
             value
         }

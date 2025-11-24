@@ -7,14 +7,14 @@
 
 import Foundation
 
-package extension JSONEncoder {
+public extension JSONEncoder {
     convenience init(keyStrategy strategy: JSONEncoder.KeyEncodingStrategy) {
         self.init()
         self.keyEncodingStrategy = strategy
     }
 }
 
-package extension JSONDecoder {
+public extension JSONDecoder {
     convenience init(keyStrategy strategy: JSONDecoder.KeyDecodingStrategy) {
         self.init()
         self.keyDecodingStrategy = strategy
@@ -22,17 +22,17 @@ package extension JSONDecoder {
     
 }
 
-package protocol StrategyCodable: StrategyDecodable, StrategyEncodable { }
+public protocol StrategyCodable: StrategyDecodable, StrategyEncodable { }
 
-package protocol StrategyDecodable: Decodable {
+public protocol StrategyDecodable: Decodable {
     static var keyStrategy: JSONDecoder.KeyDecodingStrategy { get }
 }
 
-package protocol StrategyEncodable: Encodable {
+public protocol StrategyEncodable: Encodable {
     static var keyStrategy: JSONEncoder.KeyEncodingStrategy { get }
 }
 
-package extension StrategyEncodable {
+public extension StrategyEncodable {
     var keyStrategy: JSONEncoder.KeyEncodingStrategy { Self.keyStrategy }
 }
 

@@ -7,19 +7,19 @@
 
 import Foundation
 
-package typealias WebSocketDisconnectedReason = WebSocketDisconnectedStat.DisconnectedReason
-package final class WebSocketDisconnectedStat: DefaultRecordStat {
-    package enum CodingKeys: String, CodingKey {
+public typealias WebSocketDisconnectedReason = WebSocketDisconnectedStat.DisconnectedReason
+public final class WebSocketDisconnectedStat: DefaultRecordStat {
+    public enum CodingKeys: String, CodingKey {
         case success = "success"
         case errorCode = "error_code"
         case errorDescription = "error_description"
     }
     
-    package let success: Bool
-    package let errorCode: Int
-    package let errorDescription: String
+    public let success: Bool
+    public let errorCode: Int
+    public let errorDescription: String
     
-    package init(
+    public init(
         success: Bool,
         errorCode: Int,
         reason: DisconnectedReason,
@@ -31,7 +31,7 @@ package final class WebSocketDisconnectedStat: DefaultRecordStat {
         super.init(statType: .webSocketDisconnect, timestamp: timestamp)
     }
     
-    package required init(from decoder: Decoder) throws {
+    public required init(from decoder: Decoder) throws {
         let container = try Self.nestedDecodeContainer(decoder: decoder, keyedBy: CodingKeys.self)
         
         success = try container.decode(Bool.self, forKey: .success)
@@ -41,7 +41,7 @@ package final class WebSocketDisconnectedStat: DefaultRecordStat {
         try super.init(from: decoder)
     }
     
-    package override func encode(to encoder: Encoder) throws {
+    public override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
         
         var container = nestedEncodeContainer(encoder: encoder, keyedBy: CodingKeys.self)
@@ -51,7 +51,7 @@ package final class WebSocketDisconnectedStat: DefaultRecordStat {
         try container.encode(errorDescription, forKey: .errorDescription)
     }
     
-    package override var description: String {
+    public override var description: String {
         """
             WebSocketDisconnectedStat(
                 success: \(String(describing: success)),
@@ -62,8 +62,8 @@ package final class WebSocketDisconnectedStat: DefaultRecordStat {
     }
 }
 
-package extension WebSocketDisconnectedStat {
-    package enum DisconnectedReason: CustomStringConvertible {
+public extension WebSocketDisconnectedStat {
+    public enum DisconnectedReason: CustomStringConvertible {
         case background
         case sessionExpired
         case networkDisconnected
@@ -86,7 +86,7 @@ package extension WebSocketDisconnectedStat {
             }
         }
         
-        package var description: String {
+        public var description: String {
             switch self {
             case .otherReason(let closeCode):
                 return "cause=\(closeCode.rawValue)"

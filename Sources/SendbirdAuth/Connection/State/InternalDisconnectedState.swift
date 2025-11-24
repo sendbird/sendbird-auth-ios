@@ -8,21 +8,21 @@
 import Foundation
 import Network
 
-package class InternalDisconnectedState: ConnectionStatable {
+public class InternalDisconnectedState: ConnectionStatable {
     // For retry
-    package let error: AuthError?
-    package let task: ReconnectionTask?
-    package let shouldRetry: Bool
+    public let error: AuthError?
+    public let task: ReconnectionTask?
+    public let shouldRetry: Bool
     
     // For busy state
-    package let busyEventWrapper: BusyEventWrapper?
+    public let busyEventWrapper: BusyEventWrapper?
     
     // For disconnect completion
-    package var completionHandler: VoidHandler?
+    public var completionHandler: VoidHandler?
     
-    package var reconnectedBy: ReconnectingTrigger?
+    public var reconnectedBy: ReconnectingTrigger?
 
-    package init(
+    public init(
         error: AuthError?,
         task: ReconnectionTask?,
         shouldRetry: Bool,
@@ -38,7 +38,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         self.completionHandler = completionHandler
     }
     
-    package func process(context: ConnectionContext) {
+    public func process(context: ConnectionContext) {
         Logger.main.debug()
         context.disconnectSocket()
         
@@ -71,7 +71,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         }
     }
     
-    package func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.session.debug()
         
         context.changeState(
@@ -83,7 +83,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         )
     }
     
-    package func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         context.changeState(
             to: LogoutState(
@@ -93,7 +93,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         )
     }
     
-    package func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         context.changeState(
             to: ExternalDisconnectedState(
@@ -102,7 +102,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         )
     }
 
-    package func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.session.debug("reconnect by \(String(describing: reconnectedBy?.rawValue))")
         
         if let busyEventWrapper {
@@ -166,11 +166,11 @@ package class InternalDisconnectedState: ConnectionStatable {
         }
     }
     
-    package func didEnterBackground(context: any ConnectionContext) {
+    public func didEnterBackground(context: any ConnectionContext) {
         Logger.session.debug("")
     }
     
-    package func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
+    public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
         Logger.session.debug()
         // case. scenario when connected -> disconnected
         //

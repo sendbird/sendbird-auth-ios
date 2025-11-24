@@ -7,13 +7,13 @@
 
 import Foundation
 
-package class CachedData<T> {
-    package var value: T
-    package var updatedAt: Int64
+public class CachedData<T> {
+    public var value: T
+    public var updatedAt: Int64
 
-    package var removed: Bool = false
+    public var removed: Bool = false
     
-    package init(value: T, updatedAt: Int64 = 0) {
+    public init(value: T, updatedAt: Int64 = 0) {
         self.value = value
         self.updatedAt = updatedAt
     }

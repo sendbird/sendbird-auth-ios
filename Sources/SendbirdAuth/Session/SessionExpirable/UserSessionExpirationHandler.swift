@@ -7,23 +7,23 @@
 
 import Foundation
 
-package class UserSessionExpirationHandler: SessionExpirable {
-    package init(sessionToken: String, sessionHandler: SessionEventBroadcaster, config: SendbirdConfiguration) {
+public class UserSessionExpirationHandler: SessionExpirable {
+    public init(sessionToken: String, sessionHandler: SessionEventBroadcaster, config: SendbirdConfiguration) {
         self.sessionToken = sessionToken
         self.sessionHandler = sessionHandler
         self.config = config
     }
     
-    package var config: SendbirdConfiguration
+    public var config: SendbirdConfiguration
     
-    package var sessionToken: String?
-    package var sessionHandler: SessionEventBroadcaster
+    public var sessionToken: String?
+    public var sessionHandler: SessionEventBroadcaster
     
-    package var isRefreshingSession: Bool = false
+    public var isRefreshingSession: Bool = false
     
-    package weak var delegate: InternalSessionDelegate?
+    public weak var delegate: InternalSessionDelegate?
     
-    package func refreshSessionKey(shouldRetry: Bool = true, expiresIn: Int64? = nil) {
+    public func refreshSessionKey(shouldRetry: Bool = true, expiresIn: Int64? = nil) {
         guard !isRefreshingSession else { return }
         
         isRefreshingSession = true
@@ -49,8 +49,8 @@ package class UserSessionExpirationHandler: SessionExpirable {
         }
     }
     
-    package var timerBoard: SBTimerBoard = .init()
-    package func refreshSessionToken() {
+    public var timerBoard: SBTimerBoard = .init()
+    public func refreshSessionToken() {
         guard !isRefreshingSession else { return }
 
         isRefreshingSession = true
@@ -83,7 +83,7 @@ package class UserSessionExpirationHandler: SessionExpirable {
         }
     }
     
-    package func resetSession() {
+    public func resetSession() {
         self.isRefreshingSession = false
         self.sessionToken = nil
     }

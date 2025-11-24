@@ -7,7 +7,7 @@
 
 import Foundation
 
-package enum URLPaths {
+public enum URLPaths {
     
     /// Secret", "Application Settings
     case secretApplicationAttrsReactions(applicationId: String)
@@ -156,7 +156,7 @@ package enum URLPaths {
     case settings
     case authenticate(userId: String)
     
-    package var splitPath: [CustomStringConvertible] {
+    public var splitPath: [CustomStringConvertible] {
         switch self {
             /// Secret", "Application Settings
         case .secretApplicationAttrsReactions(let applicationId):

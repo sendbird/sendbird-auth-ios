@@ -26,7 +26,7 @@ POSSIBILITY OF SUCH DAMAGE.
 import SystemConfiguration
 import Foundation
 
-package enum ReachabilityError: Error {
+public enum ReachabilityError: Error {
     case failedToCreateWithAddress(sockaddr, Int32)
     case failedToCreateWithHostname(String, Int32)
     case unableToSetCallback(Int32)
@@ -35,24 +35,24 @@ package enum ReachabilityError: Error {
 }
 
 extension Notification.Name {
-    package static let reachabilityChanged = Notification.Name("reachabilityChanged")
+    public static let reachabilityChanged = Notification.Name("reachabilityChanged")
 }
 
-package class Reachability {
-    package typealias NetworkReachable = (Reachability) -> Void
-    package typealias NetworkUnreachable = (Reachability) -> Void
+public class Reachability {
+    public typealias NetworkReachable = (Reachability) -> Void
+    public typealias NetworkUnreachable = (Reachability) -> Void
 
-    package enum Connection: CustomStringConvertible {
+    public enum Connection: CustomStringConvertible {
         case unavailable, wifi, cellular
         
-        package var isAvailable: Bool {
+        public var isAvailable: Bool {
             switch self {
             case .cellular, .wifi: return true
             case .unavailable: return false
             }
         }
         
-        package var description: String {
+        public var description: String {
             switch self {
             case .cellular: return "Cellular"
             case .wifi: return "WiFi"
@@ -61,25 +61,25 @@ package class Reachability {
         }
     }
 
-    @InternalAtomic package var whenReachabilityChanged: ((Reachability) -> Void)?
+    @InternalAtomic public var whenReachabilityChanged: ((Reachability) -> Void)?
 
     @available(*, deprecated, renamed: "allowsCellularConnection")
-    package let reachableOnWWAN: Bool = true
+    public let reachableOnWWAN: Bool = true
 
     /// Set to `false` to force Reachability.connection to .none when on cellular connection (default value `true`)
-    package var allowsCellularConnection: Bool
+    public var allowsCellularConnection: Bool
 
     @available(*, deprecated, renamed: "connection.description")
-    package var currentReachabilityString: String {
+    public var currentReachabilityString: String {
         return "\(connection)"
     }
 
     @available(*, unavailable, renamed: "connection")
-    package var currentReachabilityStatus: Connection {
+    public var currentReachabilityStatus: Connection {
         return connection
     }
 
-    package var connection: Connection {
+    public var connection: Connection {
         if flags == nil {
             try? setReachabilityFlags()
         }
@@ -103,14 +103,14 @@ package class Reachability {
     fileprivate let reachabilityRef: SCNetworkReachability
     fileprivate let reachabilitySerialQueue: DispatchQueue
     fileprivate let notificationQueue: DispatchQueue?
-    package var flags: SCNetworkReachabilityFlags? {
+    public var flags: SCNetworkReachabilityFlags? {
         didSet {
             guard flags != oldValue else { return }
             notifyReachabilityChanged()
         }
     }
 
-    package required init(
+    public required init(
         reachabilityRef: SCNetworkReachability,
         queueQoS: DispatchQoS = .default,
         targetQueue: DispatchQueue? = nil,
@@ -126,7 +126,7 @@ package class Reachability {
         self.notificationQueue = notificationQueue
     }
 
-    package convenience init(
+    public convenience init(
             hostname: String,
             queueQoS: DispatchQoS = .userInteractive,
             targetQueue: DispatchQueue? = nil,
@@ -143,7 +143,7 @@ package class Reachability {
         )
     }
 
-    package convenience init(
+    public convenience init(
         queueQoS: DispatchQoS = .default,
         targetQueue: DispatchQueue? = nil,
         notificationQueue: DispatchQueue? = .main
@@ -166,7 +166,7 @@ package class Reachability {
 
 extension Reachability {
     // MARK: - *** Notifier methods ***
-    package func startNotifier() throws {
+    public func startNotifier() throws {
         guard !notifierRunning else { return }
         Logger.external.info("Start notifier: \(self)")
 
@@ -221,7 +221,7 @@ extension Reachability {
         notifierRunning = true
     }
 
-    package func stopNotifier() {
+    public func stopNotifier() {
         defer { notifierRunning = false }
 
         Logger.external.info("Stop notifier: \(self)")
@@ -231,22 +231,22 @@ extension Reachability {
 
     // MARK: - *** Connection test methods ***
     @available(*, deprecated, message: "Please use `connection != .none`")
-    package var isReachable: Bool {
+    public var isReachable: Bool {
         return connection != .unavailable
     }
 
     @available(*, deprecated, message: "Please use `connection == .cellular`")
-    package var isReachableViaWWAN: Bool {
+    public var isReachableViaWWAN: Bool {
         // Check we're not on the simulator, we're REACHABLE and check we're on WWAN
         return connection == .cellular
     }
 
    @available(*, deprecated, message: "Please use `connection == .wifi`")
-    package var isReachableViaWiFi: Bool {
+    public var isReachableViaWiFi: Bool {
         return connection == .wifi
     }
 
-    package var description: String {
+    public var description: String {
         return flags?.description ?? "unavailable flags"
     }
 }
@@ -277,7 +277,7 @@ fileprivate extension Reachability {
     }
 }
 
-package extension SCNetworkReachabilityFlags {
+public extension SCNetworkReachabilityFlags {
     typealias Connection = Reachability.Connection
 
     var connection: Connection {

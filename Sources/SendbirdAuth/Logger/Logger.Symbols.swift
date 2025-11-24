@@ -10,14 +10,14 @@ import Foundation
 import UIKit.UIDevice
 #endif
 
-package protocol LogSymbol {
+public protocol LogSymbol {
     var symbol: String? { get }
     var priority: Logger.Priority { get }
     var wrappedSymbol: String? { get }
     var maskedSymbol: String? { get }
 }
 
-package extension LogSymbol {
+public extension LogSymbol {
     var symbolKey: String { priority.identifier }
     var wrappedSymbol: String? {
         guard let value = self.symbol?.uppercased() else { return nil }
@@ -26,7 +26,7 @@ package extension LogSymbol {
     var maskedSymbol: String? { nil }
 }
 
-package extension Logger {
+public extension Logger {
     /**
         LogSymbols will be printed like below by priority value.
         ```swift
@@ -49,13 +49,13 @@ package extension Logger {
     }
 }
 
-package extension Logger {
+public extension Logger {
     typealias Level = AuthLogLevel
 }
     
 extension Logger {
-    package struct Categories: OptionSet, LogSymbol {
-        package let rawValue: Int
+    public struct Categories: OptionSet, LogSymbol {
+        public let rawValue: Int
         
         static let external             = Categories(raw: .external)
         static let http                 = Categories(raw: .http)
@@ -93,9 +93,9 @@ extension Logger {
             .none
         ]
         
-        package var priority: Logger.Priority { .categories }
+        public var priority: Logger.Priority { .categories }
         
-        package var symbol: String? {
+        public var symbol: String? {
             switch self {
             case .http:                 return "HTTP"
             case .socket:               return "Socket"
@@ -115,18 +115,18 @@ extension Logger {
             }
         }
         
-        package var wrappedSymbol: String? {
+        public var wrappedSymbol: String? {
             guard let value = self.symbol else { return nil }
             return "[\(value)]"
         }
         
-        package init(rawValue: Int) {
+        public init(rawValue: Int) {
             self.rawValue = rawValue
         }
     }
 }
 
-package extension Logger.Categories {
+public extension Logger.Categories {
     enum Raw: Int {
         case external, http, socket, client, groupChannel
         case feedChannel, openChannel, session, user, main, localCache, messageCollection, messageRepository, messageDatabase, stat, none
@@ -136,11 +136,11 @@ package extension Logger.Categories {
 }
 
 extension Logger {
-    package enum DateFormat: LogSymbol {
+    public enum DateFormat: LogSymbol {
         case common
         case custom(String)
         
-        package var priority: Logger.Priority { .dateFormat }
+        public var priority: Logger.Priority { .dateFormat }
         
         var rawValue: String {
             switch self {
@@ -149,7 +149,7 @@ extension Logger {
             }
         }
         
-        package var symbol: String? {
+        public var symbol: String? {
             let formatter = DateFormatter()
             formatter.dateFormat = self.rawValue
             formatter.timeZone = TimeZone.current
@@ -188,18 +188,18 @@ extension Logger {
     }
 }
 
-package extension Logger {
+public extension Logger {
     enum Target: String, LogSymbol {
         case sendbirdChat = "SendbirdChat"
         case groupChannel = "GroupChannel"
         case openChannel = "OpenChannel"
         case feedChannel = "FeedChannel"
         
-        package var priority: Logger.Priority { .target }
+        public var priority: Logger.Priority { .target }
         
-        package var value: String { self.rawValue }
-        package var symbol: String? { self.value }
-        package var wrappedSymbol: String? { self.symbol }
+        public var value: String { self.rawValue }
+        public var symbol: String? { self.value }
+        public var wrappedSymbol: String? { self.symbol }
     }
     
     enum Tag: LogSymbol {
@@ -210,9 +210,9 @@ package extension Logger {
         case event(_ target: Target, _ selector: Selector)
         case status(_ status: String)
         
-        package var priority: Logger.Priority { .tag }
+        public var priority: Logger.Priority { .tag }
         
-        package var symbol: String? {
+        public var symbol: String? {
             switch self {
             case .invoked(let target, let function):    return "[Invoked] \(target.value).\(function)"
             case .success(let target, let function):    return "[Success] \(target.value).\(function)"
@@ -223,7 +223,7 @@ package extension Logger {
             }
         }
         
-        package var wrappedSymbol: String? { self.symbol }
+        public var wrappedSymbol: String? { self.symbol }
     }
 }
 
@@ -246,18 +246,18 @@ extension Logger {
 }
 
 extension String: LogSymbol {
-    package var priority: Logger.Priority { .low }
-    package var symbol: String? { self }
-    package var wrappedSymbol: String? { self.symbol }
+    public var priority: Logger.Priority { .low }
+    public var symbol: String? { self }
+    public var wrappedSymbol: String? { self.symbol }
     var symbolKey: String { self }
     
     static let separator = String(repeating: "=", count: 30)
 }
 
 extension AuthError: LogSymbol {
-    package var priority: Logger.Priority { .low }
-    package var symbol: String? { self.localizedDescription }
-    package var wrappedSymbol: String? { "[code: \(self.code)] \(self.localizedDescription)" }
+    public var priority: Logger.Priority { .low }
+    public var symbol: String? { self.localizedDescription }
+    public var wrappedSymbol: String? { "[code: \(self.code)] \(self.localizedDescription)" }
     var symbolKey: String { self.localizedDescription }
 }
 

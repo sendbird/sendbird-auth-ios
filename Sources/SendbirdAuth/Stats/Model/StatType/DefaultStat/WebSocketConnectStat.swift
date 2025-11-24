@@ -7,13 +7,13 @@
 
 import Foundation
 
-package struct WebSocketLatencyInfo {
+public struct WebSocketLatencyInfo {
     var hostURL: String = ""
     var latencyForOpened: Int64 = 0
     var latencyForLOGI: Int64?
     var success: Bool = false
     
-    package init(
+    public init(
         hostURL: String = "",
         latencyForOpened: Int64 = 0,
         latencyForLOGI: Int64? = nil,
@@ -26,8 +26,8 @@ package struct WebSocketLatencyInfo {
     }
 }
 
-package final class WebSocketConnectStat: DefaultRecordStat {
-    package enum CodingKeys: String, CodingKey {
+public final class WebSocketConnectStat: DefaultRecordStat {
+    public enum CodingKeys: String, CodingKey {
         case hostURL = "host_url"
         case latency
         case logiLatency = "logi_latency"
@@ -39,17 +39,17 @@ package final class WebSocketConnectStat: DefaultRecordStat {
         case isSoftRateLimited = "is_soft_rate_limited"
     }
     
-    package let hostURL: String
-    package let latency: Int64
-    package let logiLatency: Int64?
-    package let success: Bool
-    package let errorCode: Int?
-    package let errorDescription: String?
-    package let accumulatedTrial: Int
-    package let connectionId: String
-    package let isSoftRateLimited: Bool
+    public let hostURL: String
+    public let latency: Int64
+    public let logiLatency: Int64?
+    public let success: Bool
+    public let errorCode: Int?
+    public let errorDescription: String?
+    public let accumulatedTrial: Int
+    public let connectionId: String
+    public let isSoftRateLimited: Bool
     
-    package init(
+    public init(
         latencyInfo: WebSocketLatencyInfo,
         errorCode: Int?,
         errorDescription: String?,
@@ -71,7 +71,7 @@ package final class WebSocketConnectStat: DefaultRecordStat {
         super.init(statType: .webSocketConnect, timestamp: timestamp)
     }
     
-    package required init(from decoder: Decoder) throws {
+    public required init(from decoder: Decoder) throws {
         let container = try Self.nestedDecodeContainer(decoder: decoder, keyedBy: CodingKeys.self)
         
         hostURL = try container.decode(String.self, forKey: .hostURL)
@@ -87,7 +87,7 @@ package final class WebSocketConnectStat: DefaultRecordStat {
         try super.init(from: decoder)
     }
     
-    package override func encode(to encoder: Encoder) throws {
+    public override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
         
         var container = nestedEncodeContainer(encoder: encoder, keyedBy: CodingKeys.self)
@@ -103,7 +103,7 @@ package final class WebSocketConnectStat: DefaultRecordStat {
         try container.encode(isSoftRateLimited, forKey: .isSoftRateLimited)
     }
     
-    package override var description: String {
+    public override var description: String {
         """
         WebSocketConnectStat(
             hostURL: \(hostURL),

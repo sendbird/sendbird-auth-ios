@@ -7,18 +7,18 @@
 
 import Foundation
 
-package class SafeSerialQueue {
+public class SafeSerialQueue {
     private var queueKey: DispatchSpecificKey<Void>
-    package var queue: DispatchQueue
+    public var queue: DispatchQueue
     
-    package init(label: String? = nil, queue: DispatchQueue? = nil) {
+    public init(label: String? = nil, queue: DispatchQueue? = nil) {
         self.queueKey = DispatchSpecificKey<Void>()
         self.queue = queue ?? DispatchQueue(label: label ?? "com.sendbird.chat.common.safequeue.\(UUID().uuidString)")
         
         self.queue.setSpecific(key: queueKey, value: ())
     }
     
-    package func sync(block: () -> Void) {
+    public func sync(block: () -> Void) {
         if DispatchQueue.getSpecific(key: queueKey) != nil {
             block()
         } else {
@@ -26,7 +26,7 @@ package class SafeSerialQueue {
         }
     }
     
-    package func sync(block: () throws -> Void) rethrows {
+    public func sync(block: () throws -> Void) rethrows {
         if DispatchQueue.getSpecific(key: queueKey) != nil {
             try block()
         } else {
@@ -34,7 +34,7 @@ package class SafeSerialQueue {
         }
     }
     
-    package func sync<T>(block: () -> T) -> T {
+    public func sync<T>(block: () -> T) -> T {
         if DispatchQueue.getSpecific(key: queueKey) != nil {
             return block()
         } else {
@@ -42,7 +42,7 @@ package class SafeSerialQueue {
         }
     }
     
-    package func sync<T>(block: () throws -> T) rethrows -> T {
+    public func sync<T>(block: () throws -> T) rethrows -> T {
         if DispatchQueue.getSpecific(key: queueKey) != nil {
             return try block()
         } else {
@@ -50,11 +50,11 @@ package class SafeSerialQueue {
         }
     }
     
-    package func async(block: @escaping () -> Void) {
+    public func async(block: @escaping () -> Void) {
         queue.async(execute: block)
     }
     
-    package func blockingAsync(block: @escaping () -> Void) {
+    public func blockingAsync(block: @escaping () -> Void) {
         if DispatchQueue.getSpecific(key: queueKey) != nil {
             return block()
         } else {

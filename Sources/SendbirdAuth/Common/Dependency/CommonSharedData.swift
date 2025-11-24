@@ -7,14 +7,14 @@
 
 import Foundation
 
-package class CommonSharedData {
-    package private(set) var eKey: String?
+public class CommonSharedData {
+    public private(set) var eKey: String?
 
-    package init(eKey: String?) {
+    public init(eKey: String?) {
         self.eKey = eKey
     }
     
-    package func update(eKey: String?) {
+    public func update(eKey: String?) {
         self.eKey = eKey
     }
 }

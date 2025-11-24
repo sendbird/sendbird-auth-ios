@@ -7,45 +7,45 @@
 
 import Foundation
 
-package typealias ConnectionStateData = SessionData
-package class SessionData: AuthenticationDataSource, ConnectionStateDataSource {
+public typealias ConnectionStateData = SessionData
+public class SessionData: AuthenticationDataSource, ConnectionStateDataSource {
     // NOTE: applicationId should not reset
-    package let applicationId: String
+    public let applicationId: String
     
-    @InternalAtomic package var baseAppInfo: AuthAppInfo?
+    @InternalAtomic public var baseAppInfo: AuthAppInfo?
     
-    @InternalAtomic package var currentUser: AuthUser?
+    @InternalAtomic public var currentUser: AuthUser?
     
-    package var authenticated: Bool { currentUser != nil } // sessionKey != nil &&
+    public var authenticated: Bool { currentUser != nil } // sessionKey != nil &&
 
-    package var currentUserId: String { currentUser?.userId ?? "" }
+    public var currentUserId: String { currentUser?.userId ?? "" }
     
-    @InternalAtomic package var lastConnectedAt: Int64 = 0
+    @InternalAtomic public var lastConnectedAt: Int64 = 0
     
-    @InternalAtomic package var firstConnectedAt: Int64 = .max
+    @InternalAtomic public var firstConnectedAt: Int64 = .max
     
-    @InternalAtomic package var unreadCountInfo: UnreadCountInfo?
+    @InternalAtomic public var unreadCountInfo: UnreadCountInfo?
     
-    @InternalAtomic package var maxUnreadCntOnSuperGroup: Int = 0
+    @InternalAtomic public var maxUnreadCntOnSuperGroup: Int = 0
     
-    @InternalAtomic package var reconnectionConfig: ReconnectionConfiguration?
+    @InternalAtomic public var reconnectionConfig: ReconnectionConfiguration?
     
-    @InternalAtomic package private(set) var messageSyncConfig: MessageSyncConfiguration = .default
+    @InternalAtomic public private(set) var messageSyncConfig: MessageSyncConfiguration = .default
 
     // read config
-    @InternalAtomic package var lastMarkAsReadAllTimestamp: TimeInterval = 0
+    @InternalAtomic public var lastMarkAsReadAllTimestamp: TimeInterval = 0
     
-    @InternalAtomic package var lastMarkAsDeliveredTimestamp: TimeInterval = 0
+    @InternalAtomic public var lastMarkAsDeliveredTimestamp: TimeInterval = 0
     
-    @InternalAtomic package private(set) var requestDedupIntervalMs: Int64 = LoginEvent.Constants.defaultDedupIntervalMs
+    @InternalAtomic public private(set) var requestDedupIntervalMs: Int64 = LoginEvent.Constants.defaultDedupIntervalMs
 
-    package var sessionKey: String?
+    public var sessionKey: String?
     
-    package init(applicationId: String) {
+    public init(applicationId: String) {
         self.applicationId = applicationId
     }
     
-    package func clear() {
+    public func clear() {
         self.baseAppInfo = nil
         self.currentUser = nil
         self.lastConnectedAt = 0
@@ -59,7 +59,7 @@ package class SessionData: AuthenticationDataSource, ConnectionStateDataSource {
         self.requestDedupIntervalMs = LoginEvent.Constants.defaultDedupIntervalMs
     }
     
-    package func update(with loginEvent: LoginEvent) {
+    public func update(with loginEvent: LoginEvent) {
         baseAppInfo = loginEvent.appInfo
         maxUnreadCntOnSuperGroup = loginEvent.maxUnreadCountOnSuperGroup ?? 1
         reconnectionConfig = loginEvent.reconnectConfiguration
@@ -77,7 +77,7 @@ package class SessionData: AuthenticationDataSource, ConnectionStateDataSource {
     }
     
     @discardableResult
-    package func update(with newInfo: UnreadCountInfo) -> Bool {
+    public func update(with newInfo: UnreadCountInfo) -> Bool {
         if unreadCountInfo == nil {
             unreadCountInfo = newInfo
             return true
@@ -90,14 +90,14 @@ package class SessionData: AuthenticationDataSource, ConnectionStateDataSource {
         return false
     }
     
-    package func update(with sessionKey: String?) {
+    public func update(with sessionKey: String?) {
         self.sessionKey = sessionKey
     }
 }
 
 #if TESTCASE
 extension SessionData {
-    package func setRequestDedupIntervalMsForTest(_ interval: Int64) {
+    public func setRequestDedupIntervalMsForTest(_ interval: Int64) {
         self.requestDedupIntervalMs = interval
     }
 }

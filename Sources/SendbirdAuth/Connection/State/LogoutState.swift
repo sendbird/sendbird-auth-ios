@@ -7,12 +7,12 @@
 
 import Foundation
 
-package class LogoutState: ConnectionStatable {
-    package let error: AuthError?
-    package var disconnectHandler: VoidHandler?
-    package let userId: String
+public class LogoutState: ConnectionStatable {
+    public let error: AuthError?
+    public var disconnectHandler: VoidHandler?
+    public let userId: String
 
-    package init(
+    public init(
         error: AuthError? = nil,
         userId: String,
         disconnectHandler: VoidHandler? = nil
@@ -22,7 +22,7 @@ package class LogoutState: ConnectionStatable {
         self.disconnectHandler = disconnectHandler
     }
 
-    package func process(context: ConnectionContext) {
+    public func process(context: ConnectionContext) {
         Logger.session.info("Clear local data.")
         context.eventDispatcher.dispatch(command: ConnectionStateEvent.Logout(userId: userId, error: error))
         
@@ -35,7 +35,7 @@ package class LogoutState: ConnectionStatable {
         }
     }
 
-    package func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.main.debug("connect with \(context.userId), hasSessionKey: \(sessionKey != nil)")
         
         context.changeState(
@@ -47,18 +47,18 @@ package class LogoutState: ConnectionStatable {
         )
     }
     
-    package func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.main.debug()
         context.serviceForWebSocket? {
             completionHandler?()
         }
     }
 
-    package func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.main.debug()
     }
 
-    package func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
+    public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
         Logger.main.debug()
         context.serviceForWebSocket? {
             self.disconnectHandler?()
@@ -66,7 +66,7 @@ package class LogoutState: ConnectionStatable {
         }
     }
     
-    package func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         return false
     }
 }

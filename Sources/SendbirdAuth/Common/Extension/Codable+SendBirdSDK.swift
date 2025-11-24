@@ -8,7 +8,7 @@
 import Foundation
 
 extension Encodable {
-    package func toDictionary(
+    public func toDictionary(
         options: [CodingUserInfoKey: Any] = [:],
         keyStrategy strategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys
     ) -> [String: Any]? {
@@ -22,7 +22,7 @@ extension Encodable {
 }
 
 extension Decodable where Self: Encodable {
-    package func makeCodableCopy(options: [CodingUserInfoKey: Any] = [:], decoder: JSONDecoder) -> Self {
+    public func makeCodableCopy(options: [CodingUserInfoKey: Any] = [:], decoder: JSONDecoder) -> Self {
         do {
             let encoder = JSONEncoder()
             encoder.userInfo = options
@@ -35,7 +35,7 @@ extension Decodable where Self: Encodable {
 }
 
 extension Encodable {
-    package func makeCodableCopy<T: Decodable>(as type: T.Type, decoder: JSONDecoder) -> T? {
+    public func makeCodableCopy<T: Decodable>(as type: T.Type, decoder: JSONDecoder) -> T? {
         do {
             let encodedData = try JSONEncoder().encode(self)
             return try decoder.decode(type, from: encodedData)
@@ -49,11 +49,11 @@ extension Decodable {
     /// - Parameter json: Dictionary, such as json.
     /// - Returns: Sendbird object type if parameter is valid, otherwise `nil`
     /// - Since: 4.0.15
-    static package func make(_ json: [AnyHashable: Any]) -> Self? {
+    static func make(_ json: [AnyHashable: Any]) -> Self? {
         return Self.make(from: json, decoder: SendbirdAuth.authDecoder)
     }
     
-    static package func make(from json: [AnyHashable: Any], decoder: JSONDecoder) -> Self? {
+    static public func make(from json: [AnyHashable: Any], decoder: JSONDecoder) -> Self? {
         do {
             let data = try JSONSerialization.data(withJSONObject: json, options: [])
             let object = try decoder.decode(Self.self, from: data)
@@ -70,7 +70,7 @@ extension KeyedDecodingContainer {
     /// - Parameter key: Key.
     /// - Returns: Decoded Bool value.
     /// - Throws: Decoding error.
-    package func decodeBoolAsIntOrString(forKey key: Key) throws -> Bool {
+    public func decodeBoolAsIntOrString(forKey key: Key) throws -> Bool {
         if let bool = try? decode(Bool.self, forKey: key) {
             return bool
         }
@@ -86,7 +86,7 @@ extension KeyedDecodingContainer {
     /// - Parameter key: Key.
     /// - Returns: Decoded Bool value.
     /// - Throws: Decoding error.
-    package func decodeBoolAsIntOrStringIfPresent(forKey key: Key) throws -> Bool? {
+    public func decodeBoolAsIntOrStringIfPresent(forKey key: Key) throws -> Bool? {
         if let bool = try? decodeIfPresent(Bool.self, forKey: key) {
             return bool
         }

@@ -7,6 +7,6 @@
 
 import Foundation
 
-package protocol Cacheable {
+public protocol Cacheable {
     func update(with newValue: Self?)
 }

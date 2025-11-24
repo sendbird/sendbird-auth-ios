@@ -7,62 +7,62 @@
 
 import Foundation
 
-package class AuthUser: NSObject, Codable, Identifiable {
+public class AuthUser: NSObject, Codable, Identifiable {
     /// Identifier for the user conforming to `Identifiable`
-    package var id: String { self.userId }
+    public var id: String { self.userId }
     
     /// User ID. This has to be unique.
-    package let userId: String
+    public let userId: String
     
     /// User nickname.
-    package var nickname: String
+    public var nickname: String
     
     /// The profile image URL without the `ekey`.
     /// - Since: 3.0.194
-    package var plainProfileImageURL: String?
+    public var plainProfileImageURL: String?
     
     /// User connection status. This is defined in `AuthUserConnectionStatus`.
-    package var connectionStatus: AuthUserConnectionStatus
+    public var connectionStatus: AuthUserConnectionStatus
     
     /// The lastest time when the user became offline.
-    package var lastSeenAt: Int64
+    public var lastSeenAt: Int64
     
     /// Represents the user is activated. This property is changed by the [Platform API](https://docs.sendbird.com/platform#user_3_update_a_user)
-    package let isActive: Bool
+    public let isActive: Bool
     
     /// Discovery key for friend
-    package let friendDiscoveryKey: String?
+    public let friendDiscoveryKey: String?
     
     /// User name for friend
-    package let friendName: String?
+    public let friendName: String?
     
     /// Shows if the user is a bot or not.
     /// - Since: 4.9.4
-    package let isBot: Bool
+    public let isBot: Bool
     
     /// User's preferred language. Used for translating messages.
     /// - Since: 3.0.159
-    package var preferredLanguages: [String]?
+    public var preferredLanguages: [String]?
     
     /// Meta data.
-    package var metaData: [String: String] { self.metaDataMap.toDictionary() }
+    public var metaData: [String: String] { self.metaDataMap.toDictionary() }
     
-    package var metaDataMap: SafeDictionary<String, String>
+    public var metaDataMap: SafeDictionary<String, String>
     
-    package var requireAuth: Bool
+    public var requireAuth: Bool
     
     /// The timestamp indicating the last update time of the user.
     /// - Note: Defaults to `-1`, representing that the user has not been updated.
     /// - Since: 4.24.1
-    package private(set) var localUpdatedAt: Int64
+    public private(set) var localUpdatedAt: Int64
     
-    @DependencyWrapper package var dependency: Dependency?
-    package var requestQueue: RequestQueue? { dependency?.requestQueue }
+    @DependencyWrapper public var dependency: Dependency?
+    public var requestQueue: RequestQueue? { dependency?.requestQueue }
     private var stateData: ConnectionStateData? { dependency?.stateData }
-    package var service: QueueService? { dependency?.service }
+    public var service: QueueService? { dependency?.service }
     private var eKey: String? { dependency?.commonSharedData.eKey }
     
-    package init(
+    public init(
         dependency: Dependency?,
         userId: String = "",
         nickname: String = "",
@@ -100,7 +100,7 @@ package class AuthUser: NSObject, Codable, Identifiable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    required package init(from decoder: Decoder) throws {
+    required public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
 
         self.userId =
@@ -135,7 +135,7 @@ package class AuthUser: NSObject, Codable, Identifiable {
     /// Encodes this object.
     ///
     /// - Parameter encoder: `Encoder` instance
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         try container.encode(self.userId, forKey: .userId)
         try? container.encodeIfPresent(self.nickname, forKey: .nickname)
@@ -152,7 +152,7 @@ package class AuthUser: NSObject, Codable, Identifiable {
         try container.encode(self.localUpdatedAt, forKey: .localUpdatedAt)
     }
     
-    package func update(with user: AuthUser) {
+    public func update(with user: AuthUser) {
         self.plainProfileImageURL = user.plainProfileImageURL
         self.nickname = user.nickname
         
@@ -167,13 +167,13 @@ package class AuthUser: NSObject, Codable, Identifiable {
         self.requireAuth = user.requireAuth
     }
     
-    package func updateIfUserIsNewer(with newUser: AuthUser) {
+    public func updateIfUserIsNewer(with newUser: AuthUser) {
         if newUser.localUpdatedAt > self.localUpdatedAt {
             self.update(with: newUser)
         }
     }
     
-    package func updateUserInfo(with dictionary: [String: Any]?) {
+    public func updateUserInfo(with dictionary: [String: Any]?) {
         guard let info = dictionary else { return }
         if let auth = info["require_auth_for_profile_image"] as? Bool {
             self.requireAuth = auth
@@ -194,12 +194,12 @@ package class AuthUser: NSObject, Codable, Identifiable {
     ///     allowing the system to compare and retain the latest user information.
     ///     It is recommended to call this method whenever the `User` object is initialized or updated.
     @discardableResult
-    package func setLocalUpdateTimestamp(to timestamp: Int64) -> Self {
+    public func setLocalUpdateTimestamp(to timestamp: Int64) -> Self {
         self.localUpdatedAt = timestamp
         return self
     }
     
-    package var isCurrentUser: Bool { stateData?.currentUserId == userId }
+    public var isCurrentUser: Bool { stateData?.currentUserId == userId }
 }
 
 extension AuthUser: NSCopying {
@@ -207,7 +207,7 @@ extension AuthUser: NSCopying {
     ///
     /// - Parameter object: `Any` instance
     /// - Returns: `true` if same otherwise `false`
-    package override func isEqual(_ object: Any?) -> Bool {
+    public override func isEqual(_ object: Any?) -> Bool {
         guard let other = object as? AuthUser else { return false }
         
         return userId == other.userId &&
@@ -236,7 +236,7 @@ extension AuthUser: NSCopying {
 
 // MARK: - Hash logic
 extension AuthUser {
-    package override var hash: Int {
+    public override var hash: Int {
         var hasher = Hasher()
         hasher.combine(userId)
         hasher.combine(nickname)

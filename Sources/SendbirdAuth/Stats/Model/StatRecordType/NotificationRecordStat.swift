@@ -7,5 +7,5 @@
 
 import Foundation
 
-package struct AdditionalNotificationStatData: AdditionalStatDataType {}
-package class NotificationRecordStat: BaseStat {}
+public struct AdditionalNotificationStatData: AdditionalStatDataType {}
+public class NotificationRecordStat: BaseStat {}

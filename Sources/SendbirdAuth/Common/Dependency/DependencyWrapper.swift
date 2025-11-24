@@ -6,11 +6,11 @@
 //
 
 @propertyWrapper
-package struct DependencyWrapper<T> {
-    package var isResolved: Bool = false
+public struct DependencyWrapper<T> {
+    public var isResolved: Bool = false
     private var value: T?
     
-    package var wrappedValue: T? {
+    public var wrappedValue: T? {
         get {
             if isResolved == false {
                 assertionFailure("The object is not resolved.")
@@ -23,7 +23,7 @@ package struct DependencyWrapper<T> {
         }
     }
     
-    package init() {
+    public init() {
         self.isResolved = false
         self.value = nil
     }

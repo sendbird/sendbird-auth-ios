@@ -6,6 +6,6 @@
 //
 
 /// A protocol that defines a type that can be held in a bucket
-package protocol Bucketable: SBCommand {
+public protocol Bucketable: SBCommand {
     func copy(newId: String) -> Self?
 }

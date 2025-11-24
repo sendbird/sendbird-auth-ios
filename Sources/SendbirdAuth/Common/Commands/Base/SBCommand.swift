@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol SBCommand: Command, Decodable {
+public protocol SBCommand: Command, Decodable {
     var cmd: CommandType { get }
     
     var reqId: String? { get }
@@ -16,7 +16,7 @@ package protocol SBCommand: Command, Decodable {
     var uniqueId: String? { get }
 }
 
-package extension SBCommand {
+public extension SBCommand {
     /// For more information, see [req_id vs request_id](https://sendbird.atlassian.net/wiki/spaces/SDK/pages/1723140230/req+id+vs+request+id)
     var reqId: String? { nil }
     var requestId: String { "" }

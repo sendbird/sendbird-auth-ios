@@ -7,7 +7,7 @@
 
 import Foundation
 
-package struct Logger {
+public struct Logger {
     var descriptor: LogDescriptable
     var symbols = [String: LogSymbol]()
     
@@ -39,7 +39,7 @@ package struct Logger {
     }
 }
 
-package extension Logger {
+public extension Logger {
     static func setSDKVersion(_ version: String) {
         self.sdkVersion = version
     }
@@ -62,7 +62,7 @@ package extension Logger {
 }
 
 // MARK: Logger print methods for each levels.
-package extension Logger {
+public extension Logger {
     func error(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.error, category, tag, .common(filepath, funcName, line), symbols) }
     func warning(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.warning, category, tag, .common(filepath, funcName, line), symbols) }
     func info(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.info, category, tag, .common(filepath, funcName, line), symbols) }
@@ -124,7 +124,7 @@ extension Logger {
 }
 
 // MARK: Logger filtering methods.
-package extension Logger {
+public extension Logger {
     static func setLoggerLevel(_ level: AuthLogLevel) {
         self.observers.forEach { $0.observer?.limit = level }
     }
@@ -134,7 +134,7 @@ package extension Logger {
     }
 }
 
-package extension Logger {
+public extension Logger {
     @discardableResult
     mutating func update(_ symbols: LogSymbol ...) -> Logger {
         symbols.forEach { self.symbols[$0.symbolKey] = $0 }

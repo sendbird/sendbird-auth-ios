@@ -11,15 +11,15 @@ import Foundation
 
 // @since 3.0.231
 // Ordered thread safe dictionary
-package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatable> {
+public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatable> {
     
     private let queue = SafeSerialQueue(label: "com.sendbird.chat.common.safe_ordered_dictionary.\(UUID().uuidString)")
     private var orderedSet: [Key] = []
     private var dictionary: [Key: Value] = [:]
     
-    package init() { }
+    public init() { }
     
-    package init<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
+    public init<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
         for (key, value) in sequence {
             add(value, forKey: key)
         }
@@ -30,7 +30,7 @@ package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equata
         self.dictionary = dictionary
     }
     
-    package subscript(key: Key) -> Value? {
+    public subscript(key: Key) -> Value? {
         get {
             queue.sync { return dictionary[key] }
         }
@@ -39,7 +39,7 @@ package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equata
         }
     }
     
-    package func add(_ object: Value, forKey key: Key) {
+    public func add(_ object: Value, forKey key: Key) {
         queue.sync {
             if dictionary[key] == nil {
                 orderedSet.append(key)
@@ -50,13 +50,13 @@ package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equata
         }
     }
     
-    package func add<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
+    public func add<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
         for (key, value) in sequence {
             add(value, forKey: key)
         }
     }
     
-    package func insert(_ object: Value, forKey key: Key, at index: Int) {
+    public func insert(_ object: Value, forKey key: Key, at index: Int) {
         precondition(index < orderedSet.count, "out of bound")
         
         queue.sync {
@@ -65,7 +65,7 @@ package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equata
         }
     }
     
-    package func replace(_ object: Value, forKey key: Key) {
+    public func replace(_ object: Value, forKey key: Key) {
         queue.sync {
             guard dictionary[key] != nil else { return }
             dictionary[key] = object
@@ -73,7 +73,7 @@ package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equata
     }
     
     @discardableResult
-    package func remove(forKey key: Key) -> Value? {
+    public func remove(forKey key: Key) -> Value? {
         return queue.sync {
             guard let index = orderedSet.firstIndex(where: { $0 == key }) else {
                 return nil // key not found
@@ -84,14 +84,14 @@ package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equata
         }
     }
     
-    package func removeAll() {
+    public func removeAll() {
         queue.sync {
             orderedSet = []
             dictionary = [:]
         }
     }
     
-    package func popFirst() -> (key: Key, value: Value)? {
+    public func popFirst() -> (key: Key, value: Value)? {
         return queue.sync {
             guard let key = orderedSet.first, let value = dictionary[key] else {
                 return nil
@@ -102,7 +102,7 @@ package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equata
         }
     }
     
-    package func popLast() -> (key: Key, value: Value)? {
+    public func popLast() -> (key: Key, value: Value)? {
         return queue.sync {
             guard let key = orderedSet.last, let value = dictionary[key] else {
                 return nil
@@ -113,13 +113,13 @@ package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equata
         }
     }
     
-    package func contains(key: Key) -> Bool {
+    public func contains(key: Key) -> Bool {
         queue.sync {
             orderedSet.contains(key) && dictionary[key] != nil
         }
     }
     
-    package func toDictionary() -> [Key: Value] {
+    public func toDictionary() -> [Key: Value] {
         queue.sync {
             Dictionary(
                 uniqueKeysWithValues: orderedSet.compactMap { key in
@@ -131,23 +131,23 @@ package final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equata
 }
 
 extension SafeOrderedDictionary: CustomStringConvertible {
-    package var description: String { String(describing: toDictionary()) }
+    public var description: String { String(describing: toDictionary()) }
 }
 
 extension SafeOrderedDictionary: ExpressibleByDictionaryLiteral {
-    package convenience init(dictionaryLiteral elements: (Key, Value)...) {
+    public convenience init(dictionaryLiteral elements: (Key, Value)...) {
         self.init(elements.map { (key: $0.0, value: $0.1) })
     }
 }
 
 extension SafeOrderedDictionary : Codable where Key: Codable, Value: Codable {
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         let wrapper = OrderedDictionaryCodingWrapper(orderedSet: orderedSet, dictionary: dictionary)
         try container.encode(wrapper)
     }
     
-    package convenience init(from decoder: Decoder) throws {
+    public convenience init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
 
         do {
@@ -169,13 +169,13 @@ fileprivate struct OrderedDictionaryCodingWrapper<Key: Hashable & Codable, Value
 }
 
 extension SafeOrderedDictionary: Collection {
-    package typealias Index = OrderedDictionaryIndex
+    public typealias Index = OrderedDictionaryIndex
 
-    package var startIndex: Index { Index(position: orderedSet.startIndex) }
+    public var startIndex: Index { Index(position: orderedSet.startIndex) }
     
-    package var endIndex: Index { Index(position: orderedSet.endIndex) }
+    public var endIndex: Index { Index(position: orderedSet.endIndex) }
     
-    package subscript (position: Index) -> Iterator.Element {
+    public subscript (position: Index) -> Iterator.Element {
         precondition(position.position < orderedSet.count, "out of bounds")
         let key = orderedSet[position.position]
         guard let value = dictionary[key] else {
@@ -184,11 +184,11 @@ extension SafeOrderedDictionary: Collection {
         return (key, value)
     }
 
-    package func index(after i: Index) -> Index {
+    public func index(after i: Index) -> Index {
         return Index(position: i.position + 1)
     }
     
-    package var values: [Value] {
+    public var values: [Value] {
         queue.sync {
             orderedSet.compactMap { key in
                 dictionary[key]
@@ -196,7 +196,7 @@ extension SafeOrderedDictionary: Collection {
         }
     }
     
-    package var keys: [Key] {
+    public var keys: [Key] {
         queue.sync {
             return orderedSet
         }
@@ -204,31 +204,31 @@ extension SafeOrderedDictionary: Collection {
 }
 
 extension SafeOrderedDictionary: Equatable {
-    package static func == (lhs: SafeOrderedDictionary<Key, Value>, rhs: SafeOrderedDictionary<Key, Value>) -> Bool {
+    public static func == (lhs: SafeOrderedDictionary<Key, Value>, rhs: SafeOrderedDictionary<Key, Value>) -> Bool {
         lhs.orderedSet == rhs.orderedSet && lhs.dictionary == rhs.dictionary
     }
 }
 
 extension SafeOrderedDictionary: Sequence {
-    package typealias Iterator = OrderedDictionaryIterator<Key, Value>
+    public typealias Iterator = OrderedDictionaryIterator<Key, Value>
 
-    package func makeIterator() -> OrderedDictionaryIterator<Key, Value> {
+    public func makeIterator() -> OrderedDictionaryIterator<Key, Value> {
         return OrderedDictionaryIterator(orderedSet, values: dictionary)
     }
 }
 
-package struct OrderedDictionaryIterator<Key: Hashable, Value>: IteratorProtocol {
+public struct OrderedDictionaryIterator<Key: Hashable, Value>: IteratorProtocol {
     private let values: [Key: Value]
     private let ordered: [Key]
     private var index: Int
 
-    package init(_ ordered: [Key], values: [Key: Value]) {
+    public init(_ ordered: [Key], values: [Key: Value]) {
         self.ordered = ordered
         self.values = values
         self.index = -1  // -1에서 시작하여 next()에서 증가
     }
     
-    package mutating func next() -> (Key, Value)? {
+    public mutating func next() -> (Key, Value)? {
         index += 1
         guard index < ordered.count else { return nil }
         
@@ -237,16 +237,16 @@ package struct OrderedDictionaryIterator<Key: Hashable, Value>: IteratorProtocol
     }
 }
 
-package struct OrderedDictionaryIndex {
+public struct OrderedDictionaryIndex {
     fileprivate let position: Int
 }
 
 extension OrderedDictionaryIndex: Comparable {
-    package static func == (lhs: OrderedDictionaryIndex, rhs: OrderedDictionaryIndex) -> Bool {
+    public static func == (lhs: OrderedDictionaryIndex, rhs: OrderedDictionaryIndex) -> Bool {
         return lhs.position == rhs.position
     }
     
-    package static func < (lhs: OrderedDictionaryIndex, rhs: OrderedDictionaryIndex) -> Bool {
+    public static func < (lhs: OrderedDictionaryIndex, rhs: OrderedDictionaryIndex) -> Bool {
         return lhs.position < rhs.position
     }
 }

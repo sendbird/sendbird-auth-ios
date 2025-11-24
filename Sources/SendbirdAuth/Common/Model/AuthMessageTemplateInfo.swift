@@ -7,16 +7,16 @@
 
 import Foundation
 
-package class AuthMessageTemplateInfo: NSObject, Codable {
-    package var templateListToken: String?
+public class AuthMessageTemplateInfo: NSObject, Codable {
+    public var templateListToken: String?
     
-    package init(
+    public init(
         templateListToken: String
     ) {
         self.templateListToken = templateListToken
     }
     
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         
         try container.encodeIfPresent(templateListToken, forKey: .templateListToken)
@@ -25,7 +25,7 @@ package class AuthMessageTemplateInfo: NSObject, Codable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    package required init(from decoder: Decoder) throws {
+    public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         self.templateListToken = try container.decodeIfPresent(String.self, forKey: .templateListToken)

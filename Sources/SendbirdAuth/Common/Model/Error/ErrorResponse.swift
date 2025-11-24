@@ -7,16 +7,16 @@
 
 import Foundation
 
-package struct ErrorResponse: Decodable {
-    package let message: String
-    package let code: Int
+public struct ErrorResponse: Decodable {
+    public let message: String
+    public let code: Int
     
-    package init(message: String, code: Int) {
+    public init(message: String, code: Int) {
         self.message = message
         self.code = code
     }
     
-    package var asAuthError: AuthError {
+    public var asAuthError: AuthError {
         AuthError(
             domain: "network",
             code: code,

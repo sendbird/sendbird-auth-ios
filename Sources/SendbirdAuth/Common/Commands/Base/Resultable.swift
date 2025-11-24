@@ -7,15 +7,15 @@
 
 import Foundation
 
-package typealias ResultableRequest = Resultable & Requestable
-package typealias ResultableWSRequest = Resultable & WSRequestable
+public typealias ResultableRequest = Resultable & Requestable
+public typealias ResultableWSRequest = Resultable & WSRequestable
 
-package protocol AnyResultable {
+public protocol AnyResultable {
     func handleCommand(_ command: SBCommand?, handler: Any?)
     func handleError(_ error: AuthError?, handler: Any?)
 }
 
-package protocol Resultable: AnyResultable {
+public protocol Resultable: AnyResultable {
     associatedtype ResultType: Decodable
     
     typealias CommandHandler = (_ command: Self.ResultType?, _ error: AuthError?) -> Void
@@ -26,11 +26,11 @@ package protocol Resultable: AnyResultable {
 }
 
 extension Resultable {
-    package func decodeResult(from data: Data, decoder: JSONDecoder) -> Result<ResultType, AuthError> {
+    public func decodeResult(from data: Data, decoder: JSONDecoder) -> Result<ResultType, AuthError> {
         return decodeGenericResult(data: data, decoder: decoder)
     }
     
-    package func decodeGenericResult<T: Decodable>(data: Data, decoder: JSONDecoder) -> Result<T, AuthError> {
+    public func decodeGenericResult<T: Decodable>(data: Data, decoder: JSONDecoder) -> Result<T, AuthError> {
         do {
             if let type = T.self as? RawDataRespondable.Type,
                let result = try type.init(from: data) as? T {
@@ -48,7 +48,7 @@ extension Resultable {
         }
     }
     
-    package func handleCommand(_ command: SBCommand?, handler: Any?) {
+    public func handleCommand(_ command: SBCommand?, handler: Any?) {
         guard let handler = handler as? Self.CommandHandler else {
             return
         }
@@ -61,7 +61,7 @@ extension Resultable {
         handler(result, nil)
     }
     
-    package func handleError(_ error: AuthError?, handler: Any?) {
+    public func handleError(_ error: AuthError?, handler: Any?) {
         guard let handler = handler as? Self.CommandHandler else { return }
         handler(nil, error ?? AuthCoreError.malformedData.asAuthError)
     }

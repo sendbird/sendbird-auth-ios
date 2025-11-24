@@ -7,14 +7,14 @@
 
 import Foundation
 
-package final class NotificationStat: NotificationRecordStat {
-    package override var description: String {
+public final class NotificationStat: NotificationRecordStat {
+    public override var description: String {
         """
         NotificationStat(action: \(action), templateKey: \(templateKey), channelURL: \(channelURL), tags: \(tags), messageId: \(messageId), source: \(source), messageTs: \(messageTs), topic: \(String(describing: topic)), notificationEventDeadline: \(notificationEventDeadline)
         """
     }
     
-    package enum CodingKeys: String, CodingKey {
+    public enum CodingKeys: String, CodingKey {
         case action
         case templateKey = "template_key"
         case channelURL = "channel_url"
@@ -26,17 +26,17 @@ package final class NotificationStat: NotificationRecordStat {
         case notificationEventDeadline = "notification_event_deadline"
     }
     
-    package let action: String
-    package let templateKey: String
-    package let channelURL: String
-    package let tags: [String]
-    package let messageId: Int64
-    package let source: String
-    package let messageTs: Int64
-    package let topic: String?
-    package let notificationEventDeadline: Int64
+    public let action: String
+    public let templateKey: String
+    public let channelURL: String
+    public let tags: [String]
+    public let messageId: Int64
+    public let source: String
+    public let messageTs: Int64
+    public let topic: String?
+    public let notificationEventDeadline: Int64
     
-    package init(
+    public init(
         action: String,
         templateKey: String,
         channelURL: String,
@@ -61,7 +61,7 @@ package final class NotificationStat: NotificationRecordStat {
         super.init(statType: .notificationStats, timestamp: timestamp)
     }
     
-    package required init(from decoder: Decoder) throws {
+    public required init(from decoder: Decoder) throws {
         let container = try Self.nestedDecodeContainer(decoder: decoder, keyedBy: CodingKeys.self)
         
         action = try container.decode(String.self, forKey: .action)
@@ -77,7 +77,7 @@ package final class NotificationStat: NotificationRecordStat {
         try super.init(from: decoder)
     }
 
-    package override func encode(to encoder: Encoder) throws {
+    public override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
         var container = nestedEncodeContainer(encoder: encoder, keyedBy: CodingKeys.self)
         

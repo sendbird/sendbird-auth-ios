@@ -9,16 +9,16 @@
 import Foundation
 import CoreGraphics
 
-package struct AnyCodable: Codable {
-    package let value: Optional<Any>
+public struct AnyCodable: Codable {
+    public let value: Optional<Any>
 
-    package init<T>(_ value: T?) {
+    public init<T>(_ value: T?) {
         self.value = value
     }
 }
 
 extension AnyCodable: _AnyEncodable, _AnyDecodable {
-    package var anyValue: Optional<Any> {
+    public var anyValue: Optional<Any> {
         switch value {
         case let array as [AnyCodable]:
             return array.map { $0.anyValue }
@@ -30,7 +30,7 @@ extension AnyCodable: _AnyEncodable, _AnyDecodable {
 }
 
 extension AnyCodable: Equatable {
-    package static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+    public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
         switch (lhs.value, rhs.value) {
         case is (Void, Void):
             return true
@@ -75,7 +75,7 @@ extension AnyCodable: Equatable {
 }
 
 extension AnyCodable: CustomStringConvertible {
-    package var description: String {
+    public var description: String {
         switch value {
         case is Void:
             return String(describing: nil as Any?)
@@ -88,7 +88,7 @@ extension AnyCodable: CustomStringConvertible {
 }
 
 extension AnyCodable: CustomDebugStringConvertible {
-    package var debugDescription: String {
+    public var debugDescription: String {
         switch value {
         case let value as CustomDebugStringConvertible:
             return "AnyCodable(\(value.debugDescription))"
@@ -107,7 +107,7 @@ extension AnyCodable: ExpressibleByArrayLiteral {}
 extension AnyCodable: ExpressibleByDictionaryLiteral {}
 
 extension AnyCodable: Hashable {
-    package func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         switch value {
         case let value as Bool:
             hasher.combine(value)
@@ -149,16 +149,15 @@ extension AnyCodable: Hashable {
     }
 }
 
-package struct AnyDecodable: Decodable {
-    package let value: Optional<Any>
+public struct AnyDecodable: Decodable {
+    public let value: Optional<Any>
 
-    package init<T>(_ value: T?) {
+    public init<T>(_ value: T?) {
         self.value = value
     }
 }
 
-@usableFromInline
-package protocol _AnyDecodable {
+public protocol _AnyDecodable {
     var value: Optional<Any> { get }
     init<T>(_ value: T?)
 }
@@ -166,7 +165,7 @@ package protocol _AnyDecodable {
 extension AnyDecodable: _AnyDecodable {}
 
 extension _AnyDecodable {
-    package init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
 
         if container.decodeNil() {
@@ -194,7 +193,7 @@ extension _AnyDecodable {
 }
 
 extension AnyDecodable: Equatable {
-    package static func == (lhs: AnyDecodable, rhs: AnyDecodable) -> Bool {
+    public static func == (lhs: AnyDecodable, rhs: AnyDecodable) -> Bool {
         switch (lhs.value, rhs.value) {
         case is (NSNull, NSNull), is (Void, Void):
             return true
@@ -239,7 +238,7 @@ extension AnyDecodable: Equatable {
 }
 
 extension AnyDecodable: CustomStringConvertible {
-    package var description: String {
+    public var description: String {
         switch value {
         case is Void:
             return String(describing: nil as Any?)
@@ -252,7 +251,7 @@ extension AnyDecodable: CustomStringConvertible {
 }
 
 extension AnyDecodable: CustomDebugStringConvertible {
-    package var debugDescription: String {
+    public var debugDescription: String {
         switch value {
         case let value as CustomDebugStringConvertible:
             return "AnyDecodable(\(value.debugDescription))"
@@ -263,7 +262,7 @@ extension AnyDecodable: CustomDebugStringConvertible {
 }
 
 extension AnyDecodable: Hashable {
-    package func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         switch value {
         case let value as Bool:
             hasher.combine(value)
@@ -305,10 +304,10 @@ extension AnyDecodable: Hashable {
     }
 }
 
-package struct AnyEncodable: Encodable {
-    package let value: Optional<Any>
+public struct AnyEncodable: Encodable {
+    public let value: Optional<Any>
 
-    package init<T>(_ value: T?) {
+    public init<T>(_ value: T?) {
         self.value = value
     }
 }
@@ -323,7 +322,7 @@ extension AnyEncodable: _AnyEncodable {}
 
 // MARK: - Encodable
 extension _AnyEncodable {
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
 
         switch value {
@@ -419,7 +418,7 @@ extension _AnyEncodable {
 }
 
 extension AnyEncodable: Equatable {
-    package static func == (lhs: AnyEncodable, rhs: AnyEncodable) -> Bool {
+    public static func == (lhs: AnyEncodable, rhs: AnyEncodable) -> Bool {
         switch (lhs.value, rhs.value) {
         case is (Void, Void):
             return true
@@ -464,7 +463,7 @@ extension AnyEncodable: Equatable {
 }
 
 extension AnyEncodable: CustomStringConvertible {
-    package var description: String {
+    public var description: String {
         switch value {
         case is Void:
             return String(describing: nil as Any?)
@@ -477,7 +476,7 @@ extension AnyEncodable: CustomStringConvertible {
 }
 
 extension AnyEncodable: CustomDebugStringConvertible {
-    package var debugDescription: String {
+    public var debugDescription: String {
         switch value {
         case let value as CustomDebugStringConvertible:
             return "AnyEncodable(\(value.debugDescription))"
@@ -497,41 +496,41 @@ extension AnyEncodable: ExpressibleByArrayLiteral {}
 extension AnyEncodable: ExpressibleByDictionaryLiteral {}
 
 extension _AnyEncodable {
-    package init(nilLiteral _: ()) {
+    public init(nilLiteral _: ()) {
         self.init(nil as Any?)
     }
 
-    package init(booleanLiteral value: Bool) {
+    public init(booleanLiteral value: Bool) {
         self.init(value)
     }
 
-    package init(integerLiteral value: Int) {
+    public init(integerLiteral value: Int) {
         self.init(value)
     }
 
-    package init(floatLiteral value: Double) {
+    public init(floatLiteral value: Double) {
         self.init(value)
     }
 
-    package init(extendedGraphemeClusterLiteral value: String) {
+    public init(extendedGraphemeClusterLiteral value: String) {
         self.init(value)
     }
 
-    package init(stringLiteral value: String) {
+    public init(stringLiteral value: String) {
         self.init(value)
     }
 
-    package init(arrayLiteral elements: Any...) {
+    public init(arrayLiteral elements: Any...) {
         self.init(elements)
     }
 
-    package init(dictionaryLiteral elements: (AnyHashable, Any)...) {
+    public init(dictionaryLiteral elements: (AnyHashable, Any)...) {
         self.init([AnyHashable: Any](elements, uniquingKeysWith: { first, _ in first }))
     }
 }
 
 extension AnyEncodable: Hashable {
-    package func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         switch value {
         case let value as Bool:
             hasher.combine(value)

@@ -7,8 +7,8 @@
 
 import Foundation
 
-package enum RequestIdentifier: Equatable, Hashable {
-    package static func == (lhs: RequestIdentifier, rhs: RequestIdentifier) -> Bool {
+public enum RequestIdentifier: Equatable, Hashable {
+    public static func == (lhs: RequestIdentifier, rhs: RequestIdentifier) -> Bool {
         return lhs.hashValue == rhs.hashValue
     }
     // swiftlint:disable identifier_name
@@ -16,7 +16,7 @@ package enum RequestIdentifier: Equatable, Hashable {
     case api(_ path: URLPath, method: HTTPMethod)
     // swiftlint:enable identifier_name
 
-    package func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         switch self {
         case .ws(let commandType):
             hasher.combine(commandType.rawValue)
@@ -27,22 +27,22 @@ package enum RequestIdentifier: Equatable, Hashable {
     }
 }
 
-package protocol Requestable {
+public protocol Requestable {
     var identifier: RequestIdentifier { get }
 }
 
-package protocol WSRequestable: Requestable, Encodable {
+public protocol WSRequestable: Requestable, Encodable {
     var commandType: CommandType { get }
     var requestId: String? { get }
 }
 
 extension WSRequestable {
-    package var requestId: String? { nil }
-    package var identifier: RequestIdentifier { .ws(commandType) }
+    public var requestId: String? { nil }
+    public var identifier: RequestIdentifier { .ws(commandType) }
 }
 
-package class BaseWSRequest<T: Decodable>: ResultableWSRequest {
-    package func encode(to encoder: Encoder) throws {
+public class BaseWSRequest<T: Decodable>: ResultableWSRequest {
+    public func encode(to encoder: Encoder) throws {
         for body in additionalBodies {
             try? body.encode(to: encoder)
         }
@@ -54,15 +54,15 @@ package class BaseWSRequest<T: Decodable>: ResultableWSRequest {
         try? container.encode(requestId, forKey: .reqId)
     }
     
-    package var resultType: T.Type
+    public var resultType: T.Type
     
-    package var commandType: CommandType
-    package var requestId: String?
+    public var commandType: CommandType
+    public var requestId: String?
     
-    package var body: [CodeCodingKeys: Encodable]
-    package var additionalBodies: [Encodable]
+    public var body: [CodeCodingKeys: Encodable]
+    public var additionalBodies: [Encodable]
     
-    package init(
+    public init(
         commandType: CommandType,
         requestId: String?,
         body: [CodeCodingKeys: Encodable?],
@@ -76,8 +76,8 @@ package class BaseWSRequest<T: Decodable>: ResultableWSRequest {
     }
 }
 
-package class APIRequests<T: Decodable>: APIRequestable {
-    package func encode(to encoder: Encoder) throws {
+public class APIRequests<T: Decodable>: APIRequestable {
+    public func encode(to encoder: Encoder) throws {
         for body in additionalBodies {
             try? body.encode(to: encoder)
         }
@@ -88,24 +88,24 @@ package class APIRequests<T: Decodable>: APIRequestable {
         }
     }
     
-    package var resultType: T.Type
+    public var resultType: T.Type
     
-    package var method: HTTPMethod
-    package var url: URLPath
-    package var version: String
+    public var method: HTTPMethod
+    public var url: URLPath
+    public var version: String
     
-    package var body: [CodeCodingKeys: Encodable]
+    public var body: [CodeCodingKeys: Encodable]
     
-    package var headers: [String: String]
-    package var additionalBodies: [Encodable]
-    package var multipart: [String: Any]
+    public var headers: [String: String]
+    public var additionalBodies: [Encodable]
+    public var multipart: [String: Any]
     
-    package var isSessionRequired: Bool // Request can be sent without session key
-    package var isLoginRequired: Bool // Session key exists, but user data does not exist
+    public var isSessionRequired: Bool // Request can be sent without session key
+    public var isLoginRequired: Bool // Session key exists, but user data does not exist
     
-    package var hasMultipart: Bool { !multipart.isEmpty }
+    public var hasMultipart: Bool { !multipart.isEmpty }
     
-    package init(
+    public init(
         method: HTTPMethod,
         url: URLPaths,
         version: String,
@@ -129,7 +129,7 @@ package class APIRequests<T: Decodable>: APIRequestable {
     }
 }
 
-package protocol APIRequestable: Encodable, Requestable, Resultable {
+public protocol APIRequestable: Encodable, Requestable, Resultable {
     typealias KeyEncodingStrategy = JSONEncoder.KeyEncodingStrategy
     
     var method: HTTPMethod { get }
@@ -147,7 +147,7 @@ package protocol APIRequestable: Encodable, Requestable, Resultable {
     var isLoginRequired: Bool { get }
 }
 
-package extension APIRequestable {
+public extension APIRequestable {
     var headers: [String: String] { [:] }
     var version: String { "/v3" }
     var multipart: [String: Any] { [:] }
@@ -161,5 +161,5 @@ package extension APIRequestable {
 extension APIRequestable {
     // Default type for requests without associated response
     // Types that do have associated response type, re-define this property
-    package var resultType: DefaultResponse.Type { DefaultResponse.self }
+    public var resultType: DefaultResponse.Type { DefaultResponse.self }
 }

@@ -8,20 +8,20 @@
 import Foundation
 
 /// Debounced: Dispatches the latest request after the debounce delay.
-package actor DebouncedRequestSender: WebSocketRequestSendable {
-    package let sendHandler: WebSocketRequestHandler
+public actor DebouncedRequestSender: WebSocketRequestSendable {
+    public let sendHandler: WebSocketRequestHandler
     
     private let debounceDelay: TimeInterval
     private var pendingFireTask: Task<Void, Error>?
     
     private let defaultDebounceDelay = 0.5
     
-    package init(debounceDelay: TimeInterval? = nil, sendHandler: @escaping WebSocketRequestHandler) {
+    public init(debounceDelay: TimeInterval? = nil, sendHandler: @escaping WebSocketRequestHandler) {
         self.sendHandler = sendHandler
         self.debounceDelay = debounceDelay ?? defaultDebounceDelay
     }
     
-    package func send(_ request: some ResultableWSRequest) async {
+    public func send(_ request: some ResultableWSRequest) async {
         // Cancel the pending fire task if there is any.
         pendingFireTask?.cancel()
         pendingFireTask = Task { [weak self] in

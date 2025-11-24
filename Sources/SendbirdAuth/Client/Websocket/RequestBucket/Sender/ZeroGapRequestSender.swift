@@ -8,14 +8,14 @@
 import Foundation
 
 /// Zero gap: Dispatches all requests as soon as they are received.
-package actor ZeroGapRequestSender: WebSocketRequestSendable {
-    package let sendHandler: WebSocketRequestHandler
+public actor ZeroGapRequestSender: WebSocketRequestSendable {
+    public let sendHandler: WebSocketRequestHandler
     
-    package init(sendHandler: @escaping WebSocketRequestHandler) {
+    public init(sendHandler: @escaping WebSocketRequestHandler) {
         self.sendHandler = sendHandler
     }
     
-    package func send(_ request: some ResultableWSRequest) async {
+    public func send(_ request: some ResultableWSRequest) async {
         Task { try await sendHandler(request) }
     }
 }

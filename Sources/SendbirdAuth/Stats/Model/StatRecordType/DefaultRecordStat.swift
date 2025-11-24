@@ -7,12 +7,12 @@
 
 import Foundation
 
-package protocol DefaultRecordStatRepresentable: BaseStatType {
+public protocol DefaultRecordStatRepresentable: BaseStatType {
     func makeAdditionalData() -> [String: AnyCodable]?
 }
 
 extension DefaultRecordStatRepresentable {
-    package func toDefaultRecordStat() -> DefaultRecordStat {
+    public func toDefaultRecordStat() -> DefaultRecordStat {
         DefaultRecordStat(
             statType: self.statType,
             timestamp: self.timestamp,
@@ -23,4 +23,4 @@ extension DefaultRecordStatRepresentable {
     }
 }
 
-package class DefaultRecordStat: BaseStat {}
+public class DefaultRecordStat: BaseStat {}

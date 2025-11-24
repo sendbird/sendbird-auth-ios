@@ -7,16 +7,16 @@
 
 import Foundation
 
-package class InitializedState: ConnectionStatable {
-    package func process(context: ConnectionContext) { }
+public class InitializedState: ConnectionStatable {
+    public func process(context: ConnectionContext) { }
     
-    package init() { }
+    public init() { }
 
-    package func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         self.connect(context: context, loginKey: loginKey, sessionKey: sessionKey, userHandler: [userHandler])
     }
     
-    package func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: [AuthUserHandler?]) {
+    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: [AuthUserHandler?]) {
         context.changeState(
             to: ConnectingState(
                 loginKey: loginKey,
@@ -26,7 +26,7 @@ package class InitializedState: ConnectionStatable {
         )
     }
     
-    package func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
         context.changeState(
             to: LogoutState(
                 userId: context.userId,
@@ -35,17 +35,17 @@ package class InitializedState: ConnectionStatable {
         )
     }
     
-    package func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         context.serviceForWebSocket? {
             completionHandler?()
         }
     }
     
-    package func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         return false
     }
     
-    package func didEnterBackground(context: ConnectionContext) {
+    public func didEnterBackground(context: ConnectionContext) {
         
     }
 }

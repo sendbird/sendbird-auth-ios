@@ -10,21 +10,21 @@ import Foundation
 /// The connection state is transitioned to DelayedConnectingState when the SDK receives the `BUSY` command from server.
 /// The state in which the connection is being delayed.
 /// This state automatically retries connection after `retryAfter` seconds.
-/// - Since: [NEXT_VERSION]
-package class DelayedConnectingState: ConnectionStatable {
+/// - Since: 4.34.0
+public class DelayedConnectingState: ConnectionStatable {
     let busyEvent: BusyEvent
     var loginHandlers: [AuthUserHandler?]
     
-    package let timerBoard: SBTimerBoard = SBTimerBoard(capacity: 1)
+    public let timerBoard: SBTimerBoard = SBTimerBoard(capacity: 1)
     private var timerStartTime: TimeInterval
     
-    package init(busyEvent: BusyEvent, loginHandlers: [AuthUserHandler?]) {
+    public init(busyEvent: BusyEvent, loginHandlers: [AuthUserHandler?]) {
         self.busyEvent = busyEvent
         self.loginHandlers = loginHandlers
         self.timerStartTime = Date().timeIntervalSince1970
     }
     
-    package func process(context: any ConnectionContext) {
+    public func process(context: any ConnectionContext) {
         Logger.session.debug("userId: \(context.userId), busyEvent: \(busyEvent)")
         
         // disconnect websocket
@@ -86,7 +86,7 @@ package class DelayedConnectingState: ConnectionStatable {
         }
     }
     
-    package func connect(context: any ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    public func connect(context: any ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.session.debug()
         loginHandlers.append(userHandler)
         
@@ -112,7 +112,7 @@ package class DelayedConnectingState: ConnectionStatable {
         )
     }
     
-    package func reconnect(context: any ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    public func reconnect(context: any ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.session.debug("sessionKey=\(sessionKey ?? "nil"), reconnectedBy=\(String(describing: reconnectedBy))")
         
         let remainingRetryAfter = getRemainingRetryAfter(startTime: timerStartTime)
@@ -138,7 +138,7 @@ package class DelayedConnectingState: ConnectionStatable {
         return false
     }
     
-    package func disconnect(context: any ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnect(context: any ConnectionContext, completionHandler: VoidHandler?) {
         timerBoard.stopAll()
         Logger.session.debug()
         // logout state
@@ -151,7 +151,7 @@ package class DelayedConnectingState: ConnectionStatable {
         )
     }
     
-    package func disconnectWebSocket(context: any ConnectionContext, completionHandler: VoidHandler?) {
+    public func disconnectWebSocket(context: any ConnectionContext, completionHandler: VoidHandler?) {
         timerBoard.stopAll()
         Logger.session.debug()
         
@@ -173,7 +173,7 @@ package class DelayedConnectingState: ConnectionStatable {
         }
     }
     
-    package func didEnterBackground(context: any ConnectionContext) {
+    public func didEnterBackground(context: any ConnectionContext) {
         Logger.session.debug()
         
         processLoginHandlers(context: context, error: AuthClientError.connectionCanceled.asAuthError)
@@ -210,10 +210,10 @@ package class DelayedConnectingState: ConnectionStatable {
         }
     }
     
-    package func didSocketClose(context: any ConnectionContext, code: ChatWebSocketStatusCode) {
+    public func didSocketClose(context: any ConnectionContext, code: ChatWebSocketStatusCode) {
         Logger.session.debug()
     }
-    package func didSocketFail(context: any ConnectionContext, error: AuthError?) {
+    public func didSocketFail(context: any ConnectionContext, error: AuthError?) {
         Logger.session.debug()
     }
 }

@@ -8,13 +8,13 @@
 import Foundation
 
 // MARK: - SendbirdAuth Specific Error Cases
-package enum AuthClientError: Int, Error {
+public enum AuthClientError: Int, Error {
     // Connection related errors
     case connectionRequired = 800101
     case connectionCanceled = 800102
     case webSocketConnectionClosed = 800200
     case webSocketConnectionFailed = 800210
-    case serverOverloaded = 800221  // [NEXT_VERSION]
+    case serverOverloaded = 800221  // 4.34.0
     
     // Timer related errors
     case timerWasExpired = 800301
@@ -60,18 +60,18 @@ package enum AuthClientError: Int, Error {
 
 // MARK: - AuthClientError Extensions
 extension AuthClientError: Decodable {
-    package init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         self = AuthClientError(rawValue: try container.decode(Int.self)) ?? .unknownError
     }
 }
 
 extension AuthClientError: CustomStringConvertible {
-    package var description: String {
+    public var description: String {
         message
     }
     
-    package var message: String {
+    public var message: String {
         switch self {
         case .unknownError: return "Unknown error occurred."
         case .invalidInitialization: return "Initialization has not been done yet."

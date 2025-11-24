@@ -9,33 +9,33 @@
 
 import Foundation
 
-package protocol SortableElement: Codable, AnyObject {
+public protocol SortableElement: Codable, AnyObject {
     var uniqueKey: AnyHashable? { get }
 }
 /// An array that keeps its elements sorted at all times.
-package struct SortedArray<T: SortableElement> {
+public struct SortedArray<T: SortableElement> {
     /// The backing store
-    package var elements: [T]
+    public var elements: [T]
 
-    package typealias Comparator<A> = (A, A) -> Bool
+    public typealias Comparator<A> = (A, A) -> Bool
 
-    package let queue = SafeSerialQueue(label: "com.sendbird.core.SortedArray_\(UUID().uuidString)")
+    public let queue = SafeSerialQueue(label: "com.sendbird.core.SortedArray_\(UUID().uuidString)")
     
     /// The predicate that determines the array's sort order.
     fileprivate let areInIncreasingOrder: Comparator<T>
 
-    package init(areInIncreasingOrder: @escaping Comparator<T>) {
+    public init(areInIncreasingOrder: @escaping Comparator<T>) {
         self.elements = []
         self.areInIncreasingOrder = areInIncreasingOrder
     }
 
-    package init<S: Sequence>(unsorted: S, areInIncreasingOrder: @escaping Comparator<T>) where S.Element == T {
+    public init<S: Sequence>(unsorted: S, areInIncreasingOrder: @escaping Comparator<T>) where S.Element == T {
         let sorted = unsorted.sorted(by: areInIncreasingOrder)
         self.elements = sorted
         self.areInIncreasingOrder = areInIncreasingOrder
     }
 
-    package init<S: Sequence>(sorted: S, areInIncreasingOrder: @escaping Comparator<T>) where S.Element == T {
+    public init<S: Sequence>(sorted: S, areInIncreasingOrder: @escaping Comparator<T>) where S.Element == T {
         self.elements = Array(sorted)
         self.areInIncreasingOrder = areInIncreasingOrder
     }
@@ -46,7 +46,7 @@ package struct SortedArray<T: SortableElement> {
     /// - Complexity: O(_n_) where _n_ is the size of the array. O(_log n_) if the new
     /// element can be appended, i.e. if it is ordered last in the resulting array.
     @discardableResult
-    package mutating func insert(_ newElement: T) -> Index {
+    public mutating func insert(_ newElement: T) -> Index {
         let index = insertionIndex(for: newElement)
         // This should be O(1) if the element is to be inserted at the end,
         // O(_n) in the worst case (inserted at the front).
@@ -63,7 +63,7 @@ package struct SortedArray<T: SortableElement> {
     /// we only need to re-sort once.
     ///
     /// - Complexity: O(_n * log(n)_) where _n_ is the size of the resulting array.
-    package mutating func insert<S: Sequence>(contentsOf newElements: S) where S.Element == T {
+    public mutating func insert<S: Sequence>(contentsOf newElements: S) where S.Element == T {
         queue.sync {
             elements.append(contentsOf: newElements)
             elements.sort(by: areInIncreasingOrder)
@@ -73,7 +73,7 @@ package struct SortedArray<T: SortableElement> {
 
 extension SortedArray {
     @discardableResult
-    package mutating func insertIfNotExist(elements: [T]) -> [T] {
+    public mutating func insertIfNotExist(elements: [T]) -> [T] {
         queue.sync {
             let existingKeys = Set(self.elements.compactMap { $0.uniqueKey })
             var insertedElementKeys = Set<AnyHashable>()
@@ -99,7 +99,7 @@ extension SortedArray {
     /// Updated a message.
     /// - Parameter message Message to be updated.
     /// - Returns `true` if the message is updated.
-    package mutating func updateIfExist(_ element: T) -> Bool {
+    public mutating func updateIfExist(_ element: T) -> Bool {
         queue.sync {
             let index = self.elements.firstIndex(where: { $0.uniqueKey == element.uniqueKey })
             if let index = index {
@@ -110,7 +110,7 @@ extension SortedArray {
         }
     }
     
-    package mutating func updateIfExist(elements: [T]) -> Bool {
+    public mutating func updateIfExist(elements: [T]) -> Bool {
         var updated = false
         for element in elements {
             updated = updated || self.updateIfExist(element)
@@ -120,7 +120,7 @@ extension SortedArray {
     }
 }
 
-package extension SortedArray where T: Comparable {
+public extension SortedArray where T: Comparable {
     init() {
         self.init(areInIncreasingOrder: <)
     }
@@ -141,31 +141,31 @@ package extension SortedArray where T: Comparable {
 }
 
 extension SortedArray: RandomAccessCollection {
-    package typealias Index = Int
+    public typealias Index = Int
 
-    package var startIndex: Index { return elements.startIndex }
-    package var endIndex: Index { return elements.endIndex }
+    public var startIndex: Index { return elements.startIndex }
+    public var endIndex: Index { return elements.endIndex }
 
-    package func index(after i: Index) -> Index {
+    public func index(after i: Index) -> Index {
         queue.sync {
             return elements.index(after: i)
         }
     }
 
-    package func index(before i: Index) -> Index {
+    public func index(before i: Index) -> Index {
         queue.sync {
             return elements.index(before: i)
         }
     }
 
-    package subscript(position: Index) -> T {
+    public subscript(position: Index) -> T {
         queue.sync {
             return elements[position]
         }
     }
 }
 
-package extension SortedArray {
+public extension SortedArray {
     /// Like `Sequence.filter(_:)`, but returns a `SortedArray` instead of an `Array`.
     /// We can do this efficiently because filtering doesn't change the sort order.
     func filter(_ isIncluded: (T) throws -> Bool) rethrows -> SortedArray {
@@ -177,17 +177,17 @@ package extension SortedArray {
 }
 
 extension SortedArray: CustomStringConvertible, CustomDebugStringConvertible {
-    package var description: String {
+    public var description: String {
         return "\(String(describing: elements)) (sorted)"
     }
 
-    package var debugDescription: String {
+    public var debugDescription: String {
         return "<SortedArray> \(String(reflecting: elements))"
     }
 }
 
 // MARK: - Removing elements. This is mostly a reimplementation of part `RangeReplaceableCollection`'s interface. `SortedArray` can't conform to `RangeReplaceableCollection` because some of that protocol's semantics (e.g. `append(_:)` don't fit `SortedArray`'s semantics.
-package extension SortedArray {
+public extension SortedArray {
     /// Removes and returns the element at the specified position.
     ///
     /// - Parameter index: The position of the element to remove. `index` must be a valid index of the array.
@@ -313,7 +313,7 @@ package extension SortedArray {
 }
 
 // MARK: - More efficient variants of default implementations or implementations that need fewer constraints than the default implementations.
-package extension SortedArray {
+public extension SortedArray {
     /// Returns the first index where the specified value appears in the collection.
     ///
     /// - Complexity: O(_log(n)_), where _n_ is the size of the array.
@@ -416,7 +416,7 @@ package extension SortedArray {
 }
 
 // MARK: - APIs that go beyond what's in the stdlib
-package extension SortedArray {
+public extension SortedArray {
     /// Returns an arbitrary index where the specified value appears in the collection.
     /// Like `index(of:)`, but without the guarantee to return the *first* index
     /// if the array contains duplicates of the searched element.
@@ -493,7 +493,7 @@ package extension SortedArray {
 }
 
 // MARK: - Converting between a stdlib comparator function and Foundation.ComparisonResult
-package extension SortedArray {
+public extension SortedArray {
     fileprivate func compare(_ lhs: T, _ rhs: T) -> Foundation.ComparisonResult {
         if areInIncreasingOrder(lhs, rhs) {
             return .orderedAscending
@@ -508,7 +508,7 @@ package extension SortedArray {
 }
 
 // MARK: - Binary search
-package extension SortedArray {
+public extension SortedArray {
     /// The index where `newElement` should be inserted to preserve the array's sort order.
     fileprivate func insertionIndex(for newElement: T) -> Index {
         switch search(for: newElement) {
@@ -523,14 +523,14 @@ fileprivate enum Match<Index: Comparable> {
     case notFound(insertAt: Index)
 }
 
-package extension Range where Bound == Int {
+public extension Range where Bound == Int {
     var middle: Int? {
         guard !isEmpty else { return nil }
         return lowerBound + count / 2
     }
 }
 
-package extension SortedArray {
+public extension SortedArray {
     /// Searches the array for `element` using binary search.
     ///
     /// - Returns: If `element` is in the array, Returns `.found(at: index)`

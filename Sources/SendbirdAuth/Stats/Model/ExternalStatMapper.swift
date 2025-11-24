@@ -7,8 +7,8 @@
 
 import Foundation
 
-package struct ExternalStatMapper {
-    package static func map(type: String, data: [String: Any], timestamp: Int64) -> BaseStat? {
+public struct ExternalStatMapper {
+    public static func map(type: String, data: [String: Any], timestamp: Int64) -> BaseStat? {
         guard let statType = StatType(rawValue: type) else {
             Logger.external.error("Invalid stat type", type)
             return nil

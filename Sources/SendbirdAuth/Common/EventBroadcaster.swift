@@ -7,62 +7,80 @@
 
 import Foundation
 
-package protocol EventBroadcaster<DelegateType> {
+public protocol EventBroadcaster<DelegateType> {
     associatedtype DelegateType: AnyObject
-    
+
     var delegates: NSMapTable<NSString, DelegateType> { get }
     var service: QueueService { get }
-    
+    var delegateLock: NSLock { get }
+
     func delegate(forKey key: String) -> DelegateType?
-    
+
     func addDelegate(_ delegate: DelegateType, forKey key: String)
-    
+
     func removeDelegate(forKey key: String)
-    
+
     func removeAllDelegates()
-    
+
     func callAsFunction(task: @escaping ((DelegateType) -> Void))
-    
+
     func broadcast<OtherType>(upcast: OtherType, task: @escaping ((OtherType) -> Void))
-    
+
     func broadcast(task: @escaping ((DelegateType) -> Void))
 }
 
 extension EventBroadcaster {
-    package func delegate(forKey key: String) -> DelegateType? {
-        return delegates.object(forKey: key as NSString)
+    public func delegate(forKey key: String) -> DelegateType? {
+        return delegateLock.withLock {
+            delegates.object(forKey: key as NSString)
+        }
     }
-    
-    package func addDelegate(_ delegate: DelegateType, forKey key: String) {
-        delegates.setObject(delegate, forKey: key as NSString)
+
+    public func addDelegate(_ delegate: DelegateType, forKey key: String) {
+        delegateLock.withLock {
+            // Remove existing delegate first to safely clean up weak references
+            delegates.removeObject(forKey: key as NSString)
+            delegates.setObject(delegate, forKey: key as NSString)
+        }
     }
-    
-    package func removeDelegate(forKey key: String) {
-        delegates.removeObject(forKey: key as NSString)
+
+    public func removeDelegate(forKey key: String) {
+        delegateLock.withLock {
+            delegates.removeObject(forKey: key as NSString)
+        }
     }
-    
-    package func removeAllDelegates() {
-        delegates.removeAllObjects()
+
+    public func removeAllDelegates() {
+        delegateLock.withLock {
+            delegates.removeAllObjects()
+        }
     }
-    
-    package func callAsFunction(task: @escaping ((DelegateType) -> Void)) {
+
+    public func callAsFunction(task: @escaping ((DelegateType) -> Void)) {
         self.broadcast(task: task)
     }
-    
-    package func broadcast<OtherType>(upcast: OtherType, task: @escaping ((OtherType) -> Void)) {
+
+    public func broadcast<OtherType>(upcast: OtherType, task: @escaping ((OtherType) -> Void)) {
         service {
-            self.delegates
-                .objectEnumerator()?
+            // Create a thread-safe snapshot of delegates before enumeration
+            let snapshot = self.delegateLock.withLock {
+                self.delegates.objectEnumerator()?.allObjects
+            }
+
+            snapshot?
                 .compactMap { $0 as? OtherType }
                 .forEach { task($0) }
         }
     }
-    
-    package func broadcast(task: @escaping ((DelegateType) -> Void)) {
+
+    public func broadcast(task: @escaping ((DelegateType) -> Void)) {
         service {
-            let allObjects = delegates.objectEnumerator()?.allObjects
-            let allDelegates = (allObjects as? [DelegateType]) ?? []
-            
+            // Create a thread-safe snapshot of delegates before enumeration
+            let snapshot = self.delegateLock.withLock {
+                self.delegates.objectEnumerator()?.allObjects
+            }
+
+            let allDelegates = (snapshot as? [DelegateType]) ?? []
             allDelegates.forEach { task($0) }
         }
     }

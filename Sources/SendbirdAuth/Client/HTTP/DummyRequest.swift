@@ -5,10 +5,10 @@
 //  Created by Kai Lee on 4/28/25.
 //
 
-package struct DummyRequest: APIRequestable {
-    package let method: HTTPMethod = .get
-    package let url: URLPath = ""
-    package init() {}
+public struct DummyRequest: APIRequestable {
+    public let method: HTTPMethod = .get
+    public let url: URLPath = ""
+    public init() {}
     
-    package func encode(to encoder: Encoder) throws {}
+    public func encode(to encoder: Encoder) throws {}
 }

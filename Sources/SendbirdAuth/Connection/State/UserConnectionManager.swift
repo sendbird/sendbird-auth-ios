@@ -7,11 +7,11 @@
 
 import Foundation
 
-package typealias ConnectionContext = WebSocketContext
+public typealias ConnectionContext = WebSocketContext
 
-package typealias WebSocketContext = WebSocketDataSource & WebSocketActionable & Injectable
+public typealias WebSocketContext = WebSocketDataSource & WebSocketActionable & Injectable
 
-package protocol WebSocketDataSource: AnyObject {
+public protocol WebSocketDataSource: AnyObject {
     var configForWebSocket: SendbirdConfiguration? { get }
     var serviceForWebSocket: QueueService? { get }
     var dataSourceForWebSocket: ConnectionStateData? { get }
@@ -25,7 +25,7 @@ package protocol WebSocketDataSource: AnyObject {
     var netStatus: Reachability.Connection { get }
     
     /// Should be non-nil once connect() was explicitly called.
-    /// - Since: [NEXT_VERSION]
+    /// - Since: 4.34.0
     var loginKey: LoginKey? { get }
     
     func notifyNewConnectionStarted()
@@ -34,7 +34,7 @@ package protocol WebSocketDataSource: AnyObject {
     func notifyReconnectionAttempt()
 }
 
-package protocol WebSocketActionable: AnyObject {
+public protocol WebSocketActionable: AnyObject {
     func changeState(to nextState: ConnectionStatable)
     func createWebSocketURL(userId: String) -> String
     
@@ -42,62 +42,67 @@ package protocol WebSocketActionable: AnyObject {
     func disconnectSocket()
 }
 
-package protocol WebSocketManagerDelegate: AnyObject {
+public protocol WebSocketManagerDelegate: AnyObject {
     func didReceiveMessage(_ message: String)
 }
 
-package typealias UserConnectionManager = WebSocketManager
-package class WebSocketManager {
+public typealias UserConnectionManager = WebSocketManager
+public class WebSocketManager {
     // MARK: Injectable
     @DependencyWrapper private var dependency: Dependency?
     private var service: QueueService? { dependency?.service }
-    package var stateData: ConnectionStateData? { dependency?.stateData }
-    package var config: SendbirdConfiguration? { dependency?.config }
+    public var stateData: ConnectionStateData? { dependency?.stateData }
+    public var config: SendbirdConfiguration? { dependency?.config }
     private var statManager: StatManager? { dependency?.statManager }
     
     /// Should be non-nil once connect() was explicitly called.
-    /// - Since: [NEXT_VERSION]
-    package var loginKey: LoginKey? = nil
+    /// - Since: 4.34.0
+    public var loginKey: LoginKey? = nil
 
-    @InternalAtomic package var state: ConnectionStatable = InitializedState() {
+    @InternalAtomic public var state: ConnectionStatable = InitializedState() {
         didSet {
             Logger.session.info("State transition \(oldValue) -> \(state)")
-            #if !RELEASE
+#if !RELEASE
             $previousStates.atomicMutate {
                 $0.append(type(of: oldValue))
             }
-            #endif
+#endif
             // TODO: 같은 state일때도 process가 여러번 불필요하게 호출될 수 있음 (connecting -> connecting 하면 지금 연결중인 소켓 끊고 다시 맺어져서 불필요한 오버헤드 생김). 근데 reconnecting일때 reconnect 호출하면 끊었다 재연결하는 로직을 이걸로 해결하고 있어서 나중에 전체적으로 코드 파악 후 수정 필요
             state.process(context: self)
         }
     }
     
-    #if !RELEASE
-    @InternalAtomic package var previousStates: [ConnectionStatable.Type] = []
-    #endif
-
-    package let eventDispatcher: EventDispatcher
-
-    package var routerConfig: CommandRouterConfiguration { webSocketClient.routerConfig }
+#if !RELEASE
+    @InternalAtomic public var previousStates: [ConnectionStatable.Type] = []
+#endif
     
-    package func performOnCompletionQueue(_ block: (() -> Void)?) {
+    public let eventDispatcher: EventDispatcher
+    
+    public var routerConfig: CommandRouterConfiguration {
+        get async {
+            await webSocketClient.routerConfig
+        }
+    }
+    private let initialRouterConfig: CommandRouterConfiguration
+    
+    public func performOnCompletionQueue(_ block: (() -> Void)?) {
         service?.performOnCompletionQueue(block)
     }
     
-    package var connectionRetryCount: Int {
+    public var connectionRetryCount: Int {
         statManager?.connectionRetryCount ?? 0
     }
-    package var reconnectionTryCount: Int {
+    public var reconnectionTryCount: Int {
         statManager?.reconnectionTryCount ?? 0
     }
     
-    package var hostURL: String {
-        get { statManager?.wsOpenedEvent?.hostURL ?? "" }
+    public var hostURL: String {
+        statManager?.wsOpenedEvent?.hostURL ?? ""
     }
     
-    package weak var delegate: WebSocketManagerDelegate?
+    public weak var delegate: WebSocketManagerDelegate?
     
-    package var connectionState: AuthWebSocketConnectionState {
+    public var connectionState: AuthWebSocketConnectionState {
         queue.sync {
             if isConnecting || isReconnecting {
                 return .connecting
@@ -109,28 +114,30 @@ package class WebSocketManager {
         }
     }
     
-    package let userId: String
+    public let userId: String
     
-    package private(set) var netStatus: Reachability.Connection = .unavailable
+    public private(set) var netStatus: Reachability.Connection = .unavailable
     
-    package func changeNetworkStatus(to status: Reachability.Connection) {
+    public func changeNetworkStatus(to status: Reachability.Connection) {
         netStatus = status
         
         if status == .unavailable {
             networkDisconnected()
         }
     }
-
-    package let queue: SafeSerialQueue
-
-    package init(
+    
+    public let queue: SafeSerialQueue
+    private var webSocketEventTask: Task<Void, Never>? // stream consumption
+    // !!!: Shouldn't it be much more strict?
+    
+    public init(
         userId: String,
         queue: SafeSerialQueue,
         eventDispatcher: EventDispatcher,
         requestHeaderDataSource: RequestHeaderDataSource?,
         routerConfig: CommandRouterConfiguration,
         sendbirdConfig: SendbirdConfiguration,
-        webSocketEngine: ChatWebSocketEngine?
+        webSocketEngine: (any ChatWebSocketEngine)?
     ) {
         Logger.socket.debug("userId: \(userId)")
         self.userId = userId
@@ -139,34 +146,29 @@ package class WebSocketManager {
         
         self.requestHeaderDataSource = requestHeaderDataSource
         
+        self.initialRouterConfig = routerConfig
         self.webSocketClient = ChatWebSocketClient(
             routerConfig: routerConfig,
             sendbirdConfig: sendbirdConfig,
             webSocketEngine: webSocketEngine
         )
         
-        webSocketClient.addDelegate(self, forKey: "WebSocketManager_\(UUID().uuidString)")
-    }
-    
-    @InternalAtomic package var webSocketClient: ChatWebSocketClientInterface {
-        willSet {
-            #if TESTCASE
-            // INFO: InterceptableMocking 객체로 교체하는 케이스는 기존 engine 을 사용하기때문에 disconnect 안함
-            if newValue is ChatWebSocketClient {
-                webSocketClient.forceDisconnect()
-            }
-            return
-            #else
-            webSocketClient.forceDisconnect()
-            #endif
+        // Start consuming websocket events
+        // 나중에 actor base로 리팩하면서 Engine처럼 바뀔 거임
+        Task { [weak self] in
+            guard let self else { return }
+            await self.startListeningWebSocketEvents(from: self.webSocketClient)
         }
     }
-    package weak var requestHeaderDataSource: RequestHeaderDataSource?
-      
-    package func createWebSocketURL(
+    
+    /// Avoid changing it directly. Use `setNewWebSocketClient` method instead.
+    @InternalAtomic private(set) var webSocketClient: any ChatWebSocketClientInterface
+    public weak var requestHeaderDataSource: RequestHeaderDataSource?
+    
+    public func createWebSocketURL(
         userId: String
     ) -> String {
-    
+        
         let paramsBuilder = RequestHeadersBuilder()
         
         paramsBuilder.append(key: "p", value: "iOS")
@@ -191,9 +193,9 @@ package class WebSocketManager {
         }
         
         let params = paramsBuilder.buildString()
-        Logger.main.debug("ws request: \(self.routerConfig.wsHost)/?\(params)")
+        Logger.main.debug("ws request: \(self.initialRouterConfig.wsHost)/?\(params)")
         
-        return self.routerConfig.wsHost + "/?" + params
+        return self.initialRouterConfig.wsHost + "/?" + params
     }
     
     // MARK: - private
@@ -215,95 +217,146 @@ package class WebSocketManager {
     }
     
     // MARK: Injectable
-    package func resolve(with dependency: (any Dependency)?) {
+    public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
 }
 
-extension WebSocketManager: ChatWebSocketClientDelegate {
-    package func webSocketClient(startWith client: any ChatWebSocketClientInterface) {
-        Logger.socket.debug("started with \(client)")
-        
-        eventDispatcher.dispatch(
-            command: WebSocketStatEvent.WebSocketStartEvent()
-        )
-    }
-    
-    package func webSocketClient(openWith client: ChatWebSocketClientInterface) {
-        Logger.socket.debug("opened with \(client)")
-        if let sentRequest = client.currentRequest {
-            // INFO: ws opened
+// Removed ChatWebSocketClientDelegate conformance; using event stream instead.
+
+// MARK: - Event Stream Consumption
+extension WebSocketManager {
+    private func handleWebSocketEvent(_ event: WebSocketClientEvent) async {
+        switch event {
+        case .started:
+            Logger.socket.debug("started")
+            
+            eventDispatcher.dispatch(
+                command: WebSocketStatEvent.WebSocketStartEvent()
+            )
+            
+        case .opened:
+            Logger.socket.debug("opened")
+            
+            guard let sentRequest = await webSocketClient.currentRequest else {
+                return
+            }
+            
             eventDispatcher.dispatch(
                 command: WebSocketStatEvent.WebSocketOpenedEvent(
                     hostURL: sentRequest.url?.host ?? "",
                     openedTimestampMs: Date().milliSeconds
                 )
             )
-        }
-        
-        queue.async {
-            self.state.didSocketOpen(context: self)
-        }
-    }
-    
-    package func webSocketClient(_ client: ChatWebSocketClientInterface, failWith error: Error?) {
-        Logger.socket.debug("\(client) failWith \(String(describing: error))")
-        let sbError = AuthClientError.webSocketConnectionFailed.asAuthError(
-            message: error?.localizedDescription,
-            extraUserInfo: (error as? NSError)?.userInfo
-        )
-        if let sentRequest = client.currentRequest {
-            eventDispatcher.dispatch(
-                command: WebSocketStatEvent.WebSocketFailedEvent(
-                    hostURL: sentRequest.url?.host ?? "",
-                    code: sbError.code,
-                    reason: sbError.debugDescription
-                )
+            
+            queue.async {
+                self.state.didSocketOpen(context: self)
+            }
+            
+        case .connectionFailed(let error):
+            Logger.socket.debug("connection failed with \(String(describing: error))")
+            let authError = AuthClientError.webSocketConnectionFailed.asAuthError(
+                message: error.localizedDescription,
+                extraUserInfo: (error as NSError).userInfo
             )
-        }
-        queue.async {
-            self.state.didSocketFail(context: self, error: sbError)
-        }
-    }
-    
-    package func webSocketClient(_ client: ChatWebSocketClientInterface, closeWith code: ChatWebSocketStatusCode, reason: String?) {
-        Logger.socket.debug("\(client) closeWith \(code), reason: \(String(describing: reason))")
-        if let sentRequest = client.currentRequest {
-            // This case usually means watch dog timeout
-            if code == .noStatusReceived {
-                self.dispatchDisconnectEventIfConnected(
-                    errorType: AuthClientError.networkError.asAuthError,
-                    reasonType: .pingPongTimeout
-                )
-            } else {
-                self.dispatchDisconnectEventIfConnected(
-                    errorType: AuthClientError.webSocketConnectionClosed.asAuthError,
-                    reasonType: .otherReason(closeCode: code)
+            
+            if let sentRequest = await webSocketClient.currentRequest {
+                eventDispatcher.dispatch(
+                    command: WebSocketStatEvent.WebSocketFailedEvent(
+                        hostURL: sentRequest.url?.host ?? "",
+                        code: authError.code,
+                        reason: authError.debugDescription
+                    )
                 )
             }
-        }
+            
+            queue.async {
+                self.state.didSocketFail(context: self, error: authError)
+            }
+            
+        case let .closed(code, reason):
+            Logger.socket.debug("close with \(code), reason: \(reason ?? "")")
+            
+            if await webSocketClient.currentRequest != nil {
+                // This case usually means watch dog timeout
+                if code == .noStatusReceived {
+                    dispatchDisconnectEventIfConnected(
+                        errorType: AuthClientError.networkError.asAuthError(),
+                        reasonType: .pingPongTimeout
+                    )
+                } else {
+                    dispatchDisconnectEventIfConnected(
+                        errorType: AuthClientError.webSocketConnectionClosed.asAuthError(),
+                        reasonType: .otherReason(closeCode: code)
+                    )
+                }
+            }
 
-        queue.async {
-            self.state.didSocketClose(context: self, code: code)
+            queue.async {
+                self.state.didSocketClose(context: self, code: code)
+            }
+            
+        case .received(let message):
+            Logger.socket.debug("received \(message)")
+            delegate?.didReceiveMessage(message)
+            
+        case .timerExpired(let timerType):
+            Logger.socket.debug("Timer expired for \(timerType)")
+            
+            let request = BaseWSRequest<DefaultResponse>(commandType: .ping, requestId: nil, body: [.id: Date().milliSeconds])
+            try? await webSocketClient.send(request: request)
         }
     }
     
-    package func webSocketClient(_ client: ChatWebSocketClientInterface, receive message: String) {
-        Logger.socket.debug("\(client) receive \(message)")
-        delegate?.didReceiveMessage(message)
+    private func changeWebSocketClient(_ newClient: any ChatWebSocketClientInterface) async {
+        let oldClient = webSocketClient
+        guard newClient !== oldClient else {
+            return
+        }
+        
+        let prepare = {
+#if TESTCASE
+            // INFO: InterceptableMocking 객체로 교체하는 케이스는 기존 engine 을 사용하기때문에 disconnect 안함
+            if newClient is ChatWebSocketClient {
+                await oldClient.forceDisconnect()
+            }
+            return
+#else
+            await oldClient.forceDisconnect()
+#endif
+        }
+        
+        await prepare()
+        self.webSocketClient = newClient
+        
+        // restart stream consumption for new client
+        await startListeningWebSocketEvents(from: newClient)
     }
     
-    package func webSocketClient(_ client: ChatWebSocketClientInterface, timerExpiredFor type: ChatWebSocketClientTimerType) {
-        Logger.socket.debug("\(client) timerExpiredFor \(type)")
+    private func stopListeningWebSocketEvents(needBroadcast: Bool = false) async {
+        webSocketEventTask?.cancel()
+        webSocketEventTask = nil
         
-        let request = BaseWSRequest<DefaultResponse>(commandType: .ping, requestId: nil, body: [.id: Date().milliSeconds])
-        client.send(request: request, completion: nil)
+        await webSocketClient.disconnect()
     }
+    
+    private func startListeningWebSocketEvents(from client: some ChatWebSocketClientInterface) async {
+        webSocketEventTask?.cancel()
+
+        let clientStream = await client.makeStream()
+        webSocketEventTask = Task { [weak self] in
+            for await event in clientStream {
+                guard let self else { return }
+                await self.handleWebSocketEvent(event)
+            }
+        }
+    }
+    
 }
 
 extension WebSocketManager: EventDelegate {
     
-    package func didReceiveSBCommandEvent(command: SBCommand) async {
+    public func didReceiveSBCommandEvent(command: SBCommand) async {
         switch command {
         case let command as LoginEvent:
             queue.async {
@@ -317,29 +370,29 @@ extension WebSocketManager: EventDelegate {
         }
     }
     
-    package func didReceiveInternalEvent(command: InternalEvent) {
+    public func didReceiveInternalEvent(command: InternalEvent) {
         // do-nothing
     }
 }
 
 extension WebSocketManager: ConnectionContext {
-    package var configForWebSocket: SendbirdConfiguration? { self.config }
-    package var serviceForWebSocket: QueueService? { self.service }
-    package var dataSourceForWebSocket: ConnectionStateData? { self.stateData }
+    public var configForWebSocket: SendbirdConfiguration? { self.config }
+    public var serviceForWebSocket: QueueService? { self.service }
+    public var dataSourceForWebSocket: ConnectionStateData? { self.stateData }
     
-    package var isConnecting: Bool { state is ConnectingState }
-    package var isReconnecting: Bool { state is ReconnectingState }
-    package var isConnected: Bool { state is ConnectedState }
-    package var isDisconnected: Bool { state is LogoutState || state is InternalDisconnectedState }
-
+    public var isConnecting: Bool { state is ConnectingState }
+    public var isReconnecting: Bool { state is ReconnectingState }
+    public var isConnected: Bool { state is ConnectedState }
+    public var isDisconnected: Bool { state is LogoutState || state is InternalDisconnectedState }
+    
     // NOTE: should not be called outside of state machine due to
     // deadlock on sync
-    package func changeState(to nextState: ConnectionStatable) {
+    public func changeState(to nextState: ConnectionStatable) {
         Logger.session.verbose("\(state) to \(nextState)")
         state = nextState
     }
     
-    package func connect(loginKey: LoginKey, sessionKey: String?, completionHandler: AuthUserHandler?) {
+    public func connect(loginKey: LoginKey, sessionKey: String?, completionHandler: AuthUserHandler?) {
         self.loginKey = loginKey
         
         queue.async {
@@ -353,7 +406,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    package func disconnect(isExplicit: Bool = false, completionHandler: VoidHandler? = nil) {
+    public func disconnect(isExplicit: Bool = false, completionHandler: VoidHandler? = nil) {
         if isExplicit {
             self.dispatchDisconnectEventIfConnected(
                 errorType: nil,
@@ -370,7 +423,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    package func disconnectWebSocket(completionHandler: VoidHandler? = nil) {
+    public func disconnectWebSocket(completionHandler: VoidHandler? = nil) {
         self.dispatchDisconnectEventIfConnected(
             errorType: nil,
             reasonType: .explicitDisconnectWebSocket
@@ -385,7 +438,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    package func enterBackground(completionHandler: VoidHandler? = nil) {
+    public func enterBackground(completionHandler: VoidHandler? = nil) {
         self.dispatchDisconnectEventIfConnected(
             errorType: AuthClientError.webSocketConnectionClosed.asAuthError,
             reasonType: .background
@@ -397,7 +450,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    package func networkDisconnected(completionHandler: VoidHandler? = nil) {
+    public func networkDisconnected(completionHandler: VoidHandler? = nil) {
         self.dispatchDisconnectEventIfConnected(
             errorType: AuthClientError.networkError.asAuthError,
             reasonType: .networkDisconnected
@@ -405,13 +458,13 @@ extension WebSocketManager: ConnectionContext {
     }
     
     @discardableResult
-    package func reconnect(sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    public func reconnect(sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.socket.debug("reconnect hasSessionKey: \(sessionKey != nil). currentUser: \(self.userId), by: \(String(describing: reconnectedBy?.rawValue))")
         
         if reconnectedBy == .manual {
             dispatchDisconnectEventIfConnected(errorType: nil, reasonType: .explicitReconnect)
         }
-
+        
         return queue.sync {
             print("WebSocketManager.reconnect() > queue.sync { state.reconnect } / state=\(state) ⭐️")
             return state.reconnect(
@@ -422,61 +475,102 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    package func connectSocket(url: String, accessToken: String?, sessionKey: String?) {
+    public func connectSocket(url: String, accessToken: String?, sessionKey: String?) {
         // TODO: Shutdown websocket client silently
         // This will trigger websocket disconnectd event, and may cause changes in the state machine.
         // Is it possible to disconnect the websocket client and discard it immediately?
         // P3
-        queue.sync {
-            Logger.user.debug("current socket client state: \(self.webSocketClient.state.rawValue)")
-            if self.webSocketClient.state != .closed {
-                self.webSocketClient.disconnect()
+        queue.async {
+            Task { [weak self] in
+                guard let self else {
+                    return
+                }
+                let state = await self.webSocketClient.state
+                if state != .closed {
+                    // Don't need to broadcast disconnection event here,
+                    // as the new connection event will be broadcasted right after this.
+                    await stopListeningWebSocketEvents()
+                    await self.webSocketClient.disconnect()
+                }
+
+                Logger.user.debug("current socket client state: \(state.rawValue)")
+                let newClient = await self.webSocketClient.createNewClient()
+                await self.changeWebSocketClient(newClient)
+                
+                await self.webSocketClient.connect(
+                    with: url,
+                    accessToken: accessToken,
+                    sessionKey: sessionKey
+                )
             }
-            
-            let newClient = self.webSocketClient.createNewClient()
-            newClient.delegates = self.webSocketClient.delegates
-            
-            self.webSocketClient = newClient
-            
-            self.webSocketClient.connect(
-                with: url,
-                accessToken: accessToken,
-                sessionKey: sessionKey
-            )
         }
     }
     
-    package func disconnectSocket() {
-        queue.sync {
-            Logger.socket.debug("currentUser: \(self.userId)")
-            self.webSocketClient.disconnect()
+    public func disconnectSocket() {
+        queue.async {
+            Task { [self] in
+                Logger.socket.debug("currentUser: \(self.userId)")
+                await self.webSocketClient.disconnect()
+            }
         }
     }
     
-    package func notifyNewConnectionStarted() {
+    public func notifyNewConnectionStarted() {
         statManager?.connectionId = UUID().uuidString
         statManager?.connectionRetryCount = 0
     }
     
-    package func notifyNewReconnectionStarted() {
+    public func notifyNewReconnectionStarted() {
         statManager?.connectionId = UUID().uuidString
         statManager?.reconnectionTryCount = 0
     }
     
-    package func notifyConnectionFailed() {
+    public func notifyConnectionFailed() {
         statManager?.connectionRetryCount += 1
     }
     
-    package func notifyReconnectionAttempt() {
+    public func notifyReconnectionAttempt() {
         statManager?.reconnectionTryCount += 1
+    }
+    
+    // MARK: - Temp async methods
+    func disconnectSocket() async {
+        // TODO: Add seiral runner
+        Logger.socket.debug("currentUser: \(self.userId)")
+        await self.webSocketClient.disconnect()
+    }
+}
+
+// MARK: - Temporary WebSocketManager Indirection Wrappers
+extension WebSocketManager {
+    func sendWS<R: WSRequestable>(_ request: R) async throws {
+        try await webSocketClient.send(request: request)
+    }
+    
+    func configurePing(pingInterval: TimeInterval, watchdogInterval: TimeInterval) async {
+        await webSocketClient.setPing(interval: pingInterval > 0 ? pingInterval : 15)
+        await webSocketClient.setWatchdog(interval: watchdogInterval > 0 ? watchdogInterval : 5)
+        await webSocketClient.startPingTimer()
+    }
+    
+    func setRouterConfig(to config: CommandRouterConfiguration) async {
+        await webSocketClient.setRouterConfig(to: config)
     }
 }
 
 extension WebSocketManager {
-    #if TESTCASE
-    package func setStatManagerForTest(_ statManager: StatManager?) {
+#if TESTCASE
+    public func setStatManagerForTest(_ statManager: StatManager?) {
         // TODO: SendbirdChatMain.statManager를 교체해야 함.
-//        self.statManager = statManager
+        //        self.statManager = statManager
     }
-    #endif
+
+    public func injectWebSocketClientForTest(_ client: any ChatWebSocketClientInterface) async {
+        await changeWebSocketClient(client)
+    }
+    
+    public func getWebSocketClient() -> any ChatWebSocketClientInterface {
+        webSocketClient
+    }
+#endif
 }

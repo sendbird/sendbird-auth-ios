@@ -7,20 +7,20 @@
 
 import Foundation
 
-package class ReconnectionConfiguration: Codable {
-    package static let `default` = ReconnectionConfiguration(
+public class ReconnectionConfiguration: Codable {
+    public static let `default` = ReconnectionConfiguration(
         baseInterval: 2,
         maximumInterval: 20,
         multiplier: 2,
         maximumRetryCount: -1
     )
-    package let baseInterval: Double
-    package let maximumInterval: Double
+    public let baseInterval: Double
+    public let maximumInterval: Double
     
-    package let multiplier: Int
-    package let maximumRetryCount: Int
+    public let multiplier: Int
+    public let maximumRetryCount: Int
     
-    package init(
+    public init(
         baseInterval: Double,
         maximumInterval: Double,
         multiplier: Int,
@@ -32,11 +32,11 @@ package class ReconnectionConfiguration: Codable {
         self.maximumRetryCount = maximumRetryCount
     }
     
-    package func createTask(sessionKey: String) -> ReconnectionTask {
+    public func createTask(sessionKey: String) -> ReconnectionTask {
         return ReconnectionTask(config: self, sessionKey: sessionKey)
     }
     
-    package required init(from decoder: Decoder) throws {
+    public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         self.baseInterval = try container.decode(Double.self, forKey: .interval)
         self.maximumInterval = try container.decode(Double.self, forKey: .maxInterval)
@@ -44,7 +44,7 @@ package class ReconnectionConfiguration: Codable {
         self.maximumRetryCount = try container.decode(Int.self, forKey: .retryCount)
     }
     
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         try container.encode(self.baseInterval, forKey: .interval)
         try container.encode(self.maximumInterval, forKey: .maxInterval)

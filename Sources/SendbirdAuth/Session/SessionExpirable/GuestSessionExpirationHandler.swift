@@ -7,20 +7,20 @@
 
 import Foundation
 
-package class GuestSessionExpirationHandler: SessionExpirable {
-    package var expiringSession: Bool
-    package var accessToken: String?
+public class GuestSessionExpirationHandler: SessionExpirable {
+    public var expiringSession: Bool
+    public var accessToken: String?
 
-    package init(expiringSession: Bool, accessToken: String? = nil) {
+    public init(expiringSession: Bool, accessToken: String? = nil) {
         self.expiringSession = expiringSession
         self.accessToken = accessToken
     }
     
-    package weak var delegate: InternalSessionDelegate?
+    public weak var delegate: InternalSessionDelegate?
     
-    package var isRefreshingSession: Bool = false
+    public var isRefreshingSession: Bool = false
     
-    package func refreshSessionKey(shouldRetry: Bool, expiresIn: Int64?) {
+    public func refreshSessionKey(shouldRetry: Bool, expiresIn: Int64?) {
         guard !isRefreshingSession else { return }
         
         isRefreshingSession = true
@@ -38,8 +38,8 @@ package class GuestSessionExpirationHandler: SessionExpirable {
         })
     }
     
-    package func refreshSessionToken() { }
-    package func resetSession() {
+    public func refreshSessionToken() { }
+    public func resetSession() {
         self.isRefreshingSession = false
     }
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 extension Bool {
-    package var asInt: Int {
+    public var asInt: Int {
         self ? 1 : 0
     }
 }

@@ -9,7 +9,7 @@ import Foundation
 
 // Represents a delegate to receive session relates events
 @objc(SBDAuthSessionDelegate)
-package protocol AuthSessionDelegate {
+public protocol AuthSessionDelegate {
     func sessionTokenDidRequire(
         successCompletion success: @escaping (String?) -> Void,
         failCompletion fail: @escaping () -> Void

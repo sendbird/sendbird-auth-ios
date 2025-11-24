@@ -7,15 +7,15 @@
 
 import Foundation
 
-package class StatConfig: Codable {
-    package let minStatCount: Int
-    package let minInterval: Int64
-    package let maxStatCountPerRequest: Int
-    package let lowerThreshold: Int
-    package let requestDelayRange: Int
-    package let modStatCount: Int = 20
+public class StatConfig: Codable {
+    public let minStatCount: Int
+    public let minInterval: Int64
+    public let maxStatCountPerRequest: Int
+    public let lowerThreshold: Int
+    public let requestDelayRange: Int
+    public let modStatCount: Int = 20
     
-    package enum CodingKeys: String, CodingKey {
+    public enum CodingKeys: String, CodingKey {
         case minStatCount = "min_stat_count"
         case minInterval = "min_interval"
         case maxStatCountPerRequest = "max_stat_count_per_request"
@@ -23,7 +23,7 @@ package class StatConfig: Codable {
         case requestDelayRange = "request_delay_range"
     }
     
-    package init(
+    public init(
         minStatCount: Int, 
         minInterval: Int64,
         maxStatCountPerRequest: Int,
@@ -37,7 +37,7 @@ package class StatConfig: Codable {
         self.requestDelayRange = requestDelayRange
     }
     
-    package required init(from decoder: Decoder) throws {
+    public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         minStatCount = try container.decode(Int.self, forKey: .minStatCount)
@@ -47,7 +47,7 @@ package class StatConfig: Codable {
         requestDelayRange = try container.decode(Int.self, forKey: .requestDelayRange)
     }
     
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
         try container.encode(minStatCount, forKey: .minStatCount)
@@ -60,7 +60,7 @@ package class StatConfig: Codable {
 
 extension StatConfig {
     /// This is the debug description for the `StatConfig` object.
-    package var debugDescription: String {
+    public var debugDescription: String {
         """
         Stat config: minStatCount: \(self.minStatCount), minInterval: \(self.minInterval), maxStatCountPerRequest: \(self.maxStatCountPerRequest), lowerThreshold: \(self.lowerThreshold), requestDelayRange: \(self.requestDelayRange)
         """

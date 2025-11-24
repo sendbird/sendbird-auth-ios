@@ -7,7 +7,7 @@
 
 import Foundation
 
-package extension URLRequest {
+public extension URLRequest {
     
     var logDescription: String {
         var result = "[\(httpMethod ?? "")] \(url?.absoluteString ?? "")"

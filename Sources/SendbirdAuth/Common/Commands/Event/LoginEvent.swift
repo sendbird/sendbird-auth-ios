@@ -7,40 +7,40 @@
 
 import Foundation
 
-package struct LoginEvent: Decodable, SBCommand {
+public struct LoginEvent: Decodable, SBCommand {
     // Default value to conform SBCommand
-    package var requestId = ""
-    package var uniqueId = nil as String?
+    public var requestId = ""
+    public var uniqueId = nil as String?
     
-    package struct Constants {
-        static package let defaultDedupIntervalMs: Int64 = 0
-        static package let minDedupIntervalMs: Int64 = 50
+    public struct Constants {
+        static public let defaultDedupIntervalMs: Int64 = 0
+        static public let minDedupIntervalMs: Int64 = 50
     }
     
-    package let cmd: CommandType = .login
+    public let cmd: CommandType = .login
     
-    package let loginTimestamp: Int64
-    package let maxUnreadCountOnSuperGroup: Int?
+    public let loginTimestamp: Int64
+    public let maxUnreadCountOnSuperGroup: Int?
     
-    package let reconnectConfiguration: ReconnectionConfiguration?
-    package let messageSyncConfiguration: MessageSyncConfiguration
+    public let reconnectConfiguration: ReconnectionConfiguration?
+    public let messageSyncConfiguration: MessageSyncConfiguration
 
-    package let pingInterval: Double
-    package let watchdogInterval: Double
+    public let pingInterval: Double
+    public let watchdogInterval: Double
     
-    package let appInfo: AuthAppInfo?
-    package let user: AuthUser?
+    public let appInfo: AuthAppInfo?
+    public let user: AuthUser?
 
-    package let sessionKey: String?
-    package let eKey: String?
+    public let sessionKey: String?
+    public let eKey: String?
     
-    package let configSyncNeeded: Bool
+    public let configSyncNeeded: Bool
 
-    package private(set) var deviceTokenLastDeletedAt: Int64?
+    public private(set) var deviceTokenLastDeletedAt: Int64?
     
-    package let requestDedupIntervalMs: Int64
+    public let requestDedupIntervalMs: Int64
 
-    package var isUsingDeviceTokenCaching: Bool {
+    public var isUsingDeviceTokenCaching: Bool {
         if appInfo?.typedApplicationAttributes.contains(.sdkDeviceTokenCache) == true {
             return true
         }
@@ -51,12 +51,12 @@ package struct LoginEvent: Decodable, SBCommand {
     /// There was an error mapping the feature flag incorrectly, but the value is temporarily maintained to maintain the lower version.
     private var tempUsingDeviceTokenCaching: Bool?
     
-    package let hasError: Bool?
-    package let errorCode: Int?
-    package let errorMessage: String?
-    package var reqId: String?
+    public let hasError: Bool?
+    public let errorCode: Int?
+    public let errorMessage: String?
+    public var reqId: String?
 
-    package var error: AuthError? {
+    public var error: AuthError? {
         guard hasError == true else { return nil }
         if let errorMessage = errorMessage, let errorCode = errorCode {
             return AuthError(domain: errorMessage, code: errorCode)
@@ -65,20 +65,20 @@ package struct LoginEvent: Decodable, SBCommand {
     }
     
     /// Determines whether to send the stats log to the server
-    package var isStatsUploadAllowed: Bool {
+    public var isStatsUploadAllowed: Bool {
         appInfo?.isStatsUploadAllowed ?? false
     }
     
     /// Determines whether to collect the stats log
-    package var isStatsCollectAllowed: Bool {
+    public var isStatsCollectAllowed: Bool {
         appInfo?.isStatsCollectAllowed ?? false
     }
     
-    package var services: [Session.Service]?
-    package let expiresAt: Int64? // seconds (not millis)
-    package let unreadCountInfo: UnreadCountInfo?
+    public var services: [Session.Service]?
+    public let expiresAt: Int64? // seconds (not millis)
+    public let unreadCountInfo: UnreadCountInfo?
         
-    package init(
+    public init(
         loginTimestamp: Int64,
         maxUnreadCountOnSuperGroup: Int?,
         reconnectConfiguration: ReconnectionConfiguration,
@@ -125,7 +125,7 @@ package struct LoginEvent: Decodable, SBCommand {
         self.requestDedupIntervalMs = max(requestDedupIntervalMs, Constants.minDedupIntervalMs)
     }
     
-    package init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         self.user = try? AuthUser(from: decoder)
@@ -176,7 +176,7 @@ package struct LoginEvent: Decodable, SBCommand {
 
 #if TESTCASE
 extension LoginEvent {
-    package func updated(deviceTokenLastDeletedAt: Int64?, isUsingDeviceTokenCaching: Bool) -> Self {
+    public func updated(deviceTokenLastDeletedAt: Int64?, isUsingDeviceTokenCaching: Bool) -> Self {
         var mutating = self
         mutating.deviceTokenLastDeletedAt = deviceTokenLastDeletedAt
         if isUsingDeviceTokenCaching {

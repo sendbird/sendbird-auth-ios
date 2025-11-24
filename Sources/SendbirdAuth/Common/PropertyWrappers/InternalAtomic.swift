@@ -8,11 +8,11 @@
 import Foundation
 
 @propertyWrapper
-package class InternalAtomic<T> {
+public class InternalAtomic<T> {
     private var internalValue: T
     
     /// Actual value
-    package var wrappedValue: T {
+    public var wrappedValue: T {
         get {
             lock.sync {
                 return internalValue
@@ -25,7 +25,7 @@ package class InternalAtomic<T> {
         }
     }
     
-    package var projectedValue: InternalAtomic<T> { self }
+    public var projectedValue: InternalAtomic<T> { self }
     
     private let lock: DispatchQueue = {
         var name = "AtomicProperty_\(UUID().uuidString)_\(String(describing: T.self))"
@@ -33,11 +33,11 @@ package class InternalAtomic<T> {
     }()
     
     /// Constructor
-    package init(wrappedValue: T) {
+    public init(wrappedValue: T) {
         self.internalValue = wrappedValue
     }
     
-    package func atomicMutate(_ mutation: (inout T) -> Void) {
+    public func atomicMutate(_ mutation: (inout T) -> Void) {
         lock.sync {
             mutation(&internalValue)
         }

@@ -7,22 +7,22 @@
 
 import Foundation
 
-package class StatAPIClient: StatAPIClientable {
+public class StatAPIClient: StatAPIClientable {
     private weak var requestQueue: RequestQueue?
-    package var deviceId: String = ""
+    public var deviceId: String = ""
 
     #if TESTCASE
         // For test
-        package var mockEnabled: Bool?
-        package var mockError: AuthError?
+        public var mockEnabled: Bool?
+        public var mockError: AuthError?
     #endif
 
-    package init(requestQueue: RequestQueue) {
+    public init(requestQueue: RequestQueue) {
         self.requestQueue = requestQueue
     }
 
     // NotificationStat을 제외한 나머지 Stat log만 전송
-    package func send<RecordStatType>(
+    public func send<RecordStatType>(
         stats: [RecordStatType]
     ) async throws where RecordStatType: BaseStatType {
         guard let requestQueue else {
@@ -67,7 +67,7 @@ package class StatAPIClient: StatAPIClientable {
     }
 
     // NotificationStat만 전송
-    package func sendNotificationStats(stats: [NotificationStat]) async throws {
+    public func sendNotificationStats(stats: [NotificationStat]) async throws {
         guard let requestQueue else {
             throw AuthClientError.invalidInitialization.asAuthError(message: "Request queue is not initialized.")
         }
@@ -109,12 +109,12 @@ package class StatAPIClient: StatAPIClientable {
         }
     }
 
-    package func setDeviceId(deviceId: String) {
+    public func setDeviceId(deviceId: String) {
         self.deviceId = deviceId
     }
 
     #if TESTCASE
-    package func setMockResult(enabled: Bool, error: AuthError?) {
+    public func setMockResult(enabled: Bool, error: AuthError?) {
         mockEnabled = enabled
         mockError = error
     }

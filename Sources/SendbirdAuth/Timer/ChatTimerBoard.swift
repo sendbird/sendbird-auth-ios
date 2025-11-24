@@ -6,7 +6,7 @@
 //
 import Foundation
 
-package protocol SBTimerBoardDelegate: AnyObject {
+public protocol SBTimerBoardDelegate: AnyObject {
     func add(timer: SBTimer)
     func remove(timer: SBTimer)
 }
@@ -16,8 +16,8 @@ extension SBTimerBoardDelegate {
     func remove(timer: SBTimer) {}
 }
 
-package class SBTimerBoard: SBTimerBoardDelegate {
-    package var timers: [SBTimer] {
+public class SBTimerBoard: SBTimerBoardDelegate {
+    public var timers: [SBTimer] {
         self.timerQueue.sync {
             return self.mutableTimers.filter { $0.valid }
         }
@@ -27,13 +27,13 @@ package class SBTimerBoard: SBTimerBoardDelegate {
     // Invalid timers are removed when `add(timer:)` is called.
     private var mutableTimers: [SBTimer] = []
     private let capacity: Int
-    package let timerQueue = SafeSerialQueue(
+    public let timerQueue = SafeSerialQueue(
         label: "com.sendbird.core.common.timer.board.\(UUID().uuidString)"
     )
     
-    package var first: SBTimer? { self.timers.first }
+    public var first: SBTimer? { self.timers.first }
     
-    package init(capacity: Int = Int(INT_MAX)) {
+    public init(capacity: Int = Int(INT_MAX)) {
         self.capacity = capacity
     }
     
@@ -41,11 +41,11 @@ package class SBTimerBoard: SBTimerBoardDelegate {
         self.stopAll()
     }
     
-    package func timer(identifier: String) -> SBTimer? {
+    public func timer(identifier: String) -> SBTimer? {
         return self.timers.first(where: { $0.identifier == identifier })
     }
     
-    package func stopAll() {
+    public func stopAll() {
         self.timerQueue.sync {
             for timer in self.mutableTimers {
                 timer.stop()
@@ -54,7 +54,7 @@ package class SBTimerBoard: SBTimerBoardDelegate {
     }
     
     // MARK: SBTimer Board Delegate
-    package func add(timer: SBTimer) {
+    public func add(timer: SBTimer) {
         self.timerQueue.sync {
             let timers = self.mutableTimers
             var validTimers = timers.filter { $0.valid }
@@ -77,7 +77,7 @@ package class SBTimerBoard: SBTimerBoardDelegate {
         }
     }
     
-    package func remove(timer: SBTimer) {
+    public func remove(timer: SBTimer) {
         self.timerQueue.sync {
             self.mutableTimers.removeAll { $0 === timer }
         }

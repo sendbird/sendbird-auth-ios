@@ -10,7 +10,7 @@ import Foundation
 /// A protocol that has interfaces for the stat collector.
 /// DefaultStatCollector, NotificationStatCollector, and DailyStatCollector conform this protocol.
 /// - Since: 4.18.0
-package protocol StatCollectorContract {
+public protocol StatCollectorContract {
     associatedtype RecordStatType: BaseStatType
     
     /// A config that defines when and how the stat collector uploads the appended stat logs.

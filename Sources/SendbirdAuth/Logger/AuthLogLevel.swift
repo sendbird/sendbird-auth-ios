@@ -7,7 +7,7 @@
 
 import Foundation
 
-package enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
+public enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
     case verbose
     case debug
     case info
@@ -15,9 +15,9 @@ package enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
     case error
     case none
     
-    package var priority: Logger.Priority { .loggerLevel }
+    public var priority: Logger.Priority { .loggerLevel }
     
-    package var symbol: String? {
+    public var symbol: String? {
         switch self {
         case .verbose:  return "verbose"
         case .debug:    return "debug"
@@ -28,7 +28,7 @@ package enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
         }
     }
     
-    package init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         
         let string = try container.decode(String.self)
@@ -42,13 +42,13 @@ package enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
         }
     }
     
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         if let symbol = self.symbol {
             try container.encode(symbol)
         }
     }
     
-    package static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
-    package static func == (lhs: Self, rhs: Self) -> Bool { lhs.rawValue == rhs.rawValue }
+    public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+    public static func == (lhs: Self, rhs: Self) -> Bool { lhs.rawValue == rhs.rawValue }
 }

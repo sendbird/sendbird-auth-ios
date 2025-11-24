@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol StatStorage {
+public protocol StatStorage {
     associatedtype Key: Hashable & Codable
     associatedtype Value: BaseStatType
     
@@ -27,7 +27,7 @@ package protocol StatStorage {
     var storageHelper: StatStorageHelper<Key, RecordStatType> { get }
 }
 
-package extension StatStorage {
+public extension StatStorage {
     func loadLastSentAt() -> Date {
         storageHelper.loadLastSentAt()
     }

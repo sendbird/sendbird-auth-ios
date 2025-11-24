@@ -8,26 +8,26 @@
 
 import Foundation
 
-package struct Queue<T> {
+public struct Queue<T> {
     private var elements: [T] = []
     
-    package var head: T? { elements.first }
-    package var tail: T? { elements.last }
+    public var head: T? { elements.first }
+    public var tail: T? { elements.last }
     
-    package var count: Int { elements.count }
-    package var isEmpty: Bool { elements.isEmpty }
-    package var hasElement: Bool { !elements.isEmpty }
+    public var count: Int { elements.count }
+    public var isEmpty: Bool { elements.isEmpty }
+    public var hasElement: Bool { !elements.isEmpty }
     
-    package init(contentsOf elements: [T] = []) {
+    public init(contentsOf elements: [T] = []) {
         self.elements = elements
     }
     
-    package mutating func enqueue(_ value: T) {
+    public mutating func enqueue(_ value: T) {
         elements.append(value)
     }
     
     @discardableResult
-    package mutating func dequeue() -> T? {
+    public mutating func dequeue() -> T? {
         guard !elements.isEmpty else {
             return nil
         }

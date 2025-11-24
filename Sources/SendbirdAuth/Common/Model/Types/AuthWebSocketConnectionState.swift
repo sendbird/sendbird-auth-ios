@@ -6,7 +6,7 @@
 //
 
 /// Connection state
-package enum AuthWebSocketConnectionState: String {
+public enum AuthWebSocketConnectionState: String {
     /// Connecting
     case connecting
     /// Open

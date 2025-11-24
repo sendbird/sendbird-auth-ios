@@ -7,7 +7,7 @@
 
 import Foundation
 
-package enum StatType: String, Codable, CaseIterable {
+public enum StatType: String, Codable, CaseIterable {
     // Default stats
     case webSocketConnect = "ws:connect"
     case webSocketDisconnect = "ws:disconnect"
@@ -20,7 +20,7 @@ package enum StatType: String, Codable, CaseIterable {
     // Notification stats
     case notificationStats = "noti:stats"
 
-    package var isExternal: Bool {
+    public var isExternal: Bool {
         switch self {
         case .apiResult, .webSocketConnect, .webSocketDisconnect, .featureLocalCache, .featureLocalCacheEvent:
             return false
@@ -29,7 +29,7 @@ package enum StatType: String, Codable, CaseIterable {
         }
     }
     
-    package var applicationAttributeAllowUse: AuthAppInfo.ApplicationAttribute {
+    public var applicationAttributeAllowUse: AuthAppInfo.ApplicationAttribute {
         switch self {
         case .apiResult, .webSocketConnect, .webSocketDisconnect:
             return .allowSDKRequestLogPublish

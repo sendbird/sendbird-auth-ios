@@ -7,10 +7,10 @@
 
 import Foundation
 
-package protocol InternalEvent: Command {
+public protocol InternalEvent: Command {
     var dispatchSynchronously: Bool { get }
 }
 
-package extension InternalEvent {
+public extension InternalEvent {
     var dispatchSynchronously: Bool { true }
 }

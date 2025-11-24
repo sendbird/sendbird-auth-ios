@@ -12,7 +12,7 @@ import UIKit
 import AppKit
 #endif
 
-package class SendbirdAuthMain: RequestHeaderDataSource, Dependency {
+public class SendbirdAuthMain: RequestHeaderDataSource, Dependency {
     private let userConnectionQueue = SafeSerialQueue(label: "com.sendbird.auth.state_manager_\(UUID().uuidString)")
     private let connectionOperationQueue: OperationQueue = {
         let queue = OperationQueue()
@@ -20,36 +20,43 @@ package class SendbirdAuthMain: RequestHeaderDataSource, Dependency {
         return queue
     }()
     
-    package var sessionDelegate: AuthSessionDelegate? {
+    public var sessionDelegate: AuthSessionDelegate? {
         sessionHandler.delegate(forKey: DelegateKeys.session)
     }
-    package var configTs: Int64? {
+    public var configTs: Int64? {
         SendbirdAuth.pref.value(forKey: PreferenceKey.configApiTs)
     }
-    package var sessionManager: SessionManager
+    public var sessionManager: SessionManager
 
-    package let config: SendbirdConfiguration
-    package let service: QueueService
-    package let stateData: ConnectionStateData
-    package let requestQueue: RequestQueue
-    package let router: CommandRouter
-    package let eventDispatcher: EventDispatcher
-    package let deviceConnectionManager: DeviceConnectionManager
-    package let statManager: StatManager
-    package let commonSharedData: CommonSharedData
-    package let localCachePreference: LocalPreferences
-    package let routerConfig: CommandRouterConfiguration
-    package let sessionHandler: SessionEventBroadcaster
+    public let config: SendbirdConfiguration
+    public let service: QueueService
+    public let stateData: ConnectionStateData
+    public let requestQueue: RequestQueue
+    public let router: CommandRouter
+    public let eventDispatcher: EventDispatcher
+    public let deviceConnectionManager: DeviceConnectionManager
+    public let statManager: StatManager
+    public let commonSharedData: CommonSharedData
+    public let localCachePreference: LocalPreferences
+    public let routerConfig: CommandRouterConfiguration
+    public let sessionHandler: SessionEventBroadcaster
     
-    package let isLocalCachingEnabled: Bool
-    package let applicationId: String
+    public let isLocalCachingEnabled: Bool
+    public let applicationId: String
     
-    @InternalAtomic package var requestHeaderContext: RequestHeadersContext?
-    package var logLevel: Logger.Level = .info
-    package var appVersion: String?
-    package var extensionVersions: [String: String]
-    package var extensionSdkInfo: String?  // corresponds to `sbSdkUserAgent`. new since 4.8.5
-    package var userConnectionManager: WebSocketManager {
+    #if TESTCASE
+    private var websocketEngine: (any ChatWebSocketEngine)? // For test
+    public func injectEngineForTest(_ engine: any ChatWebSocketEngine) {
+        self.websocketEngine = engine
+    }
+    #endif
+    
+    @InternalAtomic public var requestHeaderContext: RequestHeadersContext?
+    public var logLevel: Logger.Level = .info
+    public var appVersion: String?
+    public var extensionVersions: [String: String]
+    public var extensionSdkInfo: String?  // corresponds to `sbSdkUserAgent`. new since 4.8.5
+    public var userConnectionManager: WebSocketManager {
         get {
             userConnectionQueue.sync {
                 router.webSocketManager
@@ -62,7 +69,7 @@ package class SendbirdAuthMain: RequestHeaderDataSource, Dependency {
             }
         }
     }
-    package var connectState: AuthWebSocketConnectionState {
+    public var connectState: AuthWebSocketConnectionState {
         if stateData.applicationId.isEmpty {
             return .closed
         } else {
@@ -70,7 +77,7 @@ package class SendbirdAuthMain: RequestHeaderDataSource, Dependency {
         }
     }
     
-    package convenience init() {
+    public convenience init() {
         self.init(
             params: .init(
                 applicationId: "",
@@ -79,10 +86,10 @@ package class SendbirdAuthMain: RequestHeaderDataSource, Dependency {
         )
     }
     
-    package init(
+    public init(
         params: InternalInitParams,
         statAPIClient: StatAPIClientable? = nil,
-        webSocketEngine: ChatWebSocketEngine? = nil,
+        webSocketEngine: (any ChatWebSocketEngine)? = nil,
         httpClient: HTTPClientInterface? = nil,
         customRouterConfig: CommandRouterConfiguration? = nil,
         customSendbirdConfig: SendbirdConfiguration? = nil
@@ -220,7 +227,7 @@ package class SendbirdAuthMain: RequestHeaderDataSource, Dependency {
     
     /// Modules that use the `Auth` object can resolve all the modules that
     /// need to be newly resolved within their own module at once.
-    package func resolveDependency(with dependency: some Dependency) {
+    public func resolveDependency(with dependency: some Dependency) {
         Logger.main.debug("Resolving dependency with \(String(describing: dependency))")
         
         self.sessionManager.resolve(with: dependency)
@@ -246,7 +253,7 @@ extension SendbirdAuthMain: EventDelegate {
         )
     }
     
-    package func didReceiveSBCommandEvent(command: SBCommand) async {
+    public func didReceiveSBCommandEvent(command: SBCommand) async {
         switch command {
         case let event as SessionExpiredEvent:
             if event.reason?.asAuthError.shouldRevokeSession == true {
@@ -256,7 +263,7 @@ extension SendbirdAuthMain: EventDelegate {
         }
     }
     
-    package func didReceiveInternalEvent(command: InternalEvent) {
+    public func didReceiveInternalEvent(command: InternalEvent) {
         switch command {
         case is ConnectionStateEvent.Logout:
             reset()
@@ -307,7 +314,7 @@ extension SendbirdAuthMain: EventDelegate {
 
 // MARK: - SessionManagerDelegate
 extension SendbirdAuthMain: SessionManagerDelegate {
-    package func reset() {
+    public func reset() {
         stateData.clear()
         sessionManager.logout()
         requestQueue.stateData?.clear()
@@ -319,7 +326,7 @@ extension SendbirdAuthMain: SessionManagerDelegate {
         localCachePreference.removeAll()
     }
     
-    package func disconnect(isExplicit: Bool = false, completionHandler: VoidHandler? = nil) {
+    public func disconnect(isExplicit: Bool = false, completionHandler: VoidHandler? = nil) {
         Logger.main.debug("disconnect. currentUser: \(sessionManager.userId), services: \(String(describing: sessionManager.session?.services))")
         if sessionManager.session?.services == [.feed] {
             // If Websocket is not being used, call reset in order to clean up any resources from API Auth
@@ -331,22 +338,22 @@ extension SendbirdAuthMain: SessionManagerDelegate {
         }
     }
     
-    package func disconnectWebSocket(completionHandler: VoidHandler? = nil) {
+    public func disconnectWebSocket(completionHandler: VoidHandler? = nil) {
         Logger.main.debug()
         router.webSocketManager.disconnectWebSocket(completionHandler: completionHandler)
     }
     
     @discardableResult
-    package func reconnect(reconnectedBy: ReconnectingTrigger?) -> Bool {
+    public func reconnect(reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.main.debug("reconnect by \(String(describing: reconnectedBy?.rawValue))")
         return sessionManager.reconnect(reconnectedBy: reconnectedBy)
     }
     
-    package func sessionReconnectRequired() {
+    public func sessionReconnectRequired() {
         reconnect(reconnectedBy: .refreshedSessionKey)
     }
     
-    package func sessionReconnectIfNeeded() {
+    public func sessionReconnectIfNeeded() {
         if deviceConnectionManager.isForeground
             && !requestQueue.router.connected
             && !(userConnectionManager.state is ExternalDisconnectedState) {
@@ -354,9 +361,9 @@ extension SendbirdAuthMain: SessionManagerDelegate {
         }
     }
     
-    package func sessionKeyChanged(_ value: String?) { }
+    public func sessionKeyChanged(_ value: String?) { }
     
-    package func sessionRefreshFailed() {
+    public func sessionRefreshFailed() {
         if router.webSocketManager.isReconnecting {
             deviceConnectionManager.broadcaster.failedReconnection()
             disconnect()
@@ -366,7 +373,7 @@ extension SendbirdAuthMain: SessionManagerDelegate {
 
 // MARK: - Connect
 extension SendbirdAuthMain {
-    package func connect(
+    public func connect(
         userId: String,
         accessToken: String? = nil,
         apiHost: String? = nil,
@@ -470,7 +477,7 @@ extension SendbirdAuthMain {
         }
     }
     
-    package func resetConnectionState(userId: String) {
+    public func resetConnectionState(userId: String) {
         Logger.main.debug()
         // Create new session manager
         let sessionManager = SessionManager(
@@ -492,13 +499,10 @@ extension SendbirdAuthMain {
         // Create new websocket
         #if TESTCASE // For testing
         let websocketClient = router.webSocketManager.webSocketClient as? ChatWebSocketClient
-        let engine = MockInstance.pop(key: .chatWebSocketEngine) ?? websocketClient?.getEngine()?.createNewWebSocketEngine()
+        let engine = self.websocketEngine ?? websocketClient?.getEngine().createNewWebSocketEngine()
         #else
-        let engine: ChatWebSocketEngine? = nil
+        let engine: (any ChatWebSocketEngine)? = nil
         #endif
-        
-        // Remove all delegates from the previous WebSocketManager
-        router.webSocketManager.webSocketClient.delegates.removeAllObjects()
         
         let webSocketManager = WebSocketManager(
             userId: userId,
@@ -534,7 +538,7 @@ extension SendbirdAuthMain {
 
 // MARK: - Authenticate
 extension SendbirdAuthMain {
-    package func authenticate(
+    public func authenticate(
         userId: String,
         authData: AuthData? = nil,
         apiHost: String? = nil,
@@ -656,21 +660,21 @@ extension SendbirdAuthMain {
 }
 
 // MARK: - Configuration
-package extension SendbirdAuthMain {
+public extension SendbirdAuthMain {
     struct Constants {
-        package static let premiumFeatureList = "premium_feature_list"
-        package static let fileUploadSizeLimit = "file_upload_size_limit"
-        package static let emojiHash = "emoji_hash"
-        package static let applicationAttributes = "application_attributes"
-        package static let notifications = "notifications"
-        package static let messageTemplate = "message_template"
-        package static let aiAgent = "ai_agent"
+        public static let premiumFeatureList = "premium_feature_list"
+        public static let fileUploadSizeLimit = "file_upload_size_limit"
+        public static let emojiHash = "emoji_hash"
+        public static let applicationAttributes = "application_attributes"
+        public static let notifications = "notifications"
+        public static let messageTemplate = "message_template"
+        public static let aiAgent = "ai_agent"
         
-        package static let extensionUIKit = "sb_uikit"
-        package static let extensionSyncManager = "sb_syncmanager"
-        package static let extensionSwiftUI = "sb_swiftui"
+        public static let extensionUIKit = "sb_uikit"
+        public static let extensionSyncManager = "sb_syncmanager"
+        public static let extensionSwiftUI = "sb_swiftui"
         
-        package static let loginTimerHandlerKey = "login_timer_handler"
+        public static let loginTimerHandlerKey = "login_timer_handler"
     }
     
     var sdkVersion: String {

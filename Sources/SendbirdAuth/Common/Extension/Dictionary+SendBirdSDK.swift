@@ -7,7 +7,7 @@
 
 import Foundation
 
-package extension Dictionary {
+public extension Dictionary {
     init(data: Data?) throws {
         guard let data = data,
               let jsonDict = try? JSONSerialization.jsonObject(
@@ -55,10 +55,10 @@ func == <K, L: Hashable, R: Hashable>(lhs: [K: L], rhs: [K: R]) -> Bool {
    (lhs as NSDictionary).isEqual(to: rhs)
 }
 
-package extension Dictionary where Value == AnyCodable {
+public extension Dictionary where Value == AnyCodable {
     var anyValue: [Key: Any] { compactMapValues { $0.anyValue } } // anyValue 가 null 인 경우, 필드키가 제거됨.
 }
 
-package extension Dictionary where Value == Any {
+public extension Dictionary where Value == Any {
     var anyCodable: [Key: AnyCodable] { self.mapValues { AnyCodable($0) } }
 }

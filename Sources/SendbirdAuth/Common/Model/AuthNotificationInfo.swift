@@ -7,16 +7,16 @@
 
 import Foundation
 
-package class AuthNotificationInfo: NSObject, Codable {
-    package var isEnabled: Bool = false
+public class AuthNotificationInfo: NSObject, Codable {
+    public var isEnabled: Bool = false
 
-    package var templateListToken: String = ""
+    public var templateListToken: String = ""
     
-    package var settingsUpdatedAt: Int64 = 0
+    public var settingsUpdatedAt: Int64 = 0
     
-    package var feedChannels: [String: String] = [:]
+    public var feedChannels: [String: String] = [:]
     
-    package init(
+    public init(
         isEnabled: Bool,
         templateListToken: String,
         settingsUpdatedAt: Int64,
@@ -28,7 +28,7 @@ package class AuthNotificationInfo: NSObject, Codable {
         self.feedChannels = feedChannels
     }
     
-    package func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         
         try container.encodeIfPresent(isEnabled, forKey: .enabled)
@@ -40,7 +40,7 @@ package class AuthNotificationInfo: NSObject, Codable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    package required init(from decoder: Decoder) throws {
+    public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         self.isEnabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false

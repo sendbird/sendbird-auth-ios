@@ -7,116 +7,75 @@
 
 import Foundation
 
-package class ConnectionEventBroadcaster: EventBroadcaster {
-    package let service: QueueService
-    package let delegates: NSMapTable<NSString, AuthConnectionDelegate>
-    
-    required package init(_ service: QueueService, mapTableValueOption: NSPointerFunctions.Options) {
+public class ConnectionEventBroadcaster: EventBroadcaster {
+    public let service: QueueService
+    public let delegates: NSMapTable<NSString, AuthConnectionDelegate>
+    public let delegateLock: NSLock
+
+    required public init(_ service: QueueService, mapTableValueOption: NSPointerFunctions.Options) {
         self.delegates = NSMapTable(keyOptions: .strongMemory, valueOptions: mapTableValueOption)
         self.service = service
+        self.delegateLock = NSLock()
     }
     
-    package func startedReconnection() {
+    public func startedReconnection() {
         broadcast { $0.didStartReconnection?() }
     }
     
-    package func succeededReconnection() {
+    public func succeededReconnection() {
         broadcast { $0.didSucceedReconnection?() }
     }
     
-    package func failedReconnection() {
+    public func failedReconnection() {
         broadcast { $0.didFailReconnection?() }
     }
     
-    package func connected(userId: String) {
+    public func connected(userId: String) {
         broadcast { $0.didConnect?(userId: userId) }
     }
     
-    package func disconnected(userId: String) {
+    public func disconnected(userId: String) {
         broadcast { $0.didDisconnect?(userId: userId) }
     }
     
-    /// - Since: [NEXT_VERSION]
-    package func delayedConnection(retryAfter: UInt) {
+    /// - Since: 4.34.0
+    public func delayedConnection(retryAfter: UInt) {
         broadcast { $0.didDelayConnection?(retryAfter: retryAfter) }
     }
 }
 
-package class NetworkEventBroadcaster: EventBroadcaster {
-    package let service: QueueService
-    package let delegates: NSMapTable<NSString, NetworkDelegate>
-    
-    required package init(_ service: QueueService) {
+public class NetworkEventBroadcaster: EventBroadcaster {
+    public let service: QueueService
+    public let delegates: NSMapTable<NSString, NetworkDelegate>
+    public let delegateLock: NSLock
+
+    required public init(_ service: QueueService) {
         self.delegates = NSMapTable(keyOptions: .strongMemory, valueOptions: .weakMemory)
         self.service = service
+        self.delegateLock = NSLock()
     }
     
-    package func reconnected() {
+    public func reconnected() {
         self.broadcast { $0.didReconnect() }
     }
 }
 
-package class InternalConnectionEventBroadcaster {
-    let service: QueueService
-    private var delegates: [String: InternalConnectionDelegate]
-    
-    required package init(_ service: QueueService) {
-        self.delegates = [:]
-//        NSMapTable(keyOptions: .strongMemory, valueOptions: .weakMemory)
+public class InternalConnectionEventBroadcaster: EventBroadcaster {
+    public let service: QueueService
+    public let delegates: NSMapTable<NSString, InternalConnectionDelegate>
+    public let delegateLock: NSLock
+
+    required public init(_ service: QueueService) {
+        self.delegates = NSMapTable(keyOptions: .strongMemory, valueOptions: .weakMemory)
         self.service = service
+        self.delegateLock = NSLock()
     }
     
-    package func addDelegate(_ delegate: InternalConnectionDelegate, forKey key: String) {
-        service {
-            self.delegates[key] = delegate
-        }
+    public func internalDisconnected() {
+        broadcast { $0.didInternalDisconnect() }
     }
     
-    package func delegate(forKey: String) -> InternalConnectionDelegate? {
-        var delegate: InternalConnectionDelegate?
-        service {
-            delegate = self.delegates[forKey]
-        }
-        return delegate
-    }
-    
-    package func removeDelegate(forKey key: String) {
-        service {
-            self.delegates.removeValue(forKey: key)
-        }
-    }
-    
-    package func removeAllDelegates() {
-        service {
-            self.delegates.removeAll()
-        }
-    }
-    
-    package func internalDisconnected() {
-        service { [weak self] in
-            guard let self else {
-                return
-            }
-            
-            self.delegates
-                .values
-                .forEach {
-                    $0.didInternalDisconnect()
-                }
-        }
-    }
-    
-    package func externalDisconnected() {
-        service { [weak self] in
-            guard let self else {
-                return
-            }
-            
-            self.delegates
-                .values
-                .forEach {
-                    $0.didExternalDisconnect()
-                }
-        }
+    public func externalDisconnected() {
+        broadcast { $0.didExternalDisconnect() }
     }
 }

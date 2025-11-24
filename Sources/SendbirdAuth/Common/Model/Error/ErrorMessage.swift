@@ -5,8 +5,8 @@
 //  Created by Kai Lee on 7/3/25.
 //
 
-package enum ErrorMessage: CustomStringConvertible {
-    package var description: String {
+public enum ErrorMessage: CustomStringConvertible {
+    public var description: String {
         switch self {
         case .notAuthorized: return "Not authorized to call"
         case .requestNotSupport: return "Not supported request type"

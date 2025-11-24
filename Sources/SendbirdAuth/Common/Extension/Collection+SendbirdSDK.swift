@@ -6,5 +6,5 @@
 //
 
 extension Collection {
-    package var hasElements: Bool { isEmpty == false }
+    public var hasElements: Bool { isEmpty == false }
 }

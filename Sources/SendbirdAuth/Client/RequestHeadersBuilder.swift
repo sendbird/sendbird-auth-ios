@@ -7,11 +7,11 @@
 
 import Foundation
 
-package final class RequestHeadersBuilder {
+public final class RequestHeadersBuilder {
     
     private var params: [String: String?]
     
-    package init(_ params: [String: String?] = [:]) {
+    public init(_ params: [String: String?] = [:]) {
         self.params = params
     }
     
@@ -19,7 +19,7 @@ package final class RequestHeadersBuilder {
     /// - Parameters:
     ///   - key: The param key
     ///   - value: The param value
-    package func append(key: String, value: String?) {
+    public func append(key: String, value: String?) {
         params[key] = value
     }
     
@@ -27,13 +27,13 @@ package final class RequestHeadersBuilder {
     /// - Parameters:
     ///   - key: The param key
     ///   - value: The boolean param value
-    package func append(key: String, value: Bool) {
+    public func append(key: String, value: Bool) {
         params[key] = "\(value.asInt)"
     }
     
     /// Builds joined text for URL
     /// - Returns: The text for url params
-    package func buildString() -> String {
+    public func buildString() -> String {
         return params.compactMapValues { $0 }
             .map { "\($0.key)=\($0.value)" }
             .joined(separator: "&")
@@ -41,7 +41,7 @@ package final class RequestHeadersBuilder {
     
     /// Builds JSON Dictionary for header
     /// - Returns: The JSON Dictionary for header
-    package func buildDictionary() -> [String: String] {
+    public func buildDictionary() -> [String: String] {
         return params.compactMapValues { $0 }
     }
 }

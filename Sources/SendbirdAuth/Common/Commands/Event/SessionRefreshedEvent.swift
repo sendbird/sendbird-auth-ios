@@ -7,12 +7,12 @@
 
 import Foundation
 
-package struct SessionRefreshedEvent: Decodable, SBCommand {
-    package let cmd: CommandType = .login
+public struct SessionRefreshedEvent: Decodable, SBCommand {
+    public let cmd: CommandType = .login
     
-    package let sessionKey: String?
+    public let sessionKey: String?
     
-    package init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         Logger.session.info("Got a new session key.")

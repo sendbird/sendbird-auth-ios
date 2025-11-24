@@ -7,7 +7,7 @@
 
 import Foundation
 
-package extension String {
+public extension String {
     var hasElements: Bool { isEmpty == false }
     
     var collapsed: String? { isEmpty ? nil : self }
@@ -103,7 +103,7 @@ package extension String {
 }
 
 extension String {
-    package init?(data: Data?) {
+    public init?(data: Data?) {
         guard let theData = data else {
             return nil
         }
@@ -111,12 +111,12 @@ extension String {
         self.init(data: theData, encoding: .utf8)
     }
     
-    package init(prefix: String) {
+    public init(prefix: String) {
         let compound = prefix + "." + UUID().uuidString
         self.init(compound)
     }
     
-    package func trunc(length: Int, trailing: String = "…") -> String {
+    public func trunc(length: Int, trailing: String = "…") -> String {
         return (self.count > length) ? self.prefix(length) + trailing : self
     }
     
@@ -124,7 +124,7 @@ extension String {
 //        return UUID().uuidString
 //    }
     
-    package var urlEncoded: String {
+    public var urlEncoded: String {
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: ".-_~ ")
         

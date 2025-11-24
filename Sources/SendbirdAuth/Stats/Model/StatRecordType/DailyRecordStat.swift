@@ -7,15 +7,15 @@
 
 import Foundation
 
-package final class DailyRecordStat: BaseStat {
-    package var key: DailyRecordKey {
+public final class DailyRecordStat: BaseStat {
+    public var key: DailyRecordKey {
         DailyRecordKey(
             date: Date(milliSeconds: timestamp),
             statType: statType
         )
     }
     
-    package func updated(with newValue: DailyRecordStat) -> DailyRecordStat {
+    public func updated(with newValue: DailyRecordStat) -> DailyRecordStat {
         let updatedData = mergeNestedData(existing: self.data ?? [:], new: newValue.data ?? [:])
         
         return DailyRecordStat(
@@ -63,26 +63,26 @@ package final class DailyRecordStat: BaseStat {
     }
 }
 
-package struct DailyRecordKey: Codable, Hashable {
+public struct DailyRecordKey: Codable, Hashable {
     private static let dateFormatter: DateFormatter = {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd"
         return dateFormatter
     }()
 
-    package let formattedDate: String
-    package let statType: StatType
+    public let formattedDate: String
+    public let statType: StatType
     
-    package init(date: Date, statType: StatType) {
+    public init(date: Date, statType: StatType) {
         self.formattedDate = Self.dateFormatter.string(from: date)
         self.statType = statType
     }
     
-    package func isSameDate(with other: Date) -> Bool {
+    public func isSameDate(with other: Date) -> Bool {
         return self.formattedDate == Self.dateFormatter.string(from: other)
     }
     
-    package func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(formattedDate)
         hasher.combine(statType)
     }

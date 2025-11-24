@@ -14,7 +14,7 @@ import MobileCoreServices
 import CoreServices
 #endif
 
-package extension String {
+public extension String {
     func inferMimeType(with file: Data?) -> String? {
         guard file != nil else { return nil }
         
@@ -29,7 +29,7 @@ package extension String {
     }
 }
 
-package extension Data {
+public extension Data {
     func inferMimeType() -> String {
         var c = [UInt8](repeating: 0, count: self.count)
         
@@ -182,7 +182,7 @@ package extension Data {
     }
 }
 
-package extension URL {
+public extension URL {
     func inferMimeType() -> String? {
         guard let uti = UTTypeCreatePreferredIdentifierForTag(
                 kUTTagClassFilenameExtension, pathExtension as CFString, nil
