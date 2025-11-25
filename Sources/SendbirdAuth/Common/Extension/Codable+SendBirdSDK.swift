@@ -43,17 +43,13 @@ extension Encodable {
     }
 }
 
-extension Decodable {
-    /// Initializes an object with json dictionary
-    ///
-    /// - Parameter json: Dictionary, such as json.
-    /// - Returns: Sendbird object type if parameter is valid, otherwise `nil`
-    /// - Since: 4.0.15
-    static func make(_ json: [AnyHashable: Any]) -> Self? {
-        return Self.make(from: json, decoder: SendbirdAuth.authDecoder)
+// Internal method for chat
+public extension Decodable {
+    static func _make(_ json: [AnyHashable: Any]) -> Self? {
+        return Self._make(from: json, decoder: SendbirdAuth.authDecoder)
     }
     
-    static public func make(from json: [AnyHashable: Any], decoder: JSONDecoder) -> Self? {
+    static func _make(from json: [AnyHashable: Any], decoder: JSONDecoder) -> Self? {
         do {
             let data = try JSONSerialization.data(withJSONObject: json, options: [])
             let object = try decoder.decode(Self.self, from: data)

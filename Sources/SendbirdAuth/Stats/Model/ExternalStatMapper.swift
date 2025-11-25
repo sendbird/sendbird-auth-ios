@@ -26,7 +26,7 @@ public struct ExternalStatMapper {
         }
         
         return StatCodableWrapper
-            .make(from: jsonDictionary, decoder: SendbirdAuth.authDecoder)?
+            ._make(from: jsonDictionary, decoder: SendbirdAuth.authDecoder)?
             .baseStat
     }
 }

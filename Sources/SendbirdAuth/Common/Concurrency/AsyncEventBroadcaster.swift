@@ -7,7 +7,7 @@
 
 import Foundation
 
-public actor AsyncEventBroadcaster<T> {
+actor AsyncEventBroadcaster<T> {
     struct Subscriber {
         let id: UUID
         let continuation: AsyncStream<T>.Continuation
