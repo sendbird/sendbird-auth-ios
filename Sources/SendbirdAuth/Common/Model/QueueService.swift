@@ -35,11 +35,11 @@ extension QueueService: CustomDebugStringConvertible {
 
 // MARK: - QueueServiceUsable
 
-protocol QueueServiceUsable {
+@_spi(SendbirdInternal) public protocol QueueServiceUsable {
     func callAsFunction(task: VoidHandler?)
 }
 
-extension QueueService: QueueServiceUsable { }
+@_spi(SendbirdInternal) extension QueueService: QueueServiceUsable { }
 
 @_spi(SendbirdInternal) extension DispatchQueue: QueueServiceUsable {
     @_spi(SendbirdInternal) public func callAsFunction(task: VoidHandler?) {
@@ -49,8 +49,8 @@ extension QueueService: QueueServiceUsable { }
     }
 }
 
-extension Optional where Wrapped: QueueServiceUsable {
-    func orMain() -> QueueServiceUsable {
+@_spi(SendbirdInternal) extension Optional where Wrapped: QueueServiceUsable {
+    @_spi(SendbirdInternal) public func orMain() -> QueueServiceUsable {
         switch self {
         case .some(let queue):
             return queue
