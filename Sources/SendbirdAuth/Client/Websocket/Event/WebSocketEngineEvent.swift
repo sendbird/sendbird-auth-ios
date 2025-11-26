@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum WebSocketEngineEvent {
+@_spi(SendbirdInternal) public enum WebSocketEngineEvent {
     case opened
     case closed(closeCode: URLSessionWebSocketTask.CloseCode, reason: String?)
     case received(URLSessionWebSocketTask.Message)

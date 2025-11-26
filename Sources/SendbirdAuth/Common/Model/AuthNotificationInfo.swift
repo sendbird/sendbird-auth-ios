@@ -7,16 +7,16 @@
 
 import Foundation
 
-public class AuthNotificationInfo: NSObject, Codable {
-    public var isEnabled: Bool = false
+@_spi(SendbirdInternal) public class AuthNotificationInfo: NSObject, Codable {
+    @_spi(SendbirdInternal) public var isEnabled: Bool = false
 
-    public var templateListToken: String = ""
+    @_spi(SendbirdInternal) public var templateListToken: String = ""
     
-    public var settingsUpdatedAt: Int64 = 0
+    @_spi(SendbirdInternal) public var settingsUpdatedAt: Int64 = 0
     
-    public var feedChannels: [String: String] = [:]
+    @_spi(SendbirdInternal) public var feedChannels: [String: String] = [:]
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         isEnabled: Bool,
         templateListToken: String,
         settingsUpdatedAt: Int64,
@@ -28,7 +28,7 @@ public class AuthNotificationInfo: NSObject, Codable {
         self.feedChannels = feedChannels
     }
     
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         
         try container.encodeIfPresent(isEnabled, forKey: .enabled)
@@ -40,7 +40,7 @@ public class AuthNotificationInfo: NSObject, Codable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    public required init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         self.isEnabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false

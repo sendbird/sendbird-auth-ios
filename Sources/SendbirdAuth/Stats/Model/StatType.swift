@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum StatType: String, Codable, CaseIterable {
+@_spi(SendbirdInternal) public enum StatType: String, Codable, CaseIterable {
     // Default stats
     case webSocketConnect = "ws:connect"
     case webSocketDisconnect = "ws:disconnect"
@@ -20,7 +20,7 @@ public enum StatType: String, Codable, CaseIterable {
     // Notification stats
     case notificationStats = "noti:stats"
 
-    public var isExternal: Bool {
+    @_spi(SendbirdInternal) public var isExternal: Bool {
         switch self {
         case .apiResult, .webSocketConnect, .webSocketDisconnect, .featureLocalCache, .featureLocalCacheEvent:
             return false
@@ -29,7 +29,7 @@ public enum StatType: String, Codable, CaseIterable {
         }
     }
     
-    public var applicationAttributeAllowUse: AuthAppInfo.ApplicationAttribute {
+    @_spi(SendbirdInternal) public var applicationAttributeAllowUse: AuthAppInfo.ApplicationAttribute {
         switch self {
         case .apiResult, .webSocketConnect, .webSocketDisconnect:
             return .allowSDKRequestLogPublish

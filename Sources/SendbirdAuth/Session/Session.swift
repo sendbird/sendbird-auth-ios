@@ -7,28 +7,28 @@
 
 import Foundation
 
-public struct Session: Codable, Equatable, Comparable {
-    public init(key: String, services: [Session.Service], isDirty: Bool = false) {
+@_spi(SendbirdInternal) public struct Session: Codable, Equatable, Comparable {
+    @_spi(SendbirdInternal) public init(key: String, services: [Session.Service], isDirty: Bool = false) {
         self.key = key
         self.services = services
         self.isDirty = isDirty
     }
     
-    public struct Constants {
-        public static let sessionKeyPath = "com.sendbird.sdk.messaging.sessionkey"
-        public static let userIdKeyPath = "com.sendbird.sdk.messaging.userid"
-        public static let suiteName = "com.sendbird.sdk.manager.session"
-        public static let queueName = "com.sendbird.sdk.messaging.sessionKey.queue"
+    @_spi(SendbirdInternal) public struct Constants {
+        @_spi(SendbirdInternal) public static let sessionKeyPath = "com.sendbird.sdk.messaging.sessionkey"
+        @_spi(SendbirdInternal) public static let userIdKeyPath = "com.sendbird.sdk.messaging.userid"
+        @_spi(SendbirdInternal) public static let suiteName = "com.sendbird.sdk.manager.session"
+        @_spi(SendbirdInternal) public static let queueName = "com.sendbird.sdk.messaging.sessionKey.queue"
     }
     
     // Service value that is used to control the API scope that is accessible via the session key
     // Refer to https://sendbird.atlassian.net/wiki/spaces/SDK/pages/2376695899/Extended+MAU
-    public enum Service: String, Codable {
+    @_spi(SendbirdInternal) public enum Service: String, Codable {
         case feed
         case chat
         case chatAPI = "chat_api"
         
-        public var intValue: Int {
+        @_spi(SendbirdInternal) public var intValue: Int {
             switch self {
             case .feed: return 1
             case .chat: return 2
@@ -37,32 +37,32 @@ public struct Session: Codable, Equatable, Comparable {
         }
     }
     
-    public let key: String
-    public let services: [Service]
-    public let isDirty: Bool
+    @_spi(SendbirdInternal) public let key: String
+    @_spi(SendbirdInternal) public let services: [Service]
+    @_spi(SendbirdInternal) public let isDirty: Bool
     
-    public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         self.key = try container.decode(String.self, forKey: .key)
         self.services = try container.decode([Service].self, forKey: .services)
         self.isDirty = false
     }
     
-    public static func == (lhs: Session, rhs: Session) -> Bool {
+    @_spi(SendbirdInternal) public static func == (lhs: Session, rhs: Session) -> Bool {
         return lhs.key == rhs.key && lhs.services == rhs.services
     }
     
-    public static func < (lhs: Session, rhs: Session) -> Bool {
+    @_spi(SendbirdInternal) public static func < (lhs: Session, rhs: Session) -> Bool {
         return lhs.services.map { $0.intValue }.reduce(0, +) < rhs.services.map { $0.intValue }.reduce(0, +)
     }
     
-    public func isLargerScope(than other: Session) -> Bool {
+    @_spi(SendbirdInternal) public func isLargerScope(than other: Session) -> Bool {
         return self > other
     }
 }
 
 extension Session {
-    public static func buildFromUserDefaults(for userId: String? = nil) -> Self? {
+    @_spi(SendbirdInternal) public static func buildFromUserDefaults(for userId: String? = nil) -> Self? {
         guard let userDefault = UserDefaults(suiteName: Constants.suiteName),
               let encryptedUserId = userDefault.string(forKey: Constants.userIdKeyPath) else {
             Logger.session.verbose(" failed with no saved encrypted user Id")
@@ -95,7 +95,7 @@ extension Session {
         
     }
     
-    public static func saveToUserDefaults(session: Session, userId: String?) {
+    @_spi(SendbirdInternal) public static func saveToUserDefaults(session: Session, userId: String?) {
         guard let userDefaults = UserDefaults(suiteName: Constants.suiteName) else {
             Logger.session.verbose(" failed with invalid user defaults suite")
             return
@@ -121,7 +121,7 @@ extension Session {
         userDefaults.set(encryptedData, forKey: Constants.sessionKeyPath)
     }
     
-    public static func clearUserDefaults() {
+    @_spi(SendbirdInternal) public static func clearUserDefaults() {
         guard let userDefaults = UserDefaults(suiteName: Constants.suiteName) else {
             Logger.session.verbose(" failed with invalid user defaults suite")
             return

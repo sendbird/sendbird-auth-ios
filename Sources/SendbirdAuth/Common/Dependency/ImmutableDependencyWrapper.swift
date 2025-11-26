@@ -6,14 +6,14 @@
 //
 
 @propertyWrapper
-public struct ImmutableDependencyWrapper<T> {
+@_spi(SendbirdInternal) public struct ImmutableDependencyWrapper<T> {
     @DependencyWrapper private var value: T?
     
-    public init() {
+    @_spi(SendbirdInternal) public init() {
         self._value = DependencyWrapper<T>()
     }
 
-    public var wrappedValue: T? {
+    @_spi(SendbirdInternal) public var wrappedValue: T? {
         get {
             value
         }

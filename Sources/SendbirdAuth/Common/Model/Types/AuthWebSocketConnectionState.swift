@@ -6,7 +6,7 @@
 //
 
 /// Connection state
-public enum AuthWebSocketConnectionState: String {
+@_spi(SendbirdInternal) public enum AuthWebSocketConnectionState: String {
     /// Connecting
     case connecting
     /// Open

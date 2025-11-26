@@ -8,20 +8,20 @@
 import Foundation
 
 /// Debounced: Dispatches the latest request after the debounce delay.
-public actor DebouncedRequestSender: WebSocketRequestSendable {
-    public let sendHandler: WebSocketRequestHandler
+@_spi(SendbirdInternal) public actor DebouncedRequestSender: WebSocketRequestSendable {
+    @_spi(SendbirdInternal) public let sendHandler: WebSocketRequestHandler
     
     private let debounceDelay: TimeInterval
     private var pendingFireTask: Task<Void, Error>?
     
     private let defaultDebounceDelay = 0.5
     
-    public init(debounceDelay: TimeInterval? = nil, sendHandler: @escaping WebSocketRequestHandler) {
+    @_spi(SendbirdInternal) public init(debounceDelay: TimeInterval? = nil, sendHandler: @escaping WebSocketRequestHandler) {
         self.sendHandler = sendHandler
         self.debounceDelay = debounceDelay ?? defaultDebounceDelay
     }
     
-    public func send(_ request: some ResultableWSRequest) async {
+    @_spi(SendbirdInternal) public func send(_ request: some ResultableWSRequest) async {
         // Cancel the pending fire task if there is any.
         pendingFireTask?.cancel()
         pendingFireTask = Task { [weak self] in

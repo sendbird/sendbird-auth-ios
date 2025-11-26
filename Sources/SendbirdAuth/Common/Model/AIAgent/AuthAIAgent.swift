@@ -7,18 +7,18 @@
 
 import Foundation
 
-public class AuthAIAgent {
+@_spi(SendbirdInternal) public class AuthAIAgent {
     /// - Since: 4.26.0
-    public class Info: NSObject, Codable {
-        public var templateListToken: String?
+    @_spi(SendbirdInternal) public class Info: NSObject, Codable {
+        @_spi(SendbirdInternal) public var templateListToken: String?
         
-        public init(
+        @_spi(SendbirdInternal) public init(
             templateListToken: String? = nil
         ) {
             self.templateListToken = templateListToken
         }
         
-        public func encode(to encoder: Encoder) throws {
+        @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodeCodingKeys.self)
             
             try container.encodeIfPresent(templateListToken, forKey: .templateListToken)
@@ -27,7 +27,7 @@ public class AuthAIAgent {
         /// Default constructor.
         ///
         /// - Parameter decoder: `Decoder` instance
-        public required init(from decoder: Decoder) throws {
+        @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodeCodingKeys.self)
             
             self.templateListToken = try container.decodeIfPresent(String.self, forKey: .templateListToken)

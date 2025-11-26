@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
+@_spi(SendbirdInternal) public enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
     case verbose
     case debug
     case info
@@ -15,9 +15,9 @@ public enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
     case error
     case none
     
-    public var priority: Logger.Priority { .loggerLevel }
+    @_spi(SendbirdInternal) public var priority: Logger.Priority { .loggerLevel }
     
-    public var symbol: String? {
+    @_spi(SendbirdInternal) public var symbol: String? {
         switch self {
         case .verbose:  return "verbose"
         case .debug:    return "debug"
@@ -28,7 +28,7 @@ public enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
         }
     }
     
-    public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         
         let string = try container.decode(String.self)
@@ -42,13 +42,13 @@ public enum AuthLogLevel: Int, LogSymbol, Comparable, Codable {
         }
     }
     
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         if let symbol = self.symbol {
             try container.encode(symbol)
         }
     }
     
-    public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
-    public static func == (lhs: Self, rhs: Self) -> Bool { lhs.rawValue == rhs.rawValue }
+    @_spi(SendbirdInternal) public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+    @_spi(SendbirdInternal) public static func == (lhs: Self, rhs: Self) -> Bool { lhs.rawValue == rhs.rawValue }
 }

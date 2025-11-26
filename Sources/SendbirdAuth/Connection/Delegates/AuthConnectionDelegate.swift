@@ -8,14 +8,14 @@
 import Foundation
 
 @objc(SBDInternalConnectionDelegate)
-public protocol InternalConnectionDelegate {
+@_spi(SendbirdInternal) public protocol InternalConnectionDelegate {
     func didInternalDisconnect()
     
     func didExternalDisconnect()
 }
 
 @objc(SBDAuthConnectionDelegate)
-public protocol AuthConnectionDelegate {
+@_spi(SendbirdInternal) public protocol AuthConnectionDelegate {
     @objc
     optional func didStartReconnection()
 

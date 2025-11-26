@@ -7,18 +7,18 @@
 
 import Foundation
 
-public struct StatCodableWrapper<StatType: BaseStatType>: Codable {
-    public let baseStat: StatType
+@_spi(SendbirdInternal) public struct StatCodableWrapper<StatType: BaseStatType>: Codable {
+    @_spi(SendbirdInternal) public let baseStat: StatType
         
-    public init(baseStat: StatType) {
+    @_spi(SendbirdInternal) public init(baseStat: StatType) {
         self.baseStat = baseStat
     }
     
-    public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         baseStat = try StatType.init(from: decoder)
     }
     
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         try baseStat.encode(to: encoder)
     }
 }

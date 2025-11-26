@@ -7,28 +7,28 @@
 
 import Foundation
 
-public class NotificationStatCollector: StatCollectorContract {
-    public var statConfig: StatConfig
-    public var enabled: Bool = true
-    public var storage: NotificationRecordStatStorage
-    public var sentStatDedupCache: [String] = []
-    public var appendedStatDedupCache: [String] = []
+@_spi(SendbirdInternal) public class NotificationStatCollector: StatCollectorContract {
+    @_spi(SendbirdInternal) public var statConfig: StatConfig
+    @_spi(SendbirdInternal) public var enabled: Bool = true
+    @_spi(SendbirdInternal) public var storage: NotificationRecordStatStorage
+    @_spi(SendbirdInternal) public var sentStatDedupCache: [String] = []
+    @_spi(SendbirdInternal) public var appendedStatDedupCache: [String] = []
     
-    public weak var apiClient: StatAPIClientable?
-    public weak var delegate: StatManagerDelegate?
+    @_spi(SendbirdInternal) public weak var apiClient: StatAPIClientable?
+    @_spi(SendbirdInternal) public weak var delegate: StatManagerDelegate?
     
-    public var isFlushing: Bool = false
+    @_spi(SendbirdInternal) public var isFlushing: Bool = false
     
-    public var queue = DispatchQueue(
+    @_spi(SendbirdInternal) public var queue = DispatchQueue(
         label: "com.sendbird.stat_collector.notification.\(UUID().uuidString)",
         qos: .background
     )
-    public var statCacheQueue = DispatchQueue(
+    @_spi(SendbirdInternal) public var statCacheQueue = DispatchQueue(
         label: "com.sendbird.stat_collector.notification.dedup_cache.\(UUID().uuidString)",
         qos: .background
     )
     
-    public required init(
+    @_spi(SendbirdInternal) public required init(
         statConfig: StatConfig,
         apiClient: StatAPIClientable,
         userDefaults: UserDefaults,
@@ -42,7 +42,7 @@ public class NotificationStatCollector: StatCollectorContract {
         self.enabled = enabled
     }
     
-    public func appendStat(
+    @_spi(SendbirdInternal) public func appendStat(
         _ stat: NotificationStat,
         completion: VoidHandler? = nil
     ) {
@@ -80,7 +80,7 @@ public class NotificationStatCollector: StatCollectorContract {
         }
     }
     
-    public func trySendStats(
+    @_spi(SendbirdInternal) public func trySendStats(
         fromAuth: Bool? = nil,
         completion: VoidHandler? = nil
     ) {
@@ -151,11 +151,11 @@ public class NotificationStatCollector: StatCollectorContract {
         }
     }
     
-    public func removeAll() {
+    @_spi(SendbirdInternal) public func removeAll() {
         self.storage.removeAll()
     }
     
-    public func isSendable() -> Bool {
+    @_spi(SendbirdInternal) public func isSendable() -> Bool {
         let count = self.storage.loadUnuploadedStats().count
         let minStatCount = self.statConfig.minStatCount
         let lowerThreshold = self.statConfig.lowerThreshold
@@ -186,7 +186,7 @@ public class NotificationStatCollector: StatCollectorContract {
         return countValid
     }
     
-    public func splitStatsByMaxStatCountPerRequest(stats: [NotificationStat]) -> [[NotificationStat]]? {
+    @_spi(SendbirdInternal) public func splitStatsByMaxStatCountPerRequest(stats: [NotificationStat]) -> [[NotificationStat]]? {
         if stats.count == 0 || self.statConfig.maxStatCountPerRequest == 0 {
             return nil
         }
@@ -198,7 +198,7 @@ public class NotificationStatCollector: StatCollectorContract {
     /// Checks if a given `BaseStat` has already been appended by looking it up in the `appendedStatDedupCache`.
     /// - Parameter stat: The `BaseStat` instance to check.
     /// - Returns: A Boolean value indicating whether the stat has been appended.
-    public func lookUpAppendedStatCache(_ stat: NotificationStat) -> Bool {
+    @_spi(SendbirdInternal) public func lookUpAppendedStatCache(_ stat: NotificationStat) -> Bool {
         self.statCacheQueue.sync {
             return self.appendedStatDedupCache.contains(self.hashNotificationStat( stat))
         }
@@ -207,7 +207,7 @@ public class NotificationStatCollector: StatCollectorContract {
     /// Checks if a given `BaseStat` has already been sent by looking it up in the `sentStatDedupCache`.
     /// - Parameter stat: The `BaseStat` instance to check.
     /// - Returns: A Boolean value indicating whether the stat has been sent.
-    public func lookUpSentStatCache(_ stat: NotificationStat) -> Bool {
+    @_spi(SendbirdInternal) public func lookUpSentStatCache(_ stat: NotificationStat) -> Bool {
         self.statCacheQueue.sync {
             return self.sentStatDedupCache.contains(self.hashNotificationStat(stat))
         }
@@ -215,7 +215,7 @@ public class NotificationStatCollector: StatCollectorContract {
     
     /// Appends a `NotificationStat` to the `appendedStats` dictionary.
     /// - Parameter stat: The `BaseStat` instance to be appended.
-    public func saveAppendedStatToDedupCache(_ stat: NotificationStat) {
+    @_spi(SendbirdInternal) public func saveAppendedStatToDedupCache(_ stat: NotificationStat) {
         self.statCacheQueue.sync {
             self.appendedStatDedupCache.append(self.hashNotificationStat(stat))
         }
@@ -223,7 +223,7 @@ public class NotificationStatCollector: StatCollectorContract {
     
     /// Saves a `NotificationStat` to the `sentStatDedupCache` to prevent re-sending.
     /// - Parameter stat: The `BaseStat` instance to be saved.
-    public func saveSentStatToDedupCache(_ stat: NotificationStat) {
+    @_spi(SendbirdInternal) public func saveSentStatToDedupCache(_ stat: NotificationStat) {
         self.statCacheQueue.sync {
             self.sentStatDedupCache.append(self.hashNotificationStat(stat))
         }
@@ -232,7 +232,7 @@ public class NotificationStatCollector: StatCollectorContract {
     /// Generates a unique hash for a `NotificationStat` object.
     /// - Parameter stat: The `NotificationStat` instance to hash.
     /// - Returns: A `String` representing the unique hash of the notification stat.
-    public func hashNotificationStat(_ stat: NotificationStat) -> String {
+    @_spi(SendbirdInternal) public func hashNotificationStat(_ stat: NotificationStat) -> String {
         return "\(stat.action)_\(stat.channelURL)_\(stat.messageId)"
     }
 }

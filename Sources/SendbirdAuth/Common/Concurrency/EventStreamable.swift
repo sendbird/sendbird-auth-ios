@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol EventStreamable<T>: Actor {
+@_spi(SendbirdInternal) public protocol EventStreamable<T>: Actor {
     associatedtype T
 
     /// Provides an `AsyncStream` of events of type `T`.

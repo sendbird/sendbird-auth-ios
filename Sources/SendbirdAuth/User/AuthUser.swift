@@ -7,62 +7,62 @@
 
 import Foundation
 
-public class AuthUser: NSObject, Codable, Identifiable {
+@_spi(SendbirdInternal) public class AuthUser: NSObject, Codable, Identifiable {
     /// Identifier for the user conforming to `Identifiable`
-    public var id: String { self.userId }
+    @_spi(SendbirdInternal) public var id: String { self.userId }
     
     /// User ID. This has to be unique.
-    public let userId: String
+    @_spi(SendbirdInternal) public let userId: String
     
     /// User nickname.
-    public var nickname: String
+    @_spi(SendbirdInternal) public var nickname: String
     
     /// The profile image URL without the `ekey`.
     /// - Since: 3.0.194
-    public var plainProfileImageURL: String?
+    @_spi(SendbirdInternal) public var plainProfileImageURL: String?
     
     /// User connection status. This is defined in `AuthUserConnectionStatus`.
-    public var connectionStatus: AuthUserConnectionStatus
+    @_spi(SendbirdInternal) public var connectionStatus: AuthUserConnectionStatus
     
     /// The lastest time when the user became offline.
-    public var lastSeenAt: Int64
+    @_spi(SendbirdInternal) public var lastSeenAt: Int64
     
     /// Represents the user is activated. This property is changed by the [Platform API](https://docs.sendbird.com/platform#user_3_update_a_user)
-    public let isActive: Bool
+    @_spi(SendbirdInternal) public let isActive: Bool
     
     /// Discovery key for friend
-    public let friendDiscoveryKey: String?
+    @_spi(SendbirdInternal) public let friendDiscoveryKey: String?
     
     /// User name for friend
-    public let friendName: String?
+    @_spi(SendbirdInternal) public let friendName: String?
     
     /// Shows if the user is a bot or not.
     /// - Since: 4.9.4
-    public let isBot: Bool
+    @_spi(SendbirdInternal) public let isBot: Bool
     
     /// User's preferred language. Used for translating messages.
     /// - Since: 3.0.159
-    public var preferredLanguages: [String]?
+    @_spi(SendbirdInternal) public var preferredLanguages: [String]?
     
     /// Meta data.
-    public var metaData: [String: String] { self.metaDataMap.toDictionary() }
+    @_spi(SendbirdInternal) public var metaData: [String: String] { self.metaDataMap.toDictionary() }
     
-    public var metaDataMap: SafeDictionary<String, String>
+    @_spi(SendbirdInternal) public var metaDataMap: SafeDictionary<String, String>
     
-    public var requireAuth: Bool
+    @_spi(SendbirdInternal) public var requireAuth: Bool
     
     /// The timestamp indicating the last update time of the user.
     /// - Note: Defaults to `-1`, representing that the user has not been updated.
     /// - Since: 4.24.1
-    public private(set) var localUpdatedAt: Int64
+    @_spi(SendbirdInternal) public private(set) var localUpdatedAt: Int64
     
-    @DependencyWrapper public var dependency: Dependency?
-    public var requestQueue: RequestQueue? { dependency?.requestQueue }
+    @DependencyWrapper @_spi(SendbirdInternal) public var dependency: Dependency?
+    @_spi(SendbirdInternal) public var requestQueue: RequestQueue? { dependency?.requestQueue }
     private var stateData: ConnectionStateData? { dependency?.stateData }
-    public var service: QueueService? { dependency?.service }
+    @_spi(SendbirdInternal) public var service: QueueService? { dependency?.service }
     private var eKey: String? { dependency?.commonSharedData.eKey }
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         dependency: Dependency?,
         userId: String = "",
         nickname: String = "",
@@ -100,7 +100,7 @@ public class AuthUser: NSObject, Codable, Identifiable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    required public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) required public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
 
         self.userId =
@@ -135,7 +135,7 @@ public class AuthUser: NSObject, Codable, Identifiable {
     /// Encodes this object.
     ///
     /// - Parameter encoder: `Encoder` instance
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         try container.encode(self.userId, forKey: .userId)
         try? container.encodeIfPresent(self.nickname, forKey: .nickname)
@@ -152,7 +152,7 @@ public class AuthUser: NSObject, Codable, Identifiable {
         try container.encode(self.localUpdatedAt, forKey: .localUpdatedAt)
     }
     
-    public func update(with user: AuthUser) {
+    @_spi(SendbirdInternal) public func update(with user: AuthUser) {
         self.plainProfileImageURL = user.plainProfileImageURL
         self.nickname = user.nickname
         
@@ -167,13 +167,13 @@ public class AuthUser: NSObject, Codable, Identifiable {
         self.requireAuth = user.requireAuth
     }
     
-    public func updateIfUserIsNewer(with newUser: AuthUser) {
+    @_spi(SendbirdInternal) public func updateIfUserIsNewer(with newUser: AuthUser) {
         if newUser.localUpdatedAt > self.localUpdatedAt {
             self.update(with: newUser)
         }
     }
     
-    public func updateUserInfo(with dictionary: [String: Any]?) {
+    @_spi(SendbirdInternal) public func updateUserInfo(with dictionary: [String: Any]?) {
         guard let info = dictionary else { return }
         if let auth = info["require_auth_for_profile_image"] as? Bool {
             self.requireAuth = auth
@@ -194,12 +194,12 @@ public class AuthUser: NSObject, Codable, Identifiable {
     ///     allowing the system to compare and retain the latest user information.
     ///     It is recommended to call this method whenever the `User` object is initialized or updated.
     @discardableResult
-    public func setLocalUpdateTimestamp(to timestamp: Int64) -> Self {
+    @_spi(SendbirdInternal) public func setLocalUpdateTimestamp(to timestamp: Int64) -> Self {
         self.localUpdatedAt = timestamp
         return self
     }
     
-    public var isCurrentUser: Bool { stateData?.currentUserId == userId }
+    @_spi(SendbirdInternal) public var isCurrentUser: Bool { stateData?.currentUserId == userId }
 }
 
 extension AuthUser: NSCopying {
@@ -207,7 +207,7 @@ extension AuthUser: NSCopying {
     ///
     /// - Parameter object: `Any` instance
     /// - Returns: `true` if same otherwise `false`
-    public override func isEqual(_ object: Any?) -> Bool {
+    @_spi(SendbirdInternal) public override func isEqual(_ object: Any?) -> Bool {
         guard let other = object as? AuthUser else { return false }
         
         return userId == other.userId &&
@@ -236,7 +236,7 @@ extension AuthUser: NSCopying {
 
 // MARK: - Hash logic
 extension AuthUser {
-    public override var hash: Int {
+    @_spi(SendbirdInternal) public override var hash: Int {
         var hasher = Hasher()
         hasher.combine(userId)
         hasher.combine(nickname)

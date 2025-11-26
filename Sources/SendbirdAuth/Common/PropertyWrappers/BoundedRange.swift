@@ -13,14 +13,14 @@ import Foundation
 ///     - `defaultValue`: if non-nil, the default value is static. Otherwise, default value is either min or max.
 ///     - `projectedValue`:  Mutable tuple that designates the minimum and maximum bound of the property. Used for testing purposes.
 @propertyWrapper
-public struct BoundedRange<T: AdditiveArithmetic & Comparable> {
+@_spi(SendbirdInternal) public struct BoundedRange<T: AdditiveArithmetic & Comparable> {
     let propertyName: String?
     var max: T
     var min: T
     let defaultValue: T?
     
     var internalValue: T
-    public var wrappedValue: T {
+    @_spi(SendbirdInternal) public var wrappedValue: T {
         get { internalValue }
         set {
             if isFromDecodable {
@@ -49,7 +49,7 @@ public struct BoundedRange<T: AdditiveArithmetic & Comparable> {
     
     var isFromDecodable: Bool = false
 
-    public var projectedValue: (T, T) {
+    @_spi(SendbirdInternal) public var projectedValue: (T, T) {
         get {
             (min, max)
         }
@@ -59,7 +59,7 @@ public struct BoundedRange<T: AdditiveArithmetic & Comparable> {
         }
     }
     
-    public init(wrappedValue: T, propertyName: String? = nil, min: T = .zero, max: T, defaultValue: T? = nil) {
+    @_spi(SendbirdInternal) public init(wrappedValue: T, propertyName: String? = nil, min: T = .zero, max: T, defaultValue: T? = nil) {
         self.propertyName = propertyName
         self.max = max
         self.min = min
@@ -69,12 +69,12 @@ public struct BoundedRange<T: AdditiveArithmetic & Comparable> {
 }
 
 extension BoundedRange: Codable where T: Codable {
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(internalValue)
     }
     
-    public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let value = try container.decode(T.self)
         

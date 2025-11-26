@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol StatStorage {
+@_spi(SendbirdInternal) public protocol StatStorage {
     associatedtype Key: Hashable & Codable
     associatedtype Value: BaseStatType
     
@@ -27,7 +27,7 @@ public protocol StatStorage {
     var storageHelper: StatStorageHelper<Key, RecordStatType> { get }
 }
 
-public extension StatStorage {
+@_spi(SendbirdInternal) public extension StatStorage {
     func loadLastSentAt() -> Date {
         storageHelper.loadLastSentAt()
     }

@@ -7,14 +7,14 @@
 
 import Foundation
 
-public final class AuthUIKitConfigInfo: Codable {
-    public var lastUpdatedAt: Int64 = 0
+@_spi(SendbirdInternal) public final class AuthUIKitConfigInfo: Codable {
+    @_spi(SendbirdInternal) public var lastUpdatedAt: Int64 = 0
     
-    public init() {
+    @_spi(SendbirdInternal) public init() {
         
     }
     
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         
         try container.encodeIfPresent(lastUpdatedAt, forKey: .lastUpdatedAt)
@@ -23,7 +23,7 @@ public final class AuthUIKitConfigInfo: Codable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    public required init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         self.lastUpdatedAt = try container.decodeIfPresent(Int64.self, forKey: .lastUpdatedAt) ?? 0

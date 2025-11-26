@@ -6,11 +6,11 @@
 //
 
 @propertyWrapper
-public struct DependencyWrapper<T> {
-    public var isResolved: Bool = false
+@_spi(SendbirdInternal) public struct DependencyWrapper<T> {
+    @_spi(SendbirdInternal) public var isResolved: Bool = false
     private var value: T?
     
-    public var wrappedValue: T? {
+    @_spi(SendbirdInternal) public var wrappedValue: T? {
         get {
             if isResolved == false {
                 assertionFailure("The object is not resolved.")
@@ -23,7 +23,7 @@ public struct DependencyWrapper<T> {
         }
     }
     
-    public init() {
+    @_spi(SendbirdInternal) public init() {
         self.isResolved = false
         self.value = nil
     }

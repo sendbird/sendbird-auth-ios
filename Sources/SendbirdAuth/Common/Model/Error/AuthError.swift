@@ -8,7 +8,7 @@
 import Foundation
 
 /// Sendbird error class.
-public final class AuthError: NSError {
+@_spi(SendbirdInternal) public final class AuthError: NSError {
     convenience init?(dictionary: [String: Any]) {
         guard let errorMessage = dictionary["message"] as? String,
               let errorCode = dictionary["code"] as? Int,
@@ -26,7 +26,7 @@ public final class AuthError: NSError {
     /// - Parameter dict: Error Data
     /// - Returns: `AuthError` object.
     @objc
-    public static func error(withDictionary dict: [String: Any]) -> AuthError? {
+    @_spi(SendbirdInternal) public static func error(withDictionary dict: [String: Any]) -> AuthError? {
         return AuthError(dictionary: dict)
     }
     
@@ -35,7 +35,7 @@ public final class AuthError: NSError {
     /// - Parameter error: NSError Object.
     /// - Returns: `AuthError` object.
     @objc
-    public static func error(withNSError error: NSError) -> AuthError {
+    @_spi(SendbirdInternal) public static func error(withNSError error: NSError) -> AuthError {
         return AuthError(domain: error.domain, code: error.code, userInfo: error.userInfo)
     }
     
@@ -44,7 +44,7 @@ public final class AuthError: NSError {
     /// - Parameter domain: domain.
     /// - Parameter code: error code.
     /// - Parameter dict: additional info in dictionary
-    public override init(domain: String, code: Int, userInfo dict: [String: Any]? = nil) {
+    @_spi(SendbirdInternal) public override init(domain: String, code: Int, userInfo dict: [String: Any]? = nil) {
         super.init(domain: domain, code: code, userInfo: dict)
     }
 
@@ -52,7 +52,7 @@ public final class AuthError: NSError {
         super.init(coder: coder)
     }
         
-    public static func error(from data: Data) -> AuthError {
+    @_spi(SendbirdInternal) public static func error(from data: Data) -> AuthError {
         if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
             return errorResponse.asAuthError
         } else {
@@ -77,7 +77,7 @@ public final class AuthError: NSError {
 }
 
 extension Error {
-    public func asAuthError() -> AuthError {
+    @_spi(SendbirdInternal) public func asAuthError() -> AuthError {
         return (self as? AuthError) ?? AuthError.error(withNSError: self as NSError)
     }
 }

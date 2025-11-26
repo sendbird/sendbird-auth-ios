@@ -9,14 +9,14 @@
 
 import Foundation
 
-public struct OrderedSet<Element: Hashable> {
+@_spi(SendbirdInternal) public struct OrderedSet<Element: Hashable> {
     private var elements: [Element] = []
     private var set: Set<Element> = []
 
-    public init() { }
+    @_spi(SendbirdInternal) public init() { }
 }
 
-public extension OrderedSet {
+@_spi(SendbirdInternal) public extension OrderedSet {
     init<S>(distinctElements elements: S) where S : Sequence, S.Element == Element {
         self.elements = Array(elements)
         self.set = Set(elements)
@@ -25,19 +25,19 @@ public extension OrderedSet {
 }
 
 extension OrderedSet: SetAlgebra {
-    public func contains(_ member: Element) -> Bool {
+    @_spi(SendbirdInternal) public func contains(_ member: Element) -> Bool {
         set.contains(member)
     }
 
     @discardableResult
-    public mutating func insert(_ newMember: Element) -> (inserted: Bool, memberAfterInsert: Element) {
+    @_spi(SendbirdInternal) public mutating func insert(_ newMember: Element) -> (inserted: Bool, memberAfterInsert: Element) {
         let insertion = set.insert(newMember)
         if insertion.inserted { elements.append(newMember) }
         return insertion
     }
 
     @discardableResult
-    public mutating func remove(_ member: Element) -> Element? {
+    @_spi(SendbirdInternal) public mutating func remove(_ member: Element) -> Element? {
         if let oldMember = set.remove(member) {
             let index = elements.firstIndex(of: member)!
             elements.remove(at: index)
@@ -48,7 +48,7 @@ extension OrderedSet: SetAlgebra {
     }
 
     @discardableResult
-    public mutating func update(with newMember: Element) -> Element? {
+    @_spi(SendbirdInternal) public mutating func update(with newMember: Element) -> Element? {
         if let member = set.update(with: newMember) {
             return member
         } else {
@@ -57,11 +57,11 @@ extension OrderedSet: SetAlgebra {
         }
     }
 
-    public mutating func formUnion(_ other: Self) {
+    @_spi(SendbirdInternal) public mutating func formUnion(_ other: Self) {
         other.elements.forEach { self.insert($0) }
     }
 
-    public mutating func formIntersection(_ other: Self) {
+    @_spi(SendbirdInternal) public mutating func formIntersection(_ other: Self) {
         for element in elements {
             if !other.contains(element) {
                 remove(element)
@@ -69,7 +69,7 @@ extension OrderedSet: SetAlgebra {
         }
     }
 
-    public mutating func formSymmetricDifference(_ other: Self) {
+    @_spi(SendbirdInternal) public mutating func formSymmetricDifference(_ other: Self) {
         for member in other.elements {
             if set.contains(member) {
                 remove(member)
@@ -79,38 +79,38 @@ extension OrderedSet: SetAlgebra {
         }
     }
 
-    public func union(_ other: Self) -> Self {
+    @_spi(SendbirdInternal) public func union(_ other: Self) -> Self {
         var orderedSet = self
         orderedSet.formUnion(other)
         return orderedSet
     }
 
-    public func intersection(_ other: Self) -> Self {
+    @_spi(SendbirdInternal) public func intersection(_ other: Self) -> Self {
         var orderedSet = self
         orderedSet.formIntersection(other)
         return orderedSet
     }
 
-    public func symmetricDifference(_ other: Self) -> Self {
+    @_spi(SendbirdInternal) public func symmetricDifference(_ other: Self) -> Self {
         var orderedSet = self
         orderedSet.formSymmetricDifference(other)
         return orderedSet
     }
 
-    public init<S>(_ elements: S) where S : Sequence, S.Element == Element {
+    @_spi(SendbirdInternal) public init<S>(_ elements: S) where S : Sequence, S.Element == Element {
         elements.forEach { insert($0) }
     }
 }
 
 extension OrderedSet: CustomStringConvertible {
-    public var description: String { elements.description }
+    @_spi(SendbirdInternal) public var description: String { elements.description }
 }
 
 extension OrderedSet: MutableCollection, RandomAccessCollection {
-    public typealias Index = Int
-    public typealias SubSequence = OrderedSet
+    @_spi(SendbirdInternal) public typealias Index = Int
+    @_spi(SendbirdInternal) public typealias SubSequence = OrderedSet
 
-    public subscript(index: Index) -> Element {
+    @_spi(SendbirdInternal) public subscript(index: Index) -> Element {
         get {
             elements[index]
         }
@@ -123,7 +123,7 @@ extension OrderedSet: MutableCollection, RandomAccessCollection {
         }
     }
 
-    public subscript(bounds: Range<Index>) -> SubSequence {
+    @_spi(SendbirdInternal) public subscript(bounds: Range<Index>) -> SubSequence {
         get {
             return OrderedSet(distinctElements: elements[bounds])
         }
@@ -132,13 +132,13 @@ extension OrderedSet: MutableCollection, RandomAccessCollection {
         }
 
     }
-    public var startIndex: Index { elements.startIndex }
-    public var endIndex:   Index { elements.endIndex }
+    @_spi(SendbirdInternal) public var startIndex: Index { elements.startIndex }
+    @_spi(SendbirdInternal) public var endIndex:   Index { elements.endIndex }
 
-    public var isEmpty: Bool { elements.isEmpty }
+    @_spi(SendbirdInternal) public var isEmpty: Bool { elements.isEmpty }
 }
 
-public extension OrderedSet {
+@_spi(SendbirdInternal) public extension OrderedSet {
     mutating func swapAt(_ i: Index, _ j: Index) {
         elements.swapAt(i, j)
     }
@@ -152,14 +152,14 @@ public extension OrderedSet {
     }
 }
 
-public extension OrderedSet where Element : Comparable {
+@_spi(SendbirdInternal) public extension OrderedSet where Element : Comparable {
     mutating func sort() {
         elements.sort()
     }
 }
 
 extension OrderedSet: RangeReplaceableCollection {
-    public mutating func replaceSubrange<C>(_ subrange: Range<Index>, with newElements: C) where C : Collection, C.Element == Element {
+    @_spi(SendbirdInternal) public mutating func replaceSubrange<C>(_ subrange: Range<Index>, with newElements: C) where C : Collection, C.Element == Element {
         set.subtract(elements[subrange])
         let insertedElements = newElements.filter {
             set.insert($0).inserted

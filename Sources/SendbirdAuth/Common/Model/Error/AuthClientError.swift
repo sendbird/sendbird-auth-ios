@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - SendbirdAuth Specific Error Cases
-public enum AuthClientError: Int, Error {
+@_spi(SendbirdInternal) public enum AuthClientError: Int, Error {
     // Connection related errors
     case connectionRequired = 800101
     case connectionCanceled = 800102
@@ -60,18 +60,18 @@ public enum AuthClientError: Int, Error {
 
 // MARK: - AuthClientError Extensions
 extension AuthClientError: Decodable {
-    public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         self = AuthClientError(rawValue: try container.decode(Int.self)) ?? .unknownError
     }
 }
 
 extension AuthClientError: CustomStringConvertible {
-    public var description: String {
+    @_spi(SendbirdInternal) public var description: String {
         message
     }
     
-    public var message: String {
+    @_spi(SendbirdInternal) public var message: String {
         switch self {
         case .unknownError: return "Unknown error occurred."
         case .invalidInitialization: return "Initialization has not been done yet."

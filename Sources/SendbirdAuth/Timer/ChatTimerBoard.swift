@@ -6,7 +6,7 @@
 //
 import Foundation
 
-public protocol SBTimerBoardDelegate: AnyObject {
+@_spi(SendbirdInternal) public protocol SBTimerBoardDelegate: AnyObject {
     func add(timer: SBTimer)
     func remove(timer: SBTimer)
 }
@@ -16,8 +16,8 @@ extension SBTimerBoardDelegate {
     func remove(timer: SBTimer) {}
 }
 
-public class SBTimerBoard: SBTimerBoardDelegate {
-    public var timers: [SBTimer] {
+@_spi(SendbirdInternal) public class SBTimerBoard: SBTimerBoardDelegate {
+    @_spi(SendbirdInternal) public var timers: [SBTimer] {
         self.timerQueue.sync {
             return self.mutableTimers.filter { $0.valid }
         }
@@ -27,13 +27,13 @@ public class SBTimerBoard: SBTimerBoardDelegate {
     // Invalid timers are removed when `add(timer:)` is called.
     private var mutableTimers: [SBTimer] = []
     private let capacity: Int
-    public let timerQueue = SafeSerialQueue(
+    @_spi(SendbirdInternal) public let timerQueue = SafeSerialQueue(
         label: "com.sendbird.core.common.timer.board.\(UUID().uuidString)"
     )
     
-    public var first: SBTimer? { self.timers.first }
+    @_spi(SendbirdInternal) public var first: SBTimer? { self.timers.first }
     
-    public init(capacity: Int = Int(INT_MAX)) {
+    @_spi(SendbirdInternal) public init(capacity: Int = Int(INT_MAX)) {
         self.capacity = capacity
     }
     
@@ -41,11 +41,11 @@ public class SBTimerBoard: SBTimerBoardDelegate {
         self.stopAll()
     }
     
-    public func timer(identifier: String) -> SBTimer? {
+    @_spi(SendbirdInternal) public func timer(identifier: String) -> SBTimer? {
         return self.timers.first(where: { $0.identifier == identifier })
     }
     
-    public func stopAll() {
+    @_spi(SendbirdInternal) public func stopAll() {
         self.timerQueue.sync {
             for timer in self.mutableTimers {
                 timer.stop()
@@ -54,7 +54,7 @@ public class SBTimerBoard: SBTimerBoardDelegate {
     }
     
     // MARK: SBTimer Board Delegate
-    public func add(timer: SBTimer) {
+    @_spi(SendbirdInternal) public func add(timer: SBTimer) {
         self.timerQueue.sync {
             let timers = self.mutableTimers
             var validTimers = timers.filter { $0.valid }
@@ -77,7 +77,7 @@ public class SBTimerBoard: SBTimerBoardDelegate {
         }
     }
     
-    public func remove(timer: SBTimer) {
+    @_spi(SendbirdInternal) public func remove(timer: SBTimer) {
         self.timerQueue.sync {
             self.mutableTimers.removeAll { $0 === timer }
         }

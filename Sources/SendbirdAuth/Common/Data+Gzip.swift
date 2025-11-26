@@ -34,33 +34,33 @@ import struct Foundation.Data
     import zlib
 #endif
 
-public enum GzipStatics {
+@_spi(SendbirdInternal) public enum GzipStatics {
     
     /// Maximum value for windowBits (`MAX_WBITS`)
-    public static let maxWindowBits = MAX_WBITS
+    @_spi(SendbirdInternal) public static let maxWindowBits = MAX_WBITS
 }
 
 
 /// Compression level whose rawValue is based on the zlib's constants.
-public struct CompressionLevel: RawRepresentable {
+@_spi(SendbirdInternal) public struct CompressionLevel: RawRepresentable {
     
     /// Compression level in the range of `0` (no compression) to `9` (maximum compression).
-    public let rawValue: Int32
+    @_spi(SendbirdInternal) public let rawValue: Int32
     
-    public static let noCompression = Self(Z_NO_COMPRESSION)
-    public static let bestSpeed = Self(Z_BEST_SPEED)
-    public static let bestCompression = Self(Z_BEST_COMPRESSION)
+    @_spi(SendbirdInternal) public static let noCompression = Self(Z_NO_COMPRESSION)
+    @_spi(SendbirdInternal) public static let bestSpeed = Self(Z_BEST_SPEED)
+    @_spi(SendbirdInternal) public static let bestCompression = Self(Z_BEST_COMPRESSION)
     
-    public static let defaultCompression = Self(Z_DEFAULT_COMPRESSION)
+    @_spi(SendbirdInternal) public static let defaultCompression = Self(Z_DEFAULT_COMPRESSION)
     
     
-    public init(rawValue: Int32) {
+    @_spi(SendbirdInternal) public init(rawValue: Int32) {
         
         self.rawValue = rawValue
     }
     
     
-    public init(_ rawValue: Int32) {
+    @_spi(SendbirdInternal) public init(_ rawValue: Int32) {
         
         self.rawValue = rawValue
     }
@@ -68,10 +68,10 @@ public struct CompressionLevel: RawRepresentable {
 
 
 /// Errors on gzipping/gunzipping based on the zlib error codes.
-public struct GzipError: Swift.Error {
+@_spi(SendbirdInternal) public struct GzipError: Swift.Error {
     // cf. http://www.zlib.net/manual.html
     
-    public enum Kind: Equatable {
+    @_spi(SendbirdInternal) public enum Kind: Equatable {
         /// The stream structure was inconsistent.
         ///
         /// - underlying zlib error: `Z_STREAM_ERROR` (-2)
@@ -105,10 +105,10 @@ public struct GzipError: Swift.Error {
     }
     
     /// Error kind.
-    public let kind: Kind
+    @_spi(SendbirdInternal) public let kind: Kind
     
     /// Returned message by zlib.
-    public let message: String
+    @_spi(SendbirdInternal) public let message: String
     
     
     internal init(code: Int32, msg: UnsafePointer<CChar>?) {
@@ -118,7 +118,7 @@ public struct GzipError: Swift.Error {
     }
     
     
-    public var localizedDescription: String {
+    @_spi(SendbirdInternal) public var localizedDescription: String {
         
         return self.message
     }
@@ -150,7 +150,7 @@ private extension GzipError.Kind {
 extension Data {
     
     /// Whether the receiver is compressed in gzip format.
-    public var isGzipped: Bool {
+    @_spi(SendbirdInternal) public var isGzipped: Bool {
         
         return self.starts(with: [0x1f, 0x8b])  // check magic number
     }
@@ -170,7 +170,7 @@ extension Data {
     /// - Parameter wBits: Manage the size of the history buffer.
     /// - Returns: Gzip-compressed `Data` instance.
     /// - Throws: `GzipError`
-    public func gzipped(level: CompressionLevel = .defaultCompression, wBits: Int32 = GzipStatics.maxWindowBits + 16) throws -> Data {
+    @_spi(SendbirdInternal) public func gzipped(level: CompressionLevel = .defaultCompression, wBits: Int32 = GzipStatics.maxWindowBits + 16) throws -> Data {
         
         guard !self.isEmpty else {
             return Data()
@@ -241,7 +241,7 @@ extension Data {
     /// - Parameter wBits: Manage the size of the history buffer.
     /// - Returns: Gzip-decompressed `Data` instance.
     /// - Throws: `GzipError`
-    public func gunzipped(wBits: Int32 = GzipStatics.maxWindowBits + 32) throws -> Data {
+    @_spi(SendbirdInternal) public func gunzipped(wBits: Int32 = GzipStatics.maxWindowBits + 32) throws -> Data {
         
         guard !self.isEmpty else {
             return Data()

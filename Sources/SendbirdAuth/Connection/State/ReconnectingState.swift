@@ -7,20 +7,20 @@
 
 import Foundation
 
-public class ReconnectingState: ConnectionStatable {
-    public var retryCount: Int = 0
+@_spi(SendbirdInternal) public class ReconnectingState: ConnectionStatable {
+    @_spi(SendbirdInternal) public var retryCount: Int = 0
     
     /// Changed to optional since 4.34.0.
     /// Must be optional because when transitioned from DelayedConnectingState with no previous successful connection,
     /// the reconnectionConfiguration (from LOGI payload) does not exist,
     /// hence can't create a ReconnectionTask either.
-    public let task: ReconnectionTask?
+    @_spi(SendbirdInternal) public let task: ReconnectionTask?
     
-    public var timerBoard: SBTimerBoard = SBTimerBoard(capacity: 1)
-    public var loginHandlers: [AuthUserHandler?]
-    public var reconnectedBy: ReconnectingTrigger?
+    @_spi(SendbirdInternal) public var timerBoard: SBTimerBoard = SBTimerBoard(capacity: 1)
+    @_spi(SendbirdInternal) public var loginHandlers: [AuthUserHandler?]
+    @_spi(SendbirdInternal) public var reconnectedBy: ReconnectingTrigger?
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         task: ReconnectionTask?,
         loginHandlers: [AuthUserHandler?] = [],
         reconnectedBy: ReconnectingTrigger?,
@@ -32,7 +32,7 @@ public class ReconnectingState: ConnectionStatable {
         self.retryCount = retryCount
     }
     
-    public func process(context: ConnectionContext) {
+    @_spi(SendbirdInternal) public func process(context: ConnectionContext) {
         Logger.main.debug("retryCount: \(retryCount)")
         
         // if sessionKey exists => reconnect with sessionKey
@@ -111,7 +111,7 @@ public class ReconnectingState: ConnectionStatable {
         Logger.session.info("Scheduled timer with timeout interval: \(task.backoffPeriod(with: retryCount))")
     }
     
-    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.session.debug("prev retryCount: \(retryCount), reset retryCount")
         retryCount = 0
         timerBoard.stopAll()
@@ -121,7 +121,7 @@ public class ReconnectingState: ConnectionStatable {
         processLoginHandlers(context: context, error: nil)
     }
     
-    public func disconnect(context: ConnectionContext, completionHandler: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func disconnect(context: ConnectionContext, completionHandler: VoidHandler? = nil) {
         timerBoard.stopAll()
         Logger.session.info("disconnectWithCompletionHandler. loginTimer invalidated.")
         
@@ -139,7 +139,7 @@ public class ReconnectingState: ConnectionStatable {
         // NOTE: reconnecting -> disconnected socket connection is not made so return immediately
     }
     
-    public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         context.changeState(
             to: ExternalDisconnectedState(
@@ -148,7 +148,7 @@ public class ReconnectingState: ConnectionStatable {
         )
     }
 
-    public func didEnterBackground(context: ConnectionContext) {
+    @_spi(SendbirdInternal) public func didEnterBackground(context: ConnectionContext) {
         Logger.session.verbose("called in \(Self.self) state")
         
         processLoginHandlers(context: context, error: AuthClientError.connectionCanceled.asAuthError)
@@ -162,7 +162,7 @@ public class ReconnectingState: ConnectionStatable {
         )
     }
     
-    public func didSocketOpen(context: ConnectionContext) {
+    @_spi(SendbirdInternal) public func didSocketOpen(context: ConnectionContext) {
         Logger.session.debug("socket opened. waiting for LOGI")
         guard let webSocketTimeout = context.configForWebSocket?.websocketTimeout else {
             Logger.session.error(errorMessage: .notResolved)
@@ -194,7 +194,7 @@ public class ReconnectingState: ConnectionStatable {
         }
     }
     
-    public func didSocketFail(context: ConnectionContext, error: AuthError?) {
+    @_spi(SendbirdInternal) public func didSocketFail(context: ConnectionContext, error: AuthError?) {
         Logger.session.debug("fail \(String(describing: error?.localizedDescription))")
         processLoginHandlers(context: context, error: error)
         context.changeState(
@@ -207,7 +207,7 @@ public class ReconnectingState: ConnectionStatable {
         )
     }
     
-    public func didReceiveLOGI(context: ConnectionContext, command: LoginEvent) {
+    @_spi(SendbirdInternal) public func didReceiveLOGI(context: ConnectionContext, command: LoginEvent) {
         Logger.session.debug("received LOGI. error: \(String(describing: command.error?.localizedDescription)), hasSessionKey: \(command.sessionKey != nil)")
         
         guard command.error == nil, let sessionKey = command.sessionKey else {
@@ -248,7 +248,7 @@ public class ReconnectingState: ConnectionStatable {
         )
     }
     
-    public func didReceiveBUSY(context: any ConnectionContext, command: BusyEvent) {
+    @_spi(SendbirdInternal) public func didReceiveBUSY(context: any ConnectionContext, command: BusyEvent) {
         Logger.session.debug()
         
         context.changeState(
@@ -259,7 +259,7 @@ public class ReconnectingState: ConnectionStatable {
         )
     }
 
-    public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    @_spi(SendbirdInternal) public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.session.debug("reconnect by \(String(describing: reconnectedBy?.rawValue))")
         guard let sessionKey, let task = context.dataSourceForWebSocket?
                 .reconnectionConfig?

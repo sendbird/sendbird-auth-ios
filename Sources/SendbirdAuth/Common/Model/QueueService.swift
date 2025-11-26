@@ -7,20 +7,20 @@
 
 import Foundation
 
-public class QueueService {
-    @InternalAtomic public var completionQueue: DispatchQueue
+@_spi(SendbirdInternal) public class QueueService {
+    @InternalAtomic @_spi(SendbirdInternal) public var completionQueue: DispatchQueue
     
-    public init(name: String? = nil) {
+    @_spi(SendbirdInternal) public init(name: String? = nil) {
         completionQueue = name != nil
             ? DispatchQueue(label: name!)
             : DispatchQueue.main
     }
      
-    public func callAsFunction(task: VoidHandler?) {
+    @_spi(SendbirdInternal) public func callAsFunction(task: VoidHandler?) {
         self.performOnCompletionQueue(task)
     }
     
-    public func performOnCompletionQueue(_ block: (() -> Void)?) {
+    @_spi(SendbirdInternal) public func performOnCompletionQueue(_ block: (() -> Void)?) {
         completionQueue.async { block?() }
     }
 }
@@ -28,21 +28,21 @@ public class QueueService {
 // MARK: - CustomDebugStringConvertible
 
 extension QueueService: CustomDebugStringConvertible {
-    public var debugDescription: String {
+    @_spi(SendbirdInternal) public var debugDescription: String {
         "QueueService(\(completionQueue))"
     }
 }
 
 // MARK: - QueueServiceUsable
 
-public protocol QueueServiceUsable {
+protocol QueueServiceUsable {
     func callAsFunction(task: VoidHandler?)
 }
 
 extension QueueService: QueueServiceUsable { }
 
-extension DispatchQueue: QueueServiceUsable {
-    public func callAsFunction(task: VoidHandler?) {
+@_spi(SendbirdInternal) extension DispatchQueue: QueueServiceUsable {
+    @_spi(SendbirdInternal) public func callAsFunction(task: VoidHandler?) {
         async {
             task?()
         }
@@ -50,7 +50,7 @@ extension DispatchQueue: QueueServiceUsable {
 }
 
 extension Optional where Wrapped: QueueServiceUsable {
-    public func orMain() -> QueueServiceUsable {
+    func orMain() -> QueueServiceUsable {
         switch self {
         case .some(let queue):
             return queue

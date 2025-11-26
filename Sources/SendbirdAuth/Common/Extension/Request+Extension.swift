@@ -7,7 +7,7 @@
 
 import Foundation
 
-public extension APIRequestable {
+@_spi(SendbirdInternal) public extension APIRequestable {
     func urlRequest(baseURL: String) -> URLRequest? {
         do {
             var components = try makeComponents(url: URL(string: baseURL))
@@ -42,7 +42,7 @@ public extension APIRequestable {
     }
 }
 
-public extension APIRequestable {
+@_spi(SendbirdInternal) public extension APIRequestable {
     func makeComponents(url: URL?) throws -> URLComponents {
         let error = AuthCoreError.networkRoutingError.asAuthError
         guard let url = url,

@@ -7,23 +7,23 @@
 
 import Foundation
 
-public class InternalInitParams: NSObject {
+@_spi(SendbirdInternal) public class InternalInitParams: NSObject {
     /// Application ID
-    public var applicationId: String
+    @_spi(SendbirdInternal) public var applicationId: String
     
     /// Determines to use local caching
-    public var isLocalCachingEnabled: Bool
+    @_spi(SendbirdInternal) public var isLocalCachingEnabled: Bool
     
     /// Loglevel
-    public var logLevel: AuthLogLevel = .none
+    @_spi(SendbirdInternal) public var logLevel: AuthLogLevel = .none
     
     /// Host app version
-    public var appVersion: String?
+    @_spi(SendbirdInternal) public var appVersion: String?
     
-    public var customAPIHost: String?
-    public var customWSHost: String?
+    @_spi(SendbirdInternal) public var customAPIHost: String?
+    @_spi(SendbirdInternal) public var customWSHost: String?
 
-    public init(
+    @_spi(SendbirdInternal) public init(
         applicationId: String,
         isLocalCachingEnabled: Bool,
         logLevel: AuthLogLevel = .none,
@@ -35,7 +35,7 @@ public class InternalInitParams: NSObject {
         self.appVersion = appVersion
     }
     
-    public override func isEqual(_ object: Any?) -> Bool {
+    @_spi(SendbirdInternal) public override func isEqual(_ object: Any?) -> Bool {
         guard let object = object as? InternalInitParams else { return false }
         
         return applicationId == object.applicationId

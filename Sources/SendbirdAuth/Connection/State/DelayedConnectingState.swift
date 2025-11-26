@@ -11,20 +11,20 @@ import Foundation
 /// The state in which the connection is being delayed.
 /// This state automatically retries connection after `retryAfter` seconds.
 /// - Since: 4.34.0
-public class DelayedConnectingState: ConnectionStatable {
+@_spi(SendbirdInternal) public class DelayedConnectingState: ConnectionStatable {
     let busyEvent: BusyEvent
     var loginHandlers: [AuthUserHandler?]
     
-    public let timerBoard: SBTimerBoard = SBTimerBoard(capacity: 1)
+    @_spi(SendbirdInternal) public let timerBoard: SBTimerBoard = SBTimerBoard(capacity: 1)
     private var timerStartTime: TimeInterval
     
-    public init(busyEvent: BusyEvent, loginHandlers: [AuthUserHandler?]) {
+    @_spi(SendbirdInternal) public init(busyEvent: BusyEvent, loginHandlers: [AuthUserHandler?]) {
         self.busyEvent = busyEvent
         self.loginHandlers = loginHandlers
         self.timerStartTime = Date().timeIntervalSince1970
     }
     
-    public func process(context: any ConnectionContext) {
+    @_spi(SendbirdInternal) public func process(context: any ConnectionContext) {
         Logger.session.debug("userId: \(context.userId), busyEvent: \(busyEvent)")
         
         // disconnect websocket
@@ -86,7 +86,7 @@ public class DelayedConnectingState: ConnectionStatable {
         }
     }
     
-    public func connect(context: any ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func connect(context: any ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.session.debug()
         loginHandlers.append(userHandler)
         
@@ -112,7 +112,7 @@ public class DelayedConnectingState: ConnectionStatable {
         )
     }
     
-    public func reconnect(context: any ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    @_spi(SendbirdInternal) public func reconnect(context: any ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.session.debug("sessionKey=\(sessionKey ?? "nil"), reconnectedBy=\(String(describing: reconnectedBy))")
         
         let remainingRetryAfter = getRemainingRetryAfter(startTime: timerStartTime)
@@ -138,7 +138,7 @@ public class DelayedConnectingState: ConnectionStatable {
         return false
     }
     
-    public func disconnect(context: any ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnect(context: any ConnectionContext, completionHandler: VoidHandler?) {
         timerBoard.stopAll()
         Logger.session.debug()
         // logout state
@@ -151,7 +151,7 @@ public class DelayedConnectingState: ConnectionStatable {
         )
     }
     
-    public func disconnectWebSocket(context: any ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnectWebSocket(context: any ConnectionContext, completionHandler: VoidHandler?) {
         timerBoard.stopAll()
         Logger.session.debug()
         
@@ -173,7 +173,7 @@ public class DelayedConnectingState: ConnectionStatable {
         }
     }
     
-    public func didEnterBackground(context: any ConnectionContext) {
+    @_spi(SendbirdInternal) public func didEnterBackground(context: any ConnectionContext) {
         Logger.session.debug()
         
         processLoginHandlers(context: context, error: AuthClientError.connectionCanceled.asAuthError)
@@ -210,10 +210,10 @@ public class DelayedConnectingState: ConnectionStatable {
         }
     }
     
-    public func didSocketClose(context: any ConnectionContext, code: ChatWebSocketStatusCode) {
+    @_spi(SendbirdInternal) public func didSocketClose(context: any ConnectionContext, code: ChatWebSocketStatusCode) {
         Logger.session.debug()
     }
-    public func didSocketFail(context: any ConnectionContext, error: AuthError?) {
+    @_spi(SendbirdInternal) public func didSocketFail(context: any ConnectionContext, error: AuthError?) {
         Logger.session.debug()
     }
 }

@@ -7,14 +7,14 @@
 
 import Foundation
 
-public class StatStorageHelper<Key: Hashable & Codable, RecordStatType: BaseStatType> {
+@_spi(SendbirdInternal) public class StatStorageHelper<Key: Hashable & Codable, RecordStatType: BaseStatType> {
     private let queue: SafeSerialQueue
     @UserDefault private var lastSentAt: Date?
     @CodableUserDefault private var internalStatWrappers: [Key: StatCodableWrapper<RecordStatType>]?
     
     private let statKeyGenerator: (RecordStatType) -> Key?
     
-    public init<Keys: StatStorageKeyType>(
+    @_spi(SendbirdInternal) public init<Keys: StatStorageKeyType>(
         statStorageKey: Keys,
         userDefaults: UserDefaults,
         statKeyGenerator: @escaping (RecordStatType) -> Key?
@@ -32,25 +32,25 @@ public class StatStorageHelper<Key: Hashable & Codable, RecordStatType: BaseStat
     }
     
     // MARK: StatStorage
-    public func loadLastSentAt() -> Date {
+    @_spi(SendbirdInternal) public func loadLastSentAt() -> Date {
         lastSentAt ?? Date(timeIntervalSince1970: 0)
     }
     
-    public func saveLastSentAt(_ lastSentAt: Date) {
+    @_spi(SendbirdInternal) public func saveLastSentAt(_ lastSentAt: Date) {
         self.lastSentAt = lastSentAt
     }
     
-    public func loadStat(for key: Key) -> RecordStatType? {
+    @_spi(SendbirdInternal) public func loadStat(for key: Key) -> RecordStatType? {
         internalStatWrappers?[key]?.baseStat
     }
     
-    public func loadStats() -> [RecordStatType] {
+    @_spi(SendbirdInternal) public func loadStats() -> [RecordStatType] {
         let allStats = Array(recordStatMap.values)
         
         return allStats
     }
     
-    public func loadUnuploadedStats() -> [RecordStatType] {
+    @_spi(SendbirdInternal) public func loadUnuploadedStats() -> [RecordStatType] {
         let allStats = Array(recordStatMap.values)
         
         let result = allStats.filter {
@@ -60,7 +60,7 @@ public class StatStorageHelper<Key: Hashable & Codable, RecordStatType: BaseStat
         return result
     }
     
-    public func loadUploadedStats() -> [RecordStatType] {
+    @_spi(SendbirdInternal) public func loadUploadedStats() -> [RecordStatType] {
         let allStats = Array(recordStatMap.values)
         
         let result = allStats.filter {
@@ -70,7 +70,7 @@ public class StatStorageHelper<Key: Hashable & Codable, RecordStatType: BaseStat
         return result
     }
     
-    public func saveStats(_ stats: [RecordStatType]) {
+    @_spi(SendbirdInternal) public func saveStats(_ stats: [RecordStatType]) {
         let dict = stats
             .reduce(into: [Key: StatCodableWrapper]()) { result, stat in
                 if let key = statKeyGenerator(stat) {
@@ -81,7 +81,7 @@ public class StatStorageHelper<Key: Hashable & Codable, RecordStatType: BaseStat
         statWrappers = statWrappers?.merging(dict) { _, new in new }
     }
     
-    public func removeAll() {
+    @_spi(SendbirdInternal) public func removeAll() {
         internalStatWrappers = [:]
     }
     
@@ -105,14 +105,14 @@ public class StatStorageHelper<Key: Hashable & Codable, RecordStatType: BaseStat
     }
     
     // 수집하지 않기로 한 type의 stat은 삭제.
-    public func remove(disallowedStatTypes: Set<StatType>) {
+    @_spi(SendbirdInternal) public func remove(disallowedStatTypes: Set<StatType>) {
         statWrappers = statWrappers?.filter({ element in
             disallowedStatTypes.contains(element.value.baseStat.statType) == false
         })
     }
     
     // 업로드한 stat은 삭제
-    public func removeUploadedStats() {
+    @_spi(SendbirdInternal) public func removeUploadedStats() {
         statWrappers = statWrappers?.filter({ element in
             if element.value.baseStat.isUploaded == false {
                 return true

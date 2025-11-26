@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum AuthChannelType {
+@_spi(SendbirdInternal) public enum AuthChannelType {
     /// Open channel.
     case open
     
@@ -20,11 +20,11 @@ public enum AuthChannelType {
 }
 
 extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
-    public typealias RawValue = String
+    @_spi(SendbirdInternal) public typealias RawValue = String
     
-    public var description: String { rawValue }
+    @_spi(SendbirdInternal) public var description: String { rawValue }
     
-    public var rawValue: String {
+    @_spi(SendbirdInternal) public var rawValue: String {
         switch self {
         case .open: return "open"
         case .group: return "group"
@@ -32,7 +32,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
         }
     }
     
-    public var intValue: Int {
+    @_spi(SendbirdInternal) public var intValue: Int {
         switch self {
         case .open: return 0
         case .group: return 1
@@ -40,7 +40,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
         }
     }
     
-    public init(rawValue: String) {
+    @_spi(SendbirdInternal) public init(rawValue: String) {
         switch rawValue {
         case "group": self = .group
         case "open": self = .open
@@ -49,7 +49,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
         }
     }
     
-    public var urlString: String {
+    @_spi(SendbirdInternal) public var urlString: String {
         switch self {
         case .open: return "open_channels"
         case .group, .feed: return "group_channels"
@@ -60,7 +60,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let stringValue = try container.decode(String.self)
         self.init(rawValue: stringValue)
@@ -69,7 +69,7 @@ extension AuthChannelType: RawRepresentable, CustomStringConvertible, Codable {
     /// Encodes this object.
     ///
     /// - Parameter encoder: `Encoder` instance
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(rawValue)
     }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol ChatWebSocketClientInterface: Actor, EventStreamable<WebSocketClientEvent> {
+@_spi(SendbirdInternal) public protocol ChatWebSocketClientInterface: Actor, EventStreamable<WebSocketClientEvent> {
     var routerConfig: CommandRouterConfiguration { get async }
     var sendbirdConfig: SendbirdConfiguration { get async }
     var state: AuthWebSocketConnectionState { get async }

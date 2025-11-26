@@ -7,9 +7,9 @@
 
 import Foundation
 
-public protocol Command { }
+@_spi(SendbirdInternal) public protocol Command { }
 
-public enum CommandType: String, Decodable {
+@_spi(SendbirdInternal) public enum CommandType: String, Decodable {
     case login = "LOGI"
     case userMessage = "MESG"
     case fileMessage = "FILE"
@@ -41,7 +41,7 @@ public enum CommandType: String, Decodable {
     
     case busy = "BUSY"  // 4.34.0
     
-    public var isAckRequired: Bool {
+    @_spi(SendbirdInternal) public var isAckRequired: Bool {
         switch self {
         case .userMessage, .fileMessage,
              .enterChannel, .exitChannel,
@@ -55,8 +55,8 @@ public enum CommandType: String, Decodable {
     }
 }
 
-public enum HTTPMethod: RawRepresentable {
-    public init?(rawValue: String) {
+@_spi(SendbirdInternal) public enum HTTPMethod: RawRepresentable {
+    @_spi(SendbirdInternal) public init?(rawValue: String) {
         switch rawValue {
         case "GET": self = .get(queryParams: [:])
         case "POST": self = .post(queryParams: [:])
@@ -73,13 +73,13 @@ public enum HTTPMethod: RawRepresentable {
     case delete(queryParams: [CodeCodingKeys: Any] = [:])
     case patch(queryParams: [CodeCodingKeys: Any] = [:])
     
-    public static var get: Self { .get(queryParams: [:]) }
-    public static var post: Self { .post(queryParams: [:]) }
-    public static var put: Self { .put(queryParams: [:]) }
-    public static var delete: Self { .delete(queryParams: [:]) }
-    public static var patch: Self { .patch(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var get: Self { .get(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var post: Self { .post(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var put: Self { .put(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var delete: Self { .delete(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var patch: Self { .patch(queryParams: [:]) }
     
-    public var rawValue: String {
+    @_spi(SendbirdInternal) public var rawValue: String {
         switch self {
         case .get: return "GET"
         case .post: return "POST"

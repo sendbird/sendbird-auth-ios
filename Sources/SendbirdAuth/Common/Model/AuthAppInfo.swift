@@ -8,15 +8,15 @@
 import Foundation
 
 /// An object contains application information
-public final class AuthAppInfo: NSObject, Codable {
+@_spi(SendbirdInternal) public final class AuthAppInfo: NSObject, Codable {
     /// This is the latest hash value for Emoji.
     /// Default value is empty string.
     /// - Since: 3.0.180
-    public var emojiHash: String
+    @_spi(SendbirdInternal) public var emojiHash: String
 
     /// This is the uploadable file size limit. (When receiving this value from the server, the unit is bytes.)
     /// - Since: 3.0.180
-    public var uploadSizeLimit: Int64 {
+    @_spi(SendbirdInternal) public var uploadSizeLimit: Int64 {
         if uploadSizeLimitInMB == .max { return .max }
         
         return uploadSizeLimitInMB * 1024 * 1024
@@ -24,92 +24,92 @@ public final class AuthAppInfo: NSObject, Codable {
     
     /// This is the original uploadable file size limit. (The unit is mega bytes.)
     /// - Since: 4.9.5
-    public var uploadSizeLimitInMB: Int64 = 0
+    @_spi(SendbirdInternal) public var uploadSizeLimitInMB: Int64 = 0
 
     /// This is the premium feature list using on your Application ID.
     /// - Since: 3.0.180
-    public var premiumFeatureList: [String]?
+    @_spi(SendbirdInternal) public var premiumFeatureList: [String]?
 
     /// This is the state of using the reaction feature.
     /// - Since: 3.0.180
-    public var useReaction: Bool
+    @_spi(SendbirdInternal) public var useReaction: Bool
 
     /// This is the application attributes list using on your Application ID.
     /// - Since: 3.0.198
-    public var applicationAttributes: [String]?
+    @_spi(SendbirdInternal) public var applicationAttributes: [String]?
 
     /// This is the application attribute to tell SDK use native websocket
     /// - Since: 3.0.222
-    public var useNativeWS: Bool = false
+    @_spi(SendbirdInternal) public var useNativeWS: Bool = false
 
     ///
     /// - Since: 3.0.231
-    public var concurrentCallLimit: Int = 0
+    @_spi(SendbirdInternal) public var concurrentCallLimit: Int = 0
 
     ///
     /// - Since: 3.0.231
-    public var backOffDelay: TimeInterval = 0.0
+    @_spi(SendbirdInternal) public var backOffDelay: TimeInterval = 0.0
     
     /// A getter for the `disableSupergroupMACK` property.
     /// - Since: 3.0.230
-    public var disableSuperGroupMACK: Bool
+    @_spi(SendbirdInternal) public var disableSuperGroupMACK: Bool
     
     /// Determines whether to send the stats log to the server
-    public var isStatsUploadAllowed: Bool
+    @_spi(SendbirdInternal) public var isStatsUploadAllowed: Bool
     
     /// Determines whether to collect the stats log
-    public var isStatsCollectAllowed: Bool {
+    @_spi(SendbirdInternal) public var isStatsCollectAllowed: Bool {
         typedApplicationAttributes.contains { $0.isRelatedToStat }
     }
     
-    public var typedApplicationAttributes: Set<ApplicationAttribute> {
+    @_spi(SendbirdInternal) public var typedApplicationAttributes: Set<ApplicationAttribute> {
         Set(applicationAttributes?.compactMap { ApplicationAttribute(rawValue: $0) } ?? [])
     }
     
     /// - Since: 4.6.0
-    @InternalAtomic public var notificationInfo: AuthNotificationInfo?
+    @InternalAtomic @_spi(SendbirdInternal) public var notificationInfo: AuthNotificationInfo?
     
     /// - Since: 4.17.0
-    @InternalAtomic public var messageTemplateInfo: AuthMessageTemplateInfo?
+    @InternalAtomic @_spi(SendbirdInternal) public var messageTemplateInfo: AuthMessageTemplateInfo?
     
     /// - Since: 4.26.0
-    @InternalAtomic public var aiAgentInfo: AuthAIAgent.Info
+    @InternalAtomic @_spi(SendbirdInternal) public var aiAgentInfo: AuthAIAgent.Info
     
     /// - Since: 4.8.4
-    public let uikitConfigInfo: AuthUIKitConfigInfo
+    @_spi(SendbirdInternal) public let uikitConfigInfo: AuthUIKitConfigInfo
     
     /// The maximum number of files that can be sent in a `MultipleFilesMessage`.
     /// - Since: 4.9.1
-    public let multipleFilesMessageFileCountLimit: Int
+    @_spi(SendbirdInternal) public let multipleFilesMessageFileCountLimit: Int
 
     /// - Since: 4.17.0
-    public var isChannelMembershipHistoryEnabled: Bool {
+    @_spi(SendbirdInternal) public var isChannelMembershipHistoryEnabled: Bool {
         guard let applicationAttributes else { return false }
         return applicationAttributes.contains("channel_membership_history")
     }
     
     /// - Since: 4.17.0
-    public var isLeftUserViewSupportEnabled: Bool {
+    @_spi(SendbirdInternal) public var isLeftUserViewSupportEnabled: Bool {
         guard let applicationAttributes else { return false }
         return applicationAttributes.contains("left_user_view_support")
     }
     
     /// - Since: 4.18.0
-    public let statsConfig: SafeDictionary<String, StatConfig>?
+    @_spi(SendbirdInternal) public let statsConfig: SafeDictionary<String, StatConfig>?
     
     /// StatConfig가 도입되기 전에 하드코딩 되어있던 설정
     /// - Since: 4.18.0
-    public var defaultConfig: StatConfig? {
+    @_spi(SendbirdInternal) public var defaultConfig: StatConfig? {
         statsConfig?[StatConfigKeys.default.rawValue]
     }
     
     /// Notification 로그를 위한 설정
     /// - Since: 4.18.0
-    public var notificationConfig: StatConfig? {
+    @_spi(SendbirdInternal) public var notificationConfig: StatConfig? {
         statsConfig?[StatConfigKeys.notification.rawValue]
     }
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         emojiHash: String,
         uploadSizeLimit: Int64,
         premiumFeatureList: [String]? = nil,
@@ -145,13 +145,13 @@ public final class AuthAppInfo: NSObject, Codable {
         self.statsConfig = statsConfig
     }
     
-    public enum ApplicationAttribute: String {
+    @_spi(SendbirdInternal) public enum ApplicationAttribute: String {
         case allowSDKRequestLogPublish = "allow_sdk_request_log_publish"
         case allowSDKFeatureLocalCacheLogPublish = "allow_sdk_feature_local_cache_log_publish"
         case allowSDKNotiStatsLogPublish = "allow_sdk_noti_stats_log_publish"
         case sdkDeviceTokenCache = "sdk_device_token_cache"
         
-        public var isRelatedToStat: Bool {
+        @_spi(SendbirdInternal) public var isRelatedToStat: Bool {
             switch self {
             case .allowSDKRequestLogPublish,
                     .allowSDKFeatureLocalCacheLogPublish,
@@ -163,7 +163,7 @@ public final class AuthAppInfo: NSObject, Codable {
         }
     }
     
-    public enum StatConfigKeys: String {
+    @_spi(SendbirdInternal) public enum StatConfigKeys: String {
         case `default` = "default"
         
         /// INFO: The configuration endpoint related to realtime stats has been changed in the TBD version due to rate limiting.
@@ -179,11 +179,11 @@ public final class AuthAppInfo: NSObject, Codable {
      - Since: 3.0.180
      */
     @objc
-    public func isEmojiUpdateNeeded(prevEmojiHash: String) -> Bool {
+    @_spi(SendbirdInternal) public func isEmojiUpdateNeeded(prevEmojiHash: String) -> Bool {
         return emojiHash != prevEmojiHash
     }
     
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
 
         try container.encodeIfPresent(emojiHash, forKey: .emojiHash)
@@ -209,7 +209,7 @@ public final class AuthAppInfo: NSObject, Codable {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    public required init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         self.premiumFeatureList = try container.decodeIfPresent([String].self, forKey: .premiumFeatureList)

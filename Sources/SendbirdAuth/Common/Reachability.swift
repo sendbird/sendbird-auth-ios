@@ -26,7 +26,7 @@ POSSIBILITY OF SUCH DAMAGE.
 import SystemConfiguration
 import Foundation
 
-public enum ReachabilityError: Error {
+@_spi(SendbirdInternal) public enum ReachabilityError: Error {
     case failedToCreateWithAddress(sockaddr, Int32)
     case failedToCreateWithHostname(String, Int32)
     case unableToSetCallback(Int32)
@@ -35,24 +35,24 @@ public enum ReachabilityError: Error {
 }
 
 extension Notification.Name {
-    public static let reachabilityChanged = Notification.Name("reachabilityChanged")
+    @_spi(SendbirdInternal) public static let reachabilityChanged = Notification.Name("reachabilityChanged")
 }
 
-public class Reachability {
-    public typealias NetworkReachable = (Reachability) -> Void
-    public typealias NetworkUnreachable = (Reachability) -> Void
+@_spi(SendbirdInternal) public class Reachability {
+    @_spi(SendbirdInternal) public typealias NetworkReachable = (Reachability) -> Void
+    @_spi(SendbirdInternal) public typealias NetworkUnreachable = (Reachability) -> Void
 
-    public enum Connection: CustomStringConvertible {
+    @_spi(SendbirdInternal) public enum Connection: CustomStringConvertible {
         case unavailable, wifi, cellular
         
-        public var isAvailable: Bool {
+        @_spi(SendbirdInternal) public var isAvailable: Bool {
             switch self {
             case .cellular, .wifi: return true
             case .unavailable: return false
             }
         }
         
-        public var description: String {
+        @_spi(SendbirdInternal) public var description: String {
             switch self {
             case .cellular: return "Cellular"
             case .wifi: return "WiFi"
@@ -61,25 +61,25 @@ public class Reachability {
         }
     }
 
-    @InternalAtomic public var whenReachabilityChanged: ((Reachability) -> Void)?
+    @InternalAtomic @_spi(SendbirdInternal) public var whenReachabilityChanged: ((Reachability) -> Void)?
 
     @available(*, deprecated, renamed: "allowsCellularConnection")
-    public let reachableOnWWAN: Bool = true
+    @_spi(SendbirdInternal) public let reachableOnWWAN: Bool = true
 
     /// Set to `false` to force Reachability.connection to .none when on cellular connection (default value `true`)
-    public var allowsCellularConnection: Bool
+    @_spi(SendbirdInternal) public var allowsCellularConnection: Bool
 
     @available(*, deprecated, renamed: "connection.description")
-    public var currentReachabilityString: String {
+    @_spi(SendbirdInternal) public var currentReachabilityString: String {
         return "\(connection)"
     }
 
     @available(*, unavailable, renamed: "connection")
-    public var currentReachabilityStatus: Connection {
+    @_spi(SendbirdInternal) public var currentReachabilityStatus: Connection {
         return connection
     }
 
-    public var connection: Connection {
+    @_spi(SendbirdInternal) public var connection: Connection {
         if flags == nil {
             try? setReachabilityFlags()
         }
@@ -103,14 +103,14 @@ public class Reachability {
     fileprivate let reachabilityRef: SCNetworkReachability
     fileprivate let reachabilitySerialQueue: DispatchQueue
     fileprivate let notificationQueue: DispatchQueue?
-    public var flags: SCNetworkReachabilityFlags? {
+    @_spi(SendbirdInternal) public var flags: SCNetworkReachabilityFlags? {
         didSet {
             guard flags != oldValue else { return }
             notifyReachabilityChanged()
         }
     }
 
-    public required init(
+    @_spi(SendbirdInternal) public required init(
         reachabilityRef: SCNetworkReachability,
         queueQoS: DispatchQoS = .default,
         targetQueue: DispatchQueue? = nil,
@@ -126,7 +126,7 @@ public class Reachability {
         self.notificationQueue = notificationQueue
     }
 
-    public convenience init(
+    @_spi(SendbirdInternal) public convenience init(
             hostname: String,
             queueQoS: DispatchQoS = .userInteractive,
             targetQueue: DispatchQueue? = nil,
@@ -143,7 +143,7 @@ public class Reachability {
         )
     }
 
-    public convenience init(
+    @_spi(SendbirdInternal) public convenience init(
         queueQoS: DispatchQoS = .default,
         targetQueue: DispatchQueue? = nil,
         notificationQueue: DispatchQueue? = .main
@@ -166,7 +166,7 @@ public class Reachability {
 
 extension Reachability {
     // MARK: - *** Notifier methods ***
-    public func startNotifier() throws {
+    @_spi(SendbirdInternal) public func startNotifier() throws {
         guard !notifierRunning else { return }
         Logger.external.info("Start notifier: \(self)")
 
@@ -221,7 +221,7 @@ extension Reachability {
         notifierRunning = true
     }
 
-    public func stopNotifier() {
+    @_spi(SendbirdInternal) public func stopNotifier() {
         defer { notifierRunning = false }
 
         Logger.external.info("Stop notifier: \(self)")
@@ -231,22 +231,22 @@ extension Reachability {
 
     // MARK: - *** Connection test methods ***
     @available(*, deprecated, message: "Please use `connection != .none`")
-    public var isReachable: Bool {
+    @_spi(SendbirdInternal) public var isReachable: Bool {
         return connection != .unavailable
     }
 
     @available(*, deprecated, message: "Please use `connection == .cellular`")
-    public var isReachableViaWWAN: Bool {
+    @_spi(SendbirdInternal) public var isReachableViaWWAN: Bool {
         // Check we're not on the simulator, we're REACHABLE and check we're on WWAN
         return connection == .cellular
     }
 
    @available(*, deprecated, message: "Please use `connection == .wifi`")
-    public var isReachableViaWiFi: Bool {
+    @_spi(SendbirdInternal) public var isReachableViaWiFi: Bool {
         return connection == .wifi
     }
 
-    public var description: String {
+    @_spi(SendbirdInternal) public var description: String {
         return flags?.description ?? "unavailable flags"
     }
 }
@@ -277,7 +277,7 @@ fileprivate extension Reachability {
     }
 }
 
-public extension SCNetworkReachabilityFlags {
+@_spi(SendbirdInternal) public extension SCNetworkReachabilityFlags {
     typealias Connection = Reachability.Connection
 
     var connection: Connection {

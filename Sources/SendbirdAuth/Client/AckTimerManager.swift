@@ -7,26 +7,26 @@
 
 import Foundation
 
-public enum ACKKey: String {
+@_spi(SendbirdInternal) public enum ACKKey: String {
     case requestId   = "request_id"
     case handler     = "handler"
     case command     = "command"
     case type        = "type"
 }
 
-public final class AckTimerManager {
-    public let board: SBTimerBoard
+@_spi(SendbirdInternal) public final class AckTimerManager {
+    @_spi(SendbirdInternal) public let board: SBTimerBoard
     
-    public init(board: SBTimerBoard = SBTimerBoard()) {
+    @_spi(SendbirdInternal) public init(board: SBTimerBoard = SBTimerBoard()) {
         self.board = board
     }
     
-    public func contains(_ requestId: String?) -> Bool {
+    @_spi(SendbirdInternal) public func contains(_ requestId: String?) -> Bool {
         guard let requestId = requestId else { return false }
         return board.timer(identifier: requestId) != nil
     }
     
-    public func handleResponse(with command: SBCommand, error: Error? = nil) {
+    @_spi(SendbirdInternal) public func handleResponse(with command: SBCommand, error: Error? = nil) {
         guard let identifier = command.reqId else { return }
         guard let timer = board.timer(identifier: identifier), timer.valid else { return }
         
@@ -43,7 +43,7 @@ public final class AckTimerManager {
         }
     }
     
-    public func register<R: ResultableRequest>(request: R, completionHandler: R.CommandHandler? = nil, timeout: TimeInterval) {
+    @_spi(SendbirdInternal) public func register<R: ResultableRequest>(request: R, completionHandler: R.CommandHandler? = nil, timeout: TimeInterval) {
         guard let identifier = (request as? WSRequestable)?.requestId else { return }
         
         let userInfo: [String: Any?] = [
@@ -61,7 +61,7 @@ public final class AckTimerManager {
         }
     }
     
-    public func clear(completion: (() -> Void)? = nil) {
+    @_spi(SendbirdInternal) public func clear(completion: (() -> Void)? = nil) {
         Logger.external.info("Configure ACK Timers.")
         let timers = board.timers
         

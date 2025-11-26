@@ -7,15 +7,15 @@
 
 import Foundation
 
-public final class DailyRecordStat: BaseStat {
-    public var key: DailyRecordKey {
+@_spi(SendbirdInternal) public final class DailyRecordStat: BaseStat {
+    @_spi(SendbirdInternal) public var key: DailyRecordKey {
         DailyRecordKey(
             date: Date(milliSeconds: timestamp),
             statType: statType
         )
     }
     
-    public func updated(with newValue: DailyRecordStat) -> DailyRecordStat {
+    @_spi(SendbirdInternal) public func updated(with newValue: DailyRecordStat) -> DailyRecordStat {
         let updatedData = mergeNestedData(existing: self.data ?? [:], new: newValue.data ?? [:])
         
         return DailyRecordStat(
@@ -63,26 +63,26 @@ public final class DailyRecordStat: BaseStat {
     }
 }
 
-public struct DailyRecordKey: Codable, Hashable {
+@_spi(SendbirdInternal) public struct DailyRecordKey: Codable, Hashable {
     private static let dateFormatter: DateFormatter = {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd"
         return dateFormatter
     }()
 
-    public let formattedDate: String
-    public let statType: StatType
+    @_spi(SendbirdInternal) public let formattedDate: String
+    @_spi(SendbirdInternal) public let statType: StatType
     
-    public init(date: Date, statType: StatType) {
+    @_spi(SendbirdInternal) public init(date: Date, statType: StatType) {
         self.formattedDate = Self.dateFormatter.string(from: date)
         self.statType = statType
     }
     
-    public func isSameDate(with other: Date) -> Bool {
+    @_spi(SendbirdInternal) public func isSameDate(with other: Date) -> Bool {
         return self.formattedDate == Self.dateFormatter.string(from: other)
     }
     
-    public func hash(into hasher: inout Hasher) {
+    @_spi(SendbirdInternal) public func hash(into hasher: inout Hasher) {
         hasher.combine(formattedDate)
         hasher.combine(statType)
     }
