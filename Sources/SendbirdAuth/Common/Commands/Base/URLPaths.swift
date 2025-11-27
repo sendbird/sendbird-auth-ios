@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum URLPaths {
+@_spi(SendbirdInternal) public enum URLPaths {
     
     /// Secret", "Application Settings
     case secretApplicationAttrsReactions(applicationId: String)
@@ -156,7 +156,7 @@ public enum URLPaths {
     case settings
     case authenticate(userId: String)
     
-    public var splitPath: [CustomStringConvertible] {
+    @_spi(SendbirdInternal) public var splitPath: [CustomStringConvertible] {
         switch self {
             /// Secret", "Application Settings
         case .secretApplicationAttrsReactions(let applicationId):

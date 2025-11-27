@@ -7,17 +7,17 @@
 
 import Foundation
 
-public class ConnectedState: ConnectionStatable {
-    public let loginEvent: LoginEvent
-    public let task: ReconnectionTask?
+@_spi(SendbirdInternal) public class ConnectedState: ConnectionStatable {
+    @_spi(SendbirdInternal) public let loginEvent: LoginEvent
+    @_spi(SendbirdInternal) public let task: ReconnectionTask?
     
-    public let isReconnected: Bool
+    @_spi(SendbirdInternal) public let isReconnected: Bool
     
-    public var loginHandlers: [AuthUserHandler?]
+    @_spi(SendbirdInternal) public var loginHandlers: [AuthUserHandler?]
     
-    public var reconnectedBy: ReconnectingTrigger?
+    @_spi(SendbirdInternal) public var reconnectedBy: ReconnectingTrigger?
 
-    public init(
+    @_spi(SendbirdInternal) public init(
         loginEvent: LoginEvent,
         sessionKey: String,
         isReconnected: Bool,
@@ -50,7 +50,7 @@ public class ConnectedState: ConnectionStatable {
         self.reconnectedBy = reconnectedBy
     }
     
-    public func process(context: ConnectionContext) {
+    @_spi(SendbirdInternal) public func process(context: ConnectionContext) {
         Logger.main.debug("lastConnectedAt: \(String(describing: context.dataSourceForWebSocket?.lastConnectedAt)), reconnectedBy: \(String(describing: reconnectedBy))")
         
         let previouslyConnected = context.dataSourceForWebSocket?.lastConnectedAt != 0
@@ -70,7 +70,7 @@ public class ConnectedState: ConnectionStatable {
         }
     }
     
-    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.session.debug("loginKey: \(loginKey), has sessionKey: \(sessionKey != nil)")
       
         context.serviceForWebSocket? {
@@ -78,7 +78,7 @@ public class ConnectedState: ConnectionStatable {
         }
     }
     
-    public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    @_spi(SendbirdInternal) public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.session.debug("reconnect by \(String(describing: reconnectedBy?.rawValue))")
         
         if let sessionKey {
@@ -97,7 +97,7 @@ public class ConnectedState: ConnectionStatable {
         return task != nil
     }
     
-    public func didEnterBackground(context: ConnectionContext) {
+    @_spi(SendbirdInternal) public func didEnterBackground(context: ConnectionContext) {
         Logger.main.debug()
         context.changeState(
             to: InternalDisconnectedState(
@@ -109,7 +109,7 @@ public class ConnectedState: ConnectionStatable {
         )
     }
     
-    public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         context.changeState(
             to: LogoutState(
@@ -119,7 +119,7 @@ public class ConnectedState: ConnectionStatable {
         )
     }
     
-    public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         context.changeState(
             to: ExternalDisconnectedState(
@@ -128,7 +128,7 @@ public class ConnectedState: ConnectionStatable {
         )
     }
     
-    public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
+    @_spi(SendbirdInternal) public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
         Logger.session.debug()
         context.changeState(
             to: InternalDisconnectedState(
@@ -140,7 +140,7 @@ public class ConnectedState: ConnectionStatable {
         )
     }
     
-    public func didSocketFail(context: ConnectionContext, error: AuthError?) {
+    @_spi(SendbirdInternal) public func didSocketFail(context: ConnectionContext, error: AuthError?) {
         Logger.session.debug("fail \(String(describing: error?.localizedDescription))")
         context.changeState(
             to: InternalDisconnectedState(
@@ -152,7 +152,7 @@ public class ConnectedState: ConnectionStatable {
         )
     }
     
-    public func didReceiveBUSY(context: any ConnectionContext, command: BusyEvent) {
+    @_spi(SendbirdInternal) public func didReceiveBUSY(context: any ConnectionContext, command: BusyEvent) {
         Logger.session.debug()
         
         context.changeState(

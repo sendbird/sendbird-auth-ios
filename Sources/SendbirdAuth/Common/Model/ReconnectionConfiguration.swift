@@ -7,20 +7,20 @@
 
 import Foundation
 
-public class ReconnectionConfiguration: Codable {
-    public static let `default` = ReconnectionConfiguration(
+@_spi(SendbirdInternal) public class ReconnectionConfiguration: Codable {
+    @_spi(SendbirdInternal) public static let `default` = ReconnectionConfiguration(
         baseInterval: 2,
         maximumInterval: 20,
         multiplier: 2,
         maximumRetryCount: -1
     )
-    public let baseInterval: Double
-    public let maximumInterval: Double
+    @_spi(SendbirdInternal) public let baseInterval: Double
+    @_spi(SendbirdInternal) public let maximumInterval: Double
     
-    public let multiplier: Int
-    public let maximumRetryCount: Int
+    @_spi(SendbirdInternal) public let multiplier: Int
+    @_spi(SendbirdInternal) public let maximumRetryCount: Int
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         baseInterval: Double,
         maximumInterval: Double,
         multiplier: Int,
@@ -32,11 +32,11 @@ public class ReconnectionConfiguration: Codable {
         self.maximumRetryCount = maximumRetryCount
     }
     
-    public func createTask(sessionKey: String) -> ReconnectionTask {
+    @_spi(SendbirdInternal) public func createTask(sessionKey: String) -> ReconnectionTask {
         return ReconnectionTask(config: self, sessionKey: sessionKey)
     }
     
-    public required init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         self.baseInterval = try container.decode(Double.self, forKey: .interval)
         self.maximumInterval = try container.decode(Double.self, forKey: .maxInterval)
@@ -44,7 +44,7 @@ public class ReconnectionConfiguration: Codable {
         self.maximumRetryCount = try container.decode(Int.self, forKey: .retryCount)
     }
     
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         try container.encode(self.baseInterval, forKey: .interval)
         try container.encode(self.maximumInterval, forKey: .maxInterval)

@@ -7,10 +7,10 @@
 
 import Foundation
 
-public protocol InternalEvent: Command {
+@_spi(SendbirdInternal) public protocol InternalEvent: Command {
     var dispatchSynchronously: Bool { get }
 }
 
-public extension InternalEvent {
+@_spi(SendbirdInternal) public extension InternalEvent {
     var dispatchSynchronously: Bool { true }
 }

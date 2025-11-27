@@ -7,7 +7,7 @@
 
 import Foundation
 
-public extension String {
+@_spi(SendbirdInternal) public extension String {
     var hasElements: Bool { isEmpty == false }
     
     var collapsed: String? { isEmpty ? nil : self }
@@ -103,7 +103,7 @@ public extension String {
 }
 
 extension String {
-    public init?(data: Data?) {
+    @_spi(SendbirdInternal) public init?(data: Data?) {
         guard let theData = data else {
             return nil
         }
@@ -111,12 +111,12 @@ extension String {
         self.init(data: theData, encoding: .utf8)
     }
     
-    public init(prefix: String) {
+    @_spi(SendbirdInternal) public init(prefix: String) {
         let compound = prefix + "." + UUID().uuidString
         self.init(compound)
     }
     
-    public func trunc(length: Int, trailing: String = "…") -> String {
+    @_spi(SendbirdInternal) public func trunc(length: Int, trailing: String = "…") -> String {
         return (self.count > length) ? self.prefix(length) + trailing : self
     }
     
@@ -124,7 +124,7 @@ extension String {
 //        return UUID().uuidString
 //    }
     
-    public var urlEncoded: String {
+    @_spi(SendbirdInternal) public var urlEncoded: String {
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: ".-_~ ")
         
@@ -136,9 +136,9 @@ extension String {
 }
 
 extension UniChar: Swift.ExpressibleByUnicodeScalarLiteral {
-    public typealias UnicodeScalarLiteralType = UnicodeScalar
+    @_spi(SendbirdInternal) public typealias UnicodeScalarLiteralType = UnicodeScalar
 
-    public init(unicodeScalarLiteral scalar: UnicodeScalar) {
+    @_spi(SendbirdInternal) public init(unicodeScalarLiteral scalar: UnicodeScalar) {
         self.init(scalar.value)
     }
 }

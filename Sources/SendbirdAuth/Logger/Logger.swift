@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Logger {
+@_spi(SendbirdInternal) public struct Logger {
     var descriptor: LogDescriptable
     var symbols = [String: LogSymbol]()
     
@@ -39,7 +39,7 @@ public struct Logger {
     }
 }
 
-public extension Logger {
+@_spi(SendbirdInternal) public extension Logger {
     static func setSDKVersion(_ version: String) {
         self.sdkVersion = version
     }
@@ -62,17 +62,17 @@ public extension Logger {
 }
 
 // MARK: Logger print methods for each levels.
-public extension Logger {
-    func error(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.error, category, tag, .common(filepath, funcName, line), symbols) }
-    func warning(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.warning, category, tag, .common(filepath, funcName, line), symbols) }
-    func info(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.info, category, tag, .common(filepath, funcName, line), symbols) }
-    func debug(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.debug, category, tag, .common(filepath, funcName, line), symbols) }
-    func verbose(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.verbose, category, tag, .common(filepath, funcName, line), symbols) }
+extension Logger {
+    @_spi(SendbirdInternal) public func error(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.error, category, tag, .common(filepath, funcName, line), symbols) }
+    @_spi(SendbirdInternal) public func warning(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.warning, category, tag, .common(filepath, funcName, line), symbols) }
+    @_spi(SendbirdInternal) public func info(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.info, category, tag, .common(filepath, funcName, line), symbols) }
+    @_spi(SendbirdInternal) public func debug(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.debug, category, tag, .common(filepath, funcName, line), symbols) }
+    @_spi(SendbirdInternal) public func verbose(category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(.verbose, category, tag, .common(filepath, funcName, line), symbols) }
     
-    func send(level: Logger.Level, category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(level, category, tag, .common(filepath, funcName, line), symbols) }
+    @_spi(SendbirdInternal) public func send(level: Logger.Level, category: Logger.Categories? = nil, tag: Logger.Tag? = nil, filepath: String = #file, line: Int = #line, funcName: String = #function, _ symbols: LogSymbol ...) { self.log(level, category, tag, .common(filepath, funcName, line), symbols) }
     
     // Prints the error log with `ErrorMessage`. You can use this method for convenience.
-    func error(errorMessage: ErrorMessage) {
+    @_spi(SendbirdInternal) public func error(errorMessage: ErrorMessage) {
         self.log(.error, nil, nil, nil, [errorMessage.description])
     }
 }
@@ -124,7 +124,7 @@ extension Logger {
 }
 
 // MARK: Logger filtering methods.
-public extension Logger {
+@_spi(SendbirdInternal) public extension Logger {
     static func setLoggerLevel(_ level: AuthLogLevel) {
         self.observers.forEach { $0.observer?.limit = level }
     }
@@ -134,7 +134,7 @@ public extension Logger {
     }
 }
 
-public extension Logger {
+@_spi(SendbirdInternal) public extension Logger {
     @discardableResult
     mutating func update(_ symbols: LogSymbol ...) -> Logger {
         symbols.forEach { self.symbols[$0.symbolKey] = $0 }

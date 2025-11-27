@@ -7,19 +7,19 @@
 
 import Foundation
 
-public final class SendbirdAuth {
-    public static let authDecoder = JSONDecoder()
+@_spi(SendbirdInternal) public final class SendbirdAuth {
+    @_spi(SendbirdInternal) public static let authDecoder = JSONDecoder()
     
-    public static var sdkVersion: String { "4.34.0" }
+    @_spi(SendbirdInternal) public static var sdkVersion: String { "4.34.0" }
     
     private static var sdkInstance: SendbirdAuthMain?
-    public static func updateSharedSDKInstance(to newMain: SendbirdAuthMain) {
+    @_spi(SendbirdInternal) public static func updateSharedSDKInstance(to newMain: SendbirdAuthMain) {
         sdkInstance = newMain
     }
     
-    public static var pref = LocalPreferences(suiteName: "com.sendbird.sdk.ios")
+    @_spi(SendbirdInternal) public static var pref = LocalPreferences(suiteName: "com.sendbird.sdk.ios")
     
-    public static var isInitialized: Bool {
+    @_spi(SendbirdInternal) public static var isInitialized: Bool {
         guard let sdkInstance else {
             return false
         }
@@ -33,7 +33,7 @@ public final class SendbirdAuth {
         return !emptyAppId
     }
     
-    public static var isInitializedWithoutWarning: Bool {
+    @_spi(SendbirdInternal) public static var isInitializedWithoutWarning: Bool {
         guard let sdkInstance else {
             return false
         }

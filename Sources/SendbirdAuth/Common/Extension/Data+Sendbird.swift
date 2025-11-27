@@ -8,7 +8,7 @@
 import Foundation
 import CommonCrypto
 
-public extension Data {
+@_spi(SendbirdInternal) public extension Data {
     var asDeviceTokenString: String {
         self.map { String(format: "%02.2hhx", $0) }.joined()
     }
@@ -18,7 +18,7 @@ public extension Data {
     }
 }
 
-public extension Data {
+@_spi(SendbirdInternal) public extension Data {
     
     var prettyPrintedJSONString: String {
         (try? JSONSerialization.jsonObject(with: self, options: []))
@@ -59,19 +59,19 @@ public extension Data {
     
 }
 
-public protocol Randomizer {
+@_spi(SendbirdInternal) public protocol Randomizer {
     static func randomInitialVector() -> Data?
     static func randomSalt() -> Data?
     static func randomData(length: Int) -> Data?
 }
 
-public protocol Crypter {
+@_spi(SendbirdInternal) public protocol Crypter {
     func encrypt(_ digest: Data) throws -> Data
     func decrypt(_ encrypted: Data) throws -> Data
 }
 
 // https://medium.com/@vialyx/security-data-transforms-with-swift-aes256-on-ios-6509917497d
-public struct AES256Crypter {
+@_spi(SendbirdInternal) public struct AES256Crypter {
     
     private let key: Data
     private let initialVector: Data
@@ -152,26 +152,26 @@ public struct AES256Crypter {
 
 extension AES256Crypter: Crypter {
     
-    public func encrypt(_ digest: Data) throws -> Data {
+    @_spi(SendbirdInternal) public func encrypt(_ digest: Data) throws -> Data {
         return try crypt(input: digest, operation: CCOperation(kCCEncrypt))
     }
     
-    public func decrypt(_ encrypted: Data) throws -> Data {
+    @_spi(SendbirdInternal) public func decrypt(_ encrypted: Data) throws -> Data {
         return try crypt(input: encrypted, operation: CCOperation(kCCDecrypt))
     }
 }
 
 extension AES256Crypter: Randomizer {
     
-    public static func randomInitialVector() -> Data? {
+    @_spi(SendbirdInternal) public static func randomInitialVector() -> Data? {
         return randomData(length: kCCBlockSizeAES128)
     }
     
-    public static func randomSalt() -> Data? {
+    @_spi(SendbirdInternal) public static func randomSalt() -> Data? {
         return randomData(length: 8)
     }
     
-    public static func randomData(length: Int) -> Data? {
+    @_spi(SendbirdInternal) public static func randomData(length: Int) -> Data? {
         var data = Data(count: length)
         let status = data.withUnsafeMutableBytes { mutableBytes -> Int32 in
             guard let baseAddress = mutableBytes.baseAddress else {
@@ -187,7 +187,7 @@ extension AES256Crypter: Randomizer {
     
 }
 
-public extension Data {
+@_spi(SendbirdInternal) public extension Data {
     func toHexString() -> String {
         return self.map { String(format: "%02x", $0) }.joined()
     }

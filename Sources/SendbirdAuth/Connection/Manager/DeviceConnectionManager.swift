@@ -12,44 +12,44 @@ import UIKit
 import AppKit
 #endif
 
-public class DeviceConnectionManager {
-    @InternalAtomic public var broadcaster: ConnectionEventBroadcaster
-    @InternalAtomic public var internalBroadcaster: InternalConnectionEventBroadcaster
-    @InternalAtomic public var networkBroadcaster: NetworkEventBroadcaster
+@_spi(SendbirdInternal) public class DeviceConnectionManager {
+    @InternalAtomic @_spi(SendbirdInternal) public var broadcaster: ConnectionEventBroadcaster
+    @InternalAtomic @_spi(SendbirdInternal) public var internalBroadcaster: InternalConnectionEventBroadcaster
+    @InternalAtomic @_spi(SendbirdInternal) public var networkBroadcaster: NetworkEventBroadcaster
     
-    @InternalAtomic public var reachability: Reachability?
+    @InternalAtomic @_spi(SendbirdInternal) public var reachability: Reachability?
     
-    public var isOnline: Bool { !isOffline }
-    public var isOffline: Bool { networkConnection == .unavailable }
-    public var networkConnection: Reachability.Connection = .unavailable {
+    @_spi(SendbirdInternal) public var isOnline: Bool { !isOffline }
+    @_spi(SendbirdInternal) public var isOffline: Bool { networkConnection == .unavailable }
+    @_spi(SendbirdInternal) public var networkConnection: Reachability.Connection = .unavailable {
         didSet {
             webSocketManager?.changeNetworkStatus(to: networkConnection)
         }
     }
     
-    public var useReachability: Bool = true
-    public var isReachabilityRunning: Bool {
+    @_spi(SendbirdInternal) public var useReachability: Bool = true
+    @_spi(SendbirdInternal) public var isReachabilityRunning: Bool {
         reachability?.notifierRunning ?? false
     }
     
-    public private(set) var isForeground: Bool = true
+    @_spi(SendbirdInternal) public private(set) var isForeground: Bool = true
     private var currentHost: String = ""
     
-    public weak var sessionManager: SessionManager?
-    public weak var webSocketManager: WebSocketManager? {
+    @_spi(SendbirdInternal) public weak var sessionManager: SessionManager?
+    @_spi(SendbirdInternal) public weak var webSocketManager: WebSocketManager? {
         didSet {
             webSocketManager?.changeNetworkStatus(to: networkConnection)
         }
     }
     
-    public var hasSessionDelegate: Bool {
+    @_spi(SendbirdInternal) public var hasSessionDelegate: Bool {
         sessionManager?.sessionHandler.delegate(forKey: DelegateKeys.session) != nil
     }
     
     private let eventDispatcher: EventDispatcher
     private let timerBoard: SBTimerBoard
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         commandRouter: CommandRouter?,
         sessionManager: SessionManager?,
         eventDispatcher: EventDispatcher,
@@ -115,7 +115,7 @@ public class DeviceConnectionManager {
         NotificationCenter.default.removeObserver(self)
     }
     
-    public func logout() {
+    @_spi(SendbirdInternal) public func logout() {
         timerBoard.stopAll()
         stopReachability()
     }
@@ -123,7 +123,7 @@ public class DeviceConnectionManager {
 
 extension DeviceConnectionManager {
     @objc
-    public func enteredForeground() {
+    @_spi(SendbirdInternal) public func enteredForeground() {
         Logger.external.info("Entered foreground.")
         isForeground = true
         
@@ -138,7 +138,7 @@ extension DeviceConnectionManager {
         enteredBackground(completion: nil)
     }
     
-    public func enteredBackground(completion: VoidHandler?) {
+    @_spi(SendbirdInternal) public func enteredBackground(completion: VoidHandler?) {
         Logger.external.info("Entered background.")
         
         isForeground = false
@@ -146,12 +146,12 @@ extension DeviceConnectionManager {
     }
     
     @objc
-    public func willTerminate() {
+    @_spi(SendbirdInternal) public func willTerminate() {
         eventDispatcher.dispatch(command: ApplicationStateEvent.Terminate())
     }
     
     @discardableResult
-    public func startReachability(host: String? = nil) -> Bool {
+    @_spi(SendbirdInternal) public func startReachability(host: String? = nil) -> Bool {
         guard let applicationId = webSocketManager?.stateData?.applicationId else {
             return false
         }
@@ -184,7 +184,7 @@ extension DeviceConnectionManager {
         return false
     }
     
-    public func restartReachability() {
+    @_spi(SendbirdInternal) public func restartReachability() {
         Logger.main.verbose("Restart the network reachability.")
         let host = currentHost
         
@@ -192,7 +192,7 @@ extension DeviceConnectionManager {
         startReachability(host: host)
     }
     
-    public func stopReachability() {
+    @_spi(SendbirdInternal) public func stopReachability() {
         reachability?.stopNotifier()
     }
     
@@ -209,7 +209,7 @@ extension DeviceConnectionManager {
         networkConnection = newConnection
     }
     
-    public func refreshForFeed() {
+    @_spi(SendbirdInternal) public func refreshForFeed() {
         guard let session = sessionManager?.session,
               session.services.count == 1,
               session.services.contains(.feed) else { return }
@@ -220,11 +220,11 @@ extension DeviceConnectionManager {
 }
 
 extension DeviceConnectionManager: EventDelegate {
-    public func didReceiveSBCommandEvent(command _: SBCommand) async {
+    @_spi(SendbirdInternal) public func didReceiveSBCommandEvent(command _: SBCommand) async {
         // do-nothing
     }
     
-    public func didReceiveInternalEvent(command: InternalEvent) {
+    @_spi(SendbirdInternal) public func didReceiveInternalEvent(command: InternalEvent) {
         switch command {
         case let command as ConnectionStateEvent.Connected:
             if command.isReconnected {
@@ -266,7 +266,7 @@ extension DeviceConnectionManager: EventDelegate {
 }
 
 #if TESTCASE
-public extension DeviceConnectionManager {
+@_spi(SendbirdInternal) public extension DeviceConnectionManager {
     var isReachabilityRunningForTest: Bool {
         isReachabilityRunning
     }

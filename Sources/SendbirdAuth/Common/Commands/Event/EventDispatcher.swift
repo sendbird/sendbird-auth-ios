@@ -7,10 +7,10 @@
 
 import Foundation
 
-public class EventDispatcher {
-    public var delegates: NSMapTable<NSString, AnyObject>
-    public var queue: SafeSerialQueue
-    public var timeout: TimeInterval = 10.0
+@_spi(SendbirdInternal) public class EventDispatcher {
+    @_spi(SendbirdInternal) public var delegates: NSMapTable<NSString, AnyObject>
+    @_spi(SendbirdInternal) public var queue: SafeSerialQueue
+    @_spi(SendbirdInternal) public var timeout: TimeInterval = 10.0
     
     private var onBeforeDispatchCommandHandler: ((Command) -> Void)?
     
@@ -18,35 +18,35 @@ public class EventDispatcher {
     /// - Since: 4.27.0
     private let wsEventDeduplicator: WSEventDeduplicator = WSEventDeduplicator()
     
-    public lazy var operationQueue: OperationQueue = {
+    @_spi(SendbirdInternal) public lazy var operationQueue: OperationQueue = {
         let operationQueue = OperationQueue()
         operationQueue.name = "com.sendbird.core.event_receiver.\(UUID().uuidString)"
         operationQueue.maxConcurrentOperationCount = 1
         return operationQueue
     }()
     
-    public let identifier = UUID().uuidString
+    @_spi(SendbirdInternal) public let identifier = UUID().uuidString
     
-    public init() {
+    @_spi(SendbirdInternal) public init() {
         self.delegates = NSMapTable<NSString, AnyObject>(keyOptions: .strongMemory, valueOptions: .weakMemory)
         self.queue = SafeSerialQueue(label: "com.sendbird.core.chat.commandrouter.eventreceiver.\(identifier)")
     }
     
-    public func add(receivers: [EventDelegate]) {
+    @_spi(SendbirdInternal) public func add(receivers: [EventDelegate]) {
         receivers.forEach {
             add(receiver: $0, forKey: "\(type(of: $0))_\(identifier)")
         }
     }
     
-    public func add(receiver: EventDelegate, forKey key: String) {
+    @_spi(SendbirdInternal) public func add(receiver: EventDelegate, forKey key: String) {
         delegates.setObject(receiver, forKey: key as NSString)
     }
     
-    public func remove(forKey key: String) {
+    @_spi(SendbirdInternal) public func remove(forKey key: String) {
         delegates.removeObject(forKey: key as NSString)
     }
     
-    public func register(deduplicationRules: [WSEventDeduplicationRule]) {
+    @_spi(SendbirdInternal) public func register(deduplicationRules: [WSEventDeduplicationRule]) {
         Logger.client.verbose("Register WS event deduplication rules")
         // Use semaphore to make the below Task bevahe synchronously.
         let semaphore = DispatchSemaphore(value: 0)
@@ -63,14 +63,14 @@ public class EventDispatcher {
         }
     }
     
-    public func execute(internalEvent: InternalEvent) {
+    @_spi(SendbirdInternal) public func execute(internalEvent: InternalEvent) {
         Logger.client.verbose("Will dispatch event: \(internalEvent)")
         
         // InternalEvent is dispatched from the thread that called dispatch for immediate propagation.
         dispatchableDelegates.forEach { $0.didReceiveInternalEvent(command: internalEvent) }
     }
     
-    public func dispatch(command: Command, completionHandler: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func dispatch(command: Command, completionHandler: VoidHandler? = nil) {
         onBeforeDispatchCommandHandler?(command)
         
         // InternalEvent is dispatched from the thread that called dispatch for immediate propagation.
@@ -120,7 +120,7 @@ public class EventDispatcher {
     }
 }
 
-public extension EventDispatcher {
+@_spi(SendbirdInternal) public extension EventDispatcher {
     func onBeforeDispatchCommand(_ handler: ((Command) -> Void)?) {
         onBeforeDispatchCommandHandler = handler
     }

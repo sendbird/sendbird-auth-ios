@@ -8,7 +8,7 @@
 import Foundation
 
 extension Encodable {
-    public func toDictionary(
+    @_spi(SendbirdInternal) public func toDictionary(
         options: [CodingUserInfoKey: Any] = [:],
         keyStrategy strategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys
     ) -> [String: Any]? {
@@ -22,7 +22,7 @@ extension Encodable {
 }
 
 extension Decodable where Self: Encodable {
-    public func makeCodableCopy(options: [CodingUserInfoKey: Any] = [:], decoder: JSONDecoder) -> Self {
+    @_spi(SendbirdInternal) public func makeCodableCopy(options: [CodingUserInfoKey: Any] = [:], decoder: JSONDecoder) -> Self {
         do {
             let encoder = JSONEncoder()
             encoder.userInfo = options
@@ -35,7 +35,7 @@ extension Decodable where Self: Encodable {
 }
 
 extension Encodable {
-    public func makeCodableCopy<T: Decodable>(as type: T.Type, decoder: JSONDecoder) -> T? {
+    @_spi(SendbirdInternal) public func makeCodableCopy<T: Decodable>(as type: T.Type, decoder: JSONDecoder) -> T? {
         do {
             let encodedData = try JSONEncoder().encode(self)
             return try decoder.decode(type, from: encodedData)
@@ -44,7 +44,7 @@ extension Encodable {
 }
 
 // Internal method for chat
-public extension Decodable {
+@_spi(SendbirdInternal) public extension Decodable {
     static func _make(_ json: [AnyHashable: Any]) -> Self? {
         return Self._make(from: json, decoder: SendbirdAuth.authDecoder)
     }
@@ -66,7 +66,7 @@ extension KeyedDecodingContainer {
     /// - Parameter key: Key.
     /// - Returns: Decoded Bool value.
     /// - Throws: Decoding error.
-    public func decodeBoolAsIntOrString(forKey key: Key) throws -> Bool {
+    @_spi(SendbirdInternal) public func decodeBoolAsIntOrString(forKey key: Key) throws -> Bool {
         if let bool = try? decode(Bool.self, forKey: key) {
             return bool
         }
@@ -82,7 +82,7 @@ extension KeyedDecodingContainer {
     /// - Parameter key: Key.
     /// - Returns: Decoded Bool value.
     /// - Throws: Decoding error.
-    public func decodeBoolAsIntOrStringIfPresent(forKey key: Key) throws -> Bool? {
+    @_spi(SendbirdInternal) public func decodeBoolAsIntOrStringIfPresent(forKey key: Key) throws -> Bool? {
         if let bool = try? decodeIfPresent(Bool.self, forKey: key) {
             return bool
         }

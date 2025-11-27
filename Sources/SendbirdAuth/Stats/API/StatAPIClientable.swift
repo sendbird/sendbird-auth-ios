@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol StatAPIClientable: AnyObject {
+@_spi(SendbirdInternal) public protocol StatAPIClientable: AnyObject {
     func setDeviceId(deviceId: String)
     func send<RecordStatType: BaseStatType>(stats: [RecordStatType]) async throws
     func sendNotificationStats(stats: [NotificationStat]) async throws

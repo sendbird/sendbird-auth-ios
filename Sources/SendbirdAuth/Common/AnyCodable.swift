@@ -9,16 +9,16 @@
 import Foundation
 import CoreGraphics
 
-public struct AnyCodable: Codable {
-    public let value: Optional<Any>
+@_spi(SendbirdInternal) public struct AnyCodable: Codable {
+    @_spi(SendbirdInternal) public let value: Optional<Any>
 
-    public init<T>(_ value: T?) {
+    @_spi(SendbirdInternal) public init<T>(_ value: T?) {
         self.value = value
     }
 }
 
 extension AnyCodable: _AnyEncodable, _AnyDecodable {
-    public var anyValue: Optional<Any> {
+    @_spi(SendbirdInternal) public var anyValue: Optional<Any> {
         switch value {
         case let array as [AnyCodable]:
             return array.map { $0.anyValue }
@@ -30,7 +30,7 @@ extension AnyCodable: _AnyEncodable, _AnyDecodable {
 }
 
 extension AnyCodable: Equatable {
-    public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+    @_spi(SendbirdInternal) public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
         switch (lhs.value, rhs.value) {
         case is (Void, Void):
             return true
@@ -75,7 +75,7 @@ extension AnyCodable: Equatable {
 }
 
 extension AnyCodable: CustomStringConvertible {
-    public var description: String {
+    @_spi(SendbirdInternal) public var description: String {
         switch value {
         case is Void:
             return String(describing: nil as Any?)
@@ -88,7 +88,7 @@ extension AnyCodable: CustomStringConvertible {
 }
 
 extension AnyCodable: CustomDebugStringConvertible {
-    public var debugDescription: String {
+    @_spi(SendbirdInternal) public var debugDescription: String {
         switch value {
         case let value as CustomDebugStringConvertible:
             return "AnyCodable(\(value.debugDescription))"
@@ -107,7 +107,7 @@ extension AnyCodable: ExpressibleByArrayLiteral {}
 extension AnyCodable: ExpressibleByDictionaryLiteral {}
 
 extension AnyCodable: Hashable {
-    public func hash(into hasher: inout Hasher) {
+    @_spi(SendbirdInternal) public func hash(into hasher: inout Hasher) {
         switch value {
         case let value as Bool:
             hasher.combine(value)
@@ -149,15 +149,15 @@ extension AnyCodable: Hashable {
     }
 }
 
-public struct AnyDecodable: Decodable {
-    public let value: Optional<Any>
+@_spi(SendbirdInternal) public struct AnyDecodable: Decodable {
+    @_spi(SendbirdInternal) public let value: Optional<Any>
 
-    public init<T>(_ value: T?) {
+    @_spi(SendbirdInternal) public init<T>(_ value: T?) {
         self.value = value
     }
 }
 
-public protocol _AnyDecodable {
+@_spi(SendbirdInternal) public protocol _AnyDecodable {
     var value: Optional<Any> { get }
     init<T>(_ value: T?)
 }
@@ -165,7 +165,7 @@ public protocol _AnyDecodable {
 extension AnyDecodable: _AnyDecodable {}
 
 extension _AnyDecodable {
-    public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
 
         if container.decodeNil() {
@@ -193,7 +193,7 @@ extension _AnyDecodable {
 }
 
 extension AnyDecodable: Equatable {
-    public static func == (lhs: AnyDecodable, rhs: AnyDecodable) -> Bool {
+    @_spi(SendbirdInternal) public static func == (lhs: AnyDecodable, rhs: AnyDecodable) -> Bool {
         switch (lhs.value, rhs.value) {
         case is (NSNull, NSNull), is (Void, Void):
             return true
@@ -238,7 +238,7 @@ extension AnyDecodable: Equatable {
 }
 
 extension AnyDecodable: CustomStringConvertible {
-    public var description: String {
+    @_spi(SendbirdInternal) public var description: String {
         switch value {
         case is Void:
             return String(describing: nil as Any?)
@@ -251,7 +251,7 @@ extension AnyDecodable: CustomStringConvertible {
 }
 
 extension AnyDecodable: CustomDebugStringConvertible {
-    public var debugDescription: String {
+    @_spi(SendbirdInternal) public var debugDescription: String {
         switch value {
         case let value as CustomDebugStringConvertible:
             return "AnyDecodable(\(value.debugDescription))"
@@ -262,7 +262,7 @@ extension AnyDecodable: CustomDebugStringConvertible {
 }
 
 extension AnyDecodable: Hashable {
-    public func hash(into hasher: inout Hasher) {
+    @_spi(SendbirdInternal) public func hash(into hasher: inout Hasher) {
         switch value {
         case let value as Bool:
             hasher.combine(value)
@@ -304,10 +304,10 @@ extension AnyDecodable: Hashable {
     }
 }
 
-public struct AnyEncodable: Encodable {
-    public let value: Optional<Any>
+@_spi(SendbirdInternal) public struct AnyEncodable: Encodable {
+    @_spi(SendbirdInternal) public let value: Optional<Any>
 
-    public init<T>(_ value: T?) {
+    @_spi(SendbirdInternal) public init<T>(_ value: T?) {
         self.value = value
     }
 }
@@ -322,7 +322,7 @@ extension AnyEncodable: _AnyEncodable {}
 
 // MARK: - Encodable
 extension _AnyEncodable {
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
 
         switch value {
@@ -418,7 +418,7 @@ extension _AnyEncodable {
 }
 
 extension AnyEncodable: Equatable {
-    public static func == (lhs: AnyEncodable, rhs: AnyEncodable) -> Bool {
+    @_spi(SendbirdInternal) public static func == (lhs: AnyEncodable, rhs: AnyEncodable) -> Bool {
         switch (lhs.value, rhs.value) {
         case is (Void, Void):
             return true
@@ -463,7 +463,7 @@ extension AnyEncodable: Equatable {
 }
 
 extension AnyEncodable: CustomStringConvertible {
-    public var description: String {
+    @_spi(SendbirdInternal) public var description: String {
         switch value {
         case is Void:
             return String(describing: nil as Any?)
@@ -476,7 +476,7 @@ extension AnyEncodable: CustomStringConvertible {
 }
 
 extension AnyEncodable: CustomDebugStringConvertible {
-    public var debugDescription: String {
+    @_spi(SendbirdInternal) public var debugDescription: String {
         switch value {
         case let value as CustomDebugStringConvertible:
             return "AnyEncodable(\(value.debugDescription))"
@@ -496,41 +496,41 @@ extension AnyEncodable: ExpressibleByArrayLiteral {}
 extension AnyEncodable: ExpressibleByDictionaryLiteral {}
 
 extension _AnyEncodable {
-    public init(nilLiteral _: ()) {
+    @_spi(SendbirdInternal) public init(nilLiteral _: ()) {
         self.init(nil as Any?)
     }
 
-    public init(booleanLiteral value: Bool) {
+    @_spi(SendbirdInternal) public init(booleanLiteral value: Bool) {
         self.init(value)
     }
 
-    public init(integerLiteral value: Int) {
+    @_spi(SendbirdInternal) public init(integerLiteral value: Int) {
         self.init(value)
     }
 
-    public init(floatLiteral value: Double) {
+    @_spi(SendbirdInternal) public init(floatLiteral value: Double) {
         self.init(value)
     }
 
-    public init(extendedGraphemeClusterLiteral value: String) {
+    @_spi(SendbirdInternal) public init(extendedGraphemeClusterLiteral value: String) {
         self.init(value)
     }
 
-    public init(stringLiteral value: String) {
+    @_spi(SendbirdInternal) public init(stringLiteral value: String) {
         self.init(value)
     }
 
-    public init(arrayLiteral elements: Any...) {
+    @_spi(SendbirdInternal) public init(arrayLiteral elements: Any...) {
         self.init(elements)
     }
 
-    public init(dictionaryLiteral elements: (AnyHashable, Any)...) {
+    @_spi(SendbirdInternal) public init(dictionaryLiteral elements: (AnyHashable, Any)...) {
         self.init([AnyHashable: Any](elements, uniquingKeysWith: { first, _ in first }))
     }
 }
 
 extension AnyEncodable: Hashable {
-    public func hash(into hasher: inout Hasher) {
+    @_spi(SendbirdInternal) public func hash(into hasher: inout Hasher) {
         switch value {
         case let value as Bool:
             hasher.combine(value)

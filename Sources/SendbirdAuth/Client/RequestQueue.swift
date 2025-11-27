@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol RequestQueueSendable: AnyObject {
+@_spi(SendbirdInternal) public protocol RequestQueueSendable: AnyObject {
     var requestTimeout: TimeInterval { get }
     
     func send<R: APIRequestable>(
@@ -26,41 +26,41 @@ public protocol RequestQueueSendable: AnyObject {
     func send<R: WSRequestable>(request: R)
 }
 
-public class RequestQueue: RequestQueueSendable, Injectable {
+@_spi(SendbirdInternal) public class RequestQueue: RequestQueueSendable, Injectable {
     // MARK: Injectable
-    public func resolve(with dependency: (any Dependency)?) {
+    @_spi(SendbirdInternal) public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
     
-    public struct CodingInfoKey {
-        public static let isApi = CodingUserInfoKey(rawValue: "isApi")!
+    @_spi(SendbirdInternal) public struct CodingInfoKey {
+        @_spi(SendbirdInternal) public static let isApi = CodingUserInfoKey(rawValue: "isApi")!
     }
     
-    public weak var sessionValidator: SessionValidator?
+    @_spi(SendbirdInternal) public weak var sessionValidator: SessionValidator?
      
-    public var webSocketConnectionState: AuthWebSocketConnectionState { router.webSocketConnectionState }
+    @_spi(SendbirdInternal) public var webSocketConnectionState: AuthWebSocketConnectionState { router.webSocketConnectionState }
     
-    public var requestTimeout: TimeInterval {
+    @_spi(SendbirdInternal) public var requestTimeout: TimeInterval {
         config?.requestTimeout ?? SendbirdConfiguration.requestTimeoutDefault
     }
     
-    @InternalAtomic public private(set) var router: CommandRouter
-    @InternalAtomic public private(set) var connectionState: ConnectionStateEventable = ConnectionStateEvent.Logout(userId: "", error: nil)
+    @InternalAtomic @_spi(SendbirdInternal) public private(set) var router: CommandRouter
+    @InternalAtomic @_spi(SendbirdInternal) public private(set) var connectionState: ConnectionStateEventable = ConnectionStateEvent.Logout(userId: "", error: nil)
     
     private let service: DispatchQueue
     
     // MARK: Injectable
     @DependencyWrapper private var dependency: Dependency?
-    public var stateData: ConnectionStateData? { dependency?.stateData }
-    public var deviceConnectionManager: DeviceConnectionManager? { dependency?.deviceConnectionManager }
+    @_spi(SendbirdInternal) public var stateData: ConnectionStateData? { dependency?.stateData }
+    @_spi(SendbirdInternal) public var deviceConnectionManager: DeviceConnectionManager? { dependency?.deviceConnectionManager }
     private var config: SendbirdConfiguration? { dependency?.config }
 
-    public typealias QueuedRequestHandler = (() -> ProcessResult)
+    @_spi(SendbirdInternal) public typealias QueuedRequestHandler = (() -> ProcessResult)
     private var queuedRequests: [QueuedRequestHandler] = []
     
     private var hasSessionDelegate: Bool { deviceConnectionManager?.hasSessionDelegate ?? false }
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         commandRouter: CommandRouter,
         sessionValidator: SessionValidator
     ) {
@@ -69,11 +69,11 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         self.service = DispatchQueue(label: "com.sendbird.chat.request_queue_\(UUID().uuidString)")
     }
     
-    public func updateConfig(_ config: CommandRouterConfiguration) {
+    @_spi(SendbirdInternal) public func updateConfig(_ config: CommandRouterConfiguration) {
         router.setRouterConfig(config)
     }
     
-    public func isConnected() -> Bool {
+    @_spi(SendbirdInternal) public func isConnected() -> Bool {
         let connectionState = self.router.webSocketManager.state
         return connectionState is ConnectedState
     }
@@ -98,7 +98,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
     */
 
-    public func post<R: Decodable>(
+    @_spi(SendbirdInternal) public func post<R: Decodable>(
         path: URLPaths,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -163,7 +163,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
-    public func put<R: Decodable>(
+    @_spi(SendbirdInternal) public func put<R: Decodable>(
         path: URLPaths,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -228,7 +228,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
-    public func patch<R: Decodable>(
+    @_spi(SendbirdInternal) public func patch<R: Decodable>(
         path: URLPaths,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -291,7 +291,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
-    public func get<R: Decodable>(
+    @_spi(SendbirdInternal) public func get<R: Decodable>(
         path: URLPaths,
         queryParams: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -337,7 +337,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
     */
-    public func delete<R: Decodable>(
+    @_spi(SendbirdInternal) public func delete<R: Decodable>(
         path: URLPaths,
         body: [CodeCodingKeys: Encodable] = [:],
         multipart: [String: Encodable] = [:],
@@ -371,7 +371,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    public func send<R: APIRequestable>(
+    @_spi(SendbirdInternal) public func send<R: APIRequestable>(
         request: R,
         wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
         progressHandler: MultiProgressHandler? = nil,
@@ -458,7 +458,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    public func send<R: APIRequestable>(
+    @_spi(SendbirdInternal) public func send<R: APIRequestable>(
         request: R,
         wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
         progressHandler: MultiProgressHandler? = nil
@@ -496,7 +496,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
     /// This method should be used when theres a case to send api request immediately
     /// without queueing (i.e. recursively attempt to send request after one prior request fails)
     /// due to avoiding deadlock on queue
-    public func sendImmediately<R: APIRequestable>(
+    @_spi(SendbirdInternal) public func sendImmediately<R: APIRequestable>(
         request: R,
         wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
         progressHandler: MultiProgressHandler? = nil,
@@ -576,7 +576,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
     }
     #endif
     
-    public func sendWS<R: Decodable>(
+    @_spi(SendbirdInternal) public func sendWS<R: Decodable>(
         commandType: CommandType,
         requestId: String?,
         body: [CodeCodingKeys: Encodable] = [:],
@@ -593,7 +593,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    public func sendWS(
+    @_spi(SendbirdInternal) public func sendWS(
         commandType: CommandType,
         requestId: String?,
         body: [CodeCodingKeys: Encodable] = [:],
@@ -603,7 +603,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         self.send(request: request)
     }
         
-    public func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?) {
+    @_spi(SendbirdInternal) public func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?) {
         let timeout = requestTimeout
         
         service.async { [weak self] in
@@ -640,7 +640,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    public func send<R: WSRequestable>(request: R) {
+    @_spi(SendbirdInternal) public func send<R: WSRequestable>(request: R) {
         service.async { [weak self] in
             guard let self = self else { return }
             
@@ -659,7 +659,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
         
-    public func cancelTask(with requestId: String, completionHandler: BoolHandler?) {
+    @_spi(SendbirdInternal) public func cancelTask(with requestId: String, completionHandler: BoolHandler?) {
         router.cancelTask(with: requestId, completionHandler: completionHandler)
     }
     
@@ -672,12 +672,12 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    public enum ProcessResult: Equatable {
+    @_spi(SendbirdInternal) public enum ProcessResult: Equatable {
         case onHold
         case error(AuthError)
         case process
         
-        public static func == (lhs: ProcessResult, rhs: ProcessResult) -> Bool {
+        @_spi(SendbirdInternal) public static func == (lhs: ProcessResult, rhs: ProcessResult) -> Bool {
             switch (lhs, rhs) {
             case (.onHold, .onHold): return true
             case (.error, .error): return true
@@ -687,7 +687,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    public func apiProcessStrategy(request: any APIRequestable) -> ProcessResult {
+    @_spi(SendbirdInternal) public func apiProcessStrategy(request: any APIRequestable) -> ProcessResult {
         if request.isLoginRequired {
             switch sessionValidator?.state {
             case .connected:
@@ -707,7 +707,7 @@ public class RequestQueue: RequestQueueSendable, Injectable {
         }
     }
     
-    public func wsProcessStrategy(request: WSRequestable) -> ProcessResult {
+    @_spi(SendbirdInternal) public func wsProcessStrategy(request: WSRequestable) -> ProcessResult {
         switch sessionValidator?.state {
         case .connected:
             if connectionState is ConnectionStateEvent.Connecting ||
@@ -742,11 +742,11 @@ public class RequestQueue: RequestQueueSendable, Injectable {
 // MARK: - EventDelegate
 
 extension RequestQueue: EventDelegate {
-    public func didReceiveSBCommandEvent(command: SBCommand) async {
+    @_spi(SendbirdInternal) public func didReceiveSBCommandEvent(command: SBCommand) async {
         // do-nothing
     }
     
-    public func didReceiveInternalEvent(command: InternalEvent) {
+    @_spi(SendbirdInternal) public func didReceiveInternalEvent(command: InternalEvent) {
         if let connectionState = command as? ConnectionStateEventable {
             self.connectionState = connectionState
         }
@@ -762,7 +762,7 @@ extension RequestQueue: EventDelegate {
 }
 
 extension Result {
-    public init(_ success: Success?, _ failure: Failure?) where Failure == AuthError {
+    @_spi(SendbirdInternal) public init(_ success: Success?, _ failure: Failure?) where Failure == AuthError {
         if let error = failure {
             self = .failure(error)
         } else if let value = success {

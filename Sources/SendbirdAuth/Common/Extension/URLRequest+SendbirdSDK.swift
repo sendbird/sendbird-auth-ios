@@ -7,7 +7,7 @@
 
 import Foundation
 
-public extension URLRequest {
+@_spi(SendbirdInternal) public extension URLRequest {
     
     var logDescription: String {
         var result = "[\(httpMethod ?? "")] \(url?.absoluteString ?? "")"

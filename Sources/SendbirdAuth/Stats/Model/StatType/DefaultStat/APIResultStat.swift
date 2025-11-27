@@ -7,9 +7,9 @@
 
 import Foundation
 
-public final class APIResultStat: DefaultRecordStat {
+final class APIResultStat: DefaultRecordStat {
     
-    public enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey {
         case endpoint
         case method
         case latency
@@ -18,14 +18,14 @@ public final class APIResultStat: DefaultRecordStat {
         case errorDescription = "error_description"
     }
     
-    public let endpoint: String
-    public let method: String
-    public let latency: Int64
-    public let success: Bool
-    public let errorCode: Int?
-    public let errorDescription: String?
+    let endpoint: String
+    let method: String
+    let latency: Int64
+    let success: Bool
+    let errorCode: Int?
+    let errorDescription: String?
     
-    public init(
+    init(
         endpoint: String,
         method: String,
         latency: Int64,
@@ -44,7 +44,7 @@ public final class APIResultStat: DefaultRecordStat {
         super.init(statType: .apiResult, timestamp: timestamp)
     }
     
-    public required init(from decoder: Decoder) throws {
+    required init(from decoder: Decoder) throws {
         let container = try Self.nestedDecodeContainer(decoder: decoder, keyedBy: CodingKeys.self)
         
         endpoint = try container.decode(String.self, forKey: .endpoint)
@@ -57,7 +57,7 @@ public final class APIResultStat: DefaultRecordStat {
         try super.init(from: decoder)
     }
     
-    public override func encode(to encoder: Encoder) throws {
+    override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
         var container = nestedEncodeContainer(encoder: encoder, keyedBy: CodingKeys.self)
         
@@ -69,7 +69,7 @@ public final class APIResultStat: DefaultRecordStat {
         try container.encodeIfPresent(errorDescription, forKey: .errorDescription)
     }
     
-    public override var description: String {
+    override var description: String {
         """
         APIResultStat(
             endpoint: \(endpoint),
@@ -82,7 +82,7 @@ public final class APIResultStat: DefaultRecordStat {
         """
     }
     
-    public func copy(with zone: NSZone? = nil) -> Any {
+    func copy(with zone: NSZone? = nil) -> Any {
         return makeCodableCopy(decoder: SendbirdAuth.authDecoder)
     }
 }

@@ -11,15 +11,15 @@ import Foundation
 
 // @since 3.0.231
 // Ordered thread safe dictionary
-public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatable> {
+@_spi(SendbirdInternal) public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatable> {
     
     private let queue = SafeSerialQueue(label: "com.sendbird.chat.common.safe_ordered_dictionary.\(UUID().uuidString)")
     private var orderedSet: [Key] = []
     private var dictionary: [Key: Value] = [:]
     
-    public init() { }
+    @_spi(SendbirdInternal) public init() { }
     
-    public init<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
+    @_spi(SendbirdInternal) public init<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
         for (key, value) in sequence {
             add(value, forKey: key)
         }
@@ -30,7 +30,7 @@ public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatab
         self.dictionary = dictionary
     }
     
-    public subscript(key: Key) -> Value? {
+    @_spi(SendbirdInternal) public subscript(key: Key) -> Value? {
         get {
             queue.sync { return dictionary[key] }
         }
@@ -39,7 +39,7 @@ public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatab
         }
     }
     
-    public func add(_ object: Value, forKey key: Key) {
+    @_spi(SendbirdInternal) public func add(_ object: Value, forKey key: Key) {
         queue.sync {
             if dictionary[key] == nil {
                 orderedSet.append(key)
@@ -50,13 +50,13 @@ public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatab
         }
     }
     
-    public func add<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
+    @_spi(SendbirdInternal) public func add<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
         for (key, value) in sequence {
             add(value, forKey: key)
         }
     }
     
-    public func insert(_ object: Value, forKey key: Key, at index: Int) {
+    @_spi(SendbirdInternal) public func insert(_ object: Value, forKey key: Key, at index: Int) {
         precondition(index < orderedSet.count, "out of bound")
         
         queue.sync {
@@ -65,7 +65,7 @@ public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatab
         }
     }
     
-    public func replace(_ object: Value, forKey key: Key) {
+    @_spi(SendbirdInternal) public func replace(_ object: Value, forKey key: Key) {
         queue.sync {
             guard dictionary[key] != nil else { return }
             dictionary[key] = object
@@ -73,7 +73,7 @@ public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatab
     }
     
     @discardableResult
-    public func remove(forKey key: Key) -> Value? {
+    @_spi(SendbirdInternal) public func remove(forKey key: Key) -> Value? {
         return queue.sync {
             guard let index = orderedSet.firstIndex(where: { $0 == key }) else {
                 return nil // key not found
@@ -84,14 +84,14 @@ public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatab
         }
     }
     
-    public func removeAll() {
+    @_spi(SendbirdInternal) public func removeAll() {
         queue.sync {
             orderedSet = []
             dictionary = [:]
         }
     }
     
-    public func popFirst() -> (key: Key, value: Value)? {
+    @_spi(SendbirdInternal) public func popFirst() -> (key: Key, value: Value)? {
         return queue.sync {
             guard let key = orderedSet.first, let value = dictionary[key] else {
                 return nil
@@ -102,7 +102,7 @@ public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatab
         }
     }
     
-    public func popLast() -> (key: Key, value: Value)? {
+    @_spi(SendbirdInternal) public func popLast() -> (key: Key, value: Value)? {
         return queue.sync {
             guard let key = orderedSet.last, let value = dictionary[key] else {
                 return nil
@@ -113,13 +113,13 @@ public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatab
         }
     }
     
-    public func contains(key: Key) -> Bool {
+    @_spi(SendbirdInternal) public func contains(key: Key) -> Bool {
         queue.sync {
             orderedSet.contains(key) && dictionary[key] != nil
         }
     }
     
-    public func toDictionary() -> [Key: Value] {
+    @_spi(SendbirdInternal) public func toDictionary() -> [Key: Value] {
         queue.sync {
             Dictionary(
                 uniqueKeysWithValues: orderedSet.compactMap { key in
@@ -131,23 +131,23 @@ public final class SafeOrderedDictionary<Key: Hashable & Codable, Value: Equatab
 }
 
 extension SafeOrderedDictionary: CustomStringConvertible {
-    public var description: String { String(describing: toDictionary()) }
+    @_spi(SendbirdInternal) public var description: String { String(describing: toDictionary()) }
 }
 
 extension SafeOrderedDictionary: ExpressibleByDictionaryLiteral {
-    public convenience init(dictionaryLiteral elements: (Key, Value)...) {
+    @_spi(SendbirdInternal) public convenience init(dictionaryLiteral elements: (Key, Value)...) {
         self.init(elements.map { (key: $0.0, value: $0.1) })
     }
 }
 
 extension SafeOrderedDictionary : Codable where Key: Codable, Value: Codable {
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         let wrapper = OrderedDictionaryCodingWrapper(orderedSet: orderedSet, dictionary: dictionary)
         try container.encode(wrapper)
     }
     
-    public convenience init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public convenience init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
 
         do {
@@ -169,13 +169,13 @@ fileprivate struct OrderedDictionaryCodingWrapper<Key: Hashable & Codable, Value
 }
 
 extension SafeOrderedDictionary: Collection {
-    public typealias Index = OrderedDictionaryIndex
+    @_spi(SendbirdInternal) public typealias Index = OrderedDictionaryIndex
 
-    public var startIndex: Index { Index(position: orderedSet.startIndex) }
+    @_spi(SendbirdInternal) public var startIndex: Index { Index(position: orderedSet.startIndex) }
     
-    public var endIndex: Index { Index(position: orderedSet.endIndex) }
+    @_spi(SendbirdInternal) public var endIndex: Index { Index(position: orderedSet.endIndex) }
     
-    public subscript (position: Index) -> Iterator.Element {
+    @_spi(SendbirdInternal) public subscript (position: Index) -> Iterator.Element {
         precondition(position.position < orderedSet.count, "out of bounds")
         let key = orderedSet[position.position]
         guard let value = dictionary[key] else {
@@ -184,11 +184,11 @@ extension SafeOrderedDictionary: Collection {
         return (key, value)
     }
 
-    public func index(after i: Index) -> Index {
+    @_spi(SendbirdInternal) public func index(after i: Index) -> Index {
         return Index(position: i.position + 1)
     }
     
-    public var values: [Value] {
+    @_spi(SendbirdInternal) public var values: [Value] {
         queue.sync {
             orderedSet.compactMap { key in
                 dictionary[key]
@@ -196,7 +196,7 @@ extension SafeOrderedDictionary: Collection {
         }
     }
     
-    public var keys: [Key] {
+    @_spi(SendbirdInternal) public var keys: [Key] {
         queue.sync {
             return orderedSet
         }
@@ -204,31 +204,31 @@ extension SafeOrderedDictionary: Collection {
 }
 
 extension SafeOrderedDictionary: Equatable {
-    public static func == (lhs: SafeOrderedDictionary<Key, Value>, rhs: SafeOrderedDictionary<Key, Value>) -> Bool {
+    @_spi(SendbirdInternal) public static func == (lhs: SafeOrderedDictionary<Key, Value>, rhs: SafeOrderedDictionary<Key, Value>) -> Bool {
         lhs.orderedSet == rhs.orderedSet && lhs.dictionary == rhs.dictionary
     }
 }
 
 extension SafeOrderedDictionary: Sequence {
-    public typealias Iterator = OrderedDictionaryIterator<Key, Value>
+    @_spi(SendbirdInternal) public typealias Iterator = OrderedDictionaryIterator<Key, Value>
 
-    public func makeIterator() -> OrderedDictionaryIterator<Key, Value> {
+    @_spi(SendbirdInternal) public func makeIterator() -> OrderedDictionaryIterator<Key, Value> {
         return OrderedDictionaryIterator(orderedSet, values: dictionary)
     }
 }
 
-public struct OrderedDictionaryIterator<Key: Hashable, Value>: IteratorProtocol {
+@_spi(SendbirdInternal) public struct OrderedDictionaryIterator<Key: Hashable, Value>: IteratorProtocol {
     private let values: [Key: Value]
     private let ordered: [Key]
     private var index: Int
 
-    public init(_ ordered: [Key], values: [Key: Value]) {
+    @_spi(SendbirdInternal) public init(_ ordered: [Key], values: [Key: Value]) {
         self.ordered = ordered
         self.values = values
         self.index = -1  // -1에서 시작하여 next()에서 증가
     }
     
-    public mutating func next() -> (Key, Value)? {
+    @_spi(SendbirdInternal) public mutating func next() -> (Key, Value)? {
         index += 1
         guard index < ordered.count else { return nil }
         
@@ -237,16 +237,16 @@ public struct OrderedDictionaryIterator<Key: Hashable, Value>: IteratorProtocol 
     }
 }
 
-public struct OrderedDictionaryIndex {
+@_spi(SendbirdInternal) public struct OrderedDictionaryIndex {
     fileprivate let position: Int
 }
 
 extension OrderedDictionaryIndex: Comparable {
-    public static func == (lhs: OrderedDictionaryIndex, rhs: OrderedDictionaryIndex) -> Bool {
+    @_spi(SendbirdInternal) public static func == (lhs: OrderedDictionaryIndex, rhs: OrderedDictionaryIndex) -> Bool {
         return lhs.position == rhs.position
     }
     
-    public static func < (lhs: OrderedDictionaryIndex, rhs: OrderedDictionaryIndex) -> Bool {
+    @_spi(SendbirdInternal) public static func < (lhs: OrderedDictionaryIndex, rhs: OrderedDictionaryIndex) -> Bool {
         return lhs.position < rhs.position
     }
 }

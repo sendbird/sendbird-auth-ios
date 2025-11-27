@@ -8,7 +8,7 @@
 import Foundation
 
 /// https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
-public enum ChatWebSocketStatusCode: Int {
+@_spi(SendbirdInternal) public enum ChatWebSocketStatusCode: Int {
     case invalid = 0
     case normal = 1000
     case goingAway = 1001
@@ -48,12 +48,12 @@ public enum ChatWebSocketStatusCode: Int {
     }
 }
 
-public enum ChatWebSocketClientTimerType {
+@_spi(SendbirdInternal) public enum ChatWebSocketClientTimerType {
     case ping
     case watchdog
 }
 
-public protocol ChatWebSocketEngine: Actor, EventStreamable<WebSocketEngineEvent> {
+@_spi(SendbirdInternal) public protocol ChatWebSocketEngine: Actor, EventStreamable<WebSocketEngineEvent> {
     init()
     
     var state: AuthWebSocketConnectionState { get }
@@ -68,7 +68,7 @@ public protocol ChatWebSocketEngine: Actor, EventStreamable<WebSocketEngineEvent
     nonisolated func createNewWebSocketEngine() -> Self
 }
 
-public enum ChatWebSocketData {
+@_spi(SendbirdInternal) public enum ChatWebSocketData {
     case string(String)
     case data(Data)
 }
@@ -78,7 +78,7 @@ extension ChatWebSocketData {
     /// If data is gzip compressed, decompress and returns UTF8 string value, otherwise returns UTF8 string of original data.
     ///
     /// [SDK Design - WebSocket payload compression]( https://sendbird.atlassian.net/wiki/spaces/SDK/pages/2002354587/SDK+Design+-+WebSocket+payload+compression )
-    public var unzippedString: String? {
+    @_spi(SendbirdInternal) public var unzippedString: String? {
         guard data.isGzipped else {
             return string
         }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum WebSocketClientEvent {
+@_spi(SendbirdInternal) public enum WebSocketClientEvent {
     case started
     case opened
     case connectionFailed(Error)

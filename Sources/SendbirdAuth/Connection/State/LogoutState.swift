@@ -7,12 +7,12 @@
 
 import Foundation
 
-public class LogoutState: ConnectionStatable {
-    public let error: AuthError?
-    public var disconnectHandler: VoidHandler?
-    public let userId: String
+@_spi(SendbirdInternal) public class LogoutState: ConnectionStatable {
+    @_spi(SendbirdInternal) public let error: AuthError?
+    @_spi(SendbirdInternal) public var disconnectHandler: VoidHandler?
+    @_spi(SendbirdInternal) public let userId: String
 
-    public init(
+    @_spi(SendbirdInternal) public init(
         error: AuthError? = nil,
         userId: String,
         disconnectHandler: VoidHandler? = nil
@@ -22,7 +22,7 @@ public class LogoutState: ConnectionStatable {
         self.disconnectHandler = disconnectHandler
     }
 
-    public func process(context: ConnectionContext) {
+    @_spi(SendbirdInternal) public func process(context: ConnectionContext) {
         Logger.session.info("Clear local data.")
         context.eventDispatcher.dispatch(command: ConnectionStateEvent.Logout(userId: userId, error: error))
         
@@ -35,7 +35,7 @@ public class LogoutState: ConnectionStatable {
         }
     }
 
-    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.main.debug("connect with \(context.userId), hasSessionKey: \(sessionKey != nil)")
         
         context.changeState(
@@ -47,18 +47,18 @@ public class LogoutState: ConnectionStatable {
         )
     }
     
-    public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.main.debug()
         context.serviceForWebSocket? {
             completionHandler?()
         }
     }
 
-    public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.main.debug()
     }
 
-    public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
+    @_spi(SendbirdInternal) public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
         Logger.main.debug()
         context.serviceForWebSocket? {
             self.disconnectHandler?()
@@ -66,7 +66,7 @@ public class LogoutState: ConnectionStatable {
         }
     }
     
-    public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    @_spi(SendbirdInternal) public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         return false
     }
 }

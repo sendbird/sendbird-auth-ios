@@ -11,24 +11,24 @@ import Foundation
 
 // @since 3.0.231
 // Ordered thread safe dictionary
-public final class SafeDictionary<Key: Hashable & Codable, Value> {
+@_spi(SendbirdInternal) public final class SafeDictionary<Key: Hashable & Codable, Value> {
     
     private let queue = SafeSerialQueue(label: "com.sendbird.chat.common.safe_dictionary.\(UUID().uuidString)")
     private var dictionary: [Key: Value] = [:]
     
-    public var count: Int {
+    @_spi(SendbirdInternal) public var count: Int {
         queue.sync { dictionary.count }
     }
     
-    public var values: [Value] {
+    @_spi(SendbirdInternal) public var values: [Value] {
         queue.sync { Array(dictionary.values) }
     }
     
-    public var keys: [Key] {
+    @_spi(SendbirdInternal) public var keys: [Key] {
         queue.sync { Array(dictionary.keys) }
     }
     
-    public subscript(key: Key) -> Value? {
+    @_spi(SendbirdInternal) public subscript(key: Key) -> Value? {
         get {
             queue.sync { dictionary[key] }
         }
@@ -37,46 +37,46 @@ public final class SafeDictionary<Key: Hashable & Codable, Value> {
         }
     }
     
-    public init() { }
+    @_spi(SendbirdInternal) public init() { }
     
-    public init<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
+    @_spi(SendbirdInternal) public init<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
         for (key, value) in sequence {
             add(value, forKey: key)
         }
     }
     
-    public func replaceAll(with other: SafeDictionary) {
+    @_spi(SendbirdInternal) public func replaceAll(with other: SafeDictionary) {
         queue.sync {
             dictionary = other.toDictionary()
         }
     }
     
-    public func replaceAll(with other: [Key: Value]) {
+    @_spi(SendbirdInternal) public func replaceAll(with other: [Key: Value]) {
         queue.sync {
             dictionary = other
         }
     }
     
-    public func add(_ object: Value, forKey key: Key) {
+    @_spi(SendbirdInternal) public func add(_ object: Value, forKey key: Key) {
         queue.sync {
             dictionary[key] = object
         }
     }
     
-    public func add<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
+    @_spi(SendbirdInternal) public func add<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Key, value: Value) {
         for (key, value) in sequence {
             add(value, forKey: key)
         }
     }
     
-    public func mergingOverwrite(_ other: [Key: Value]) {
+    @_spi(SendbirdInternal) public func mergingOverwrite(_ other: [Key: Value]) {
         queue.sync {
             let result = other.merging(self.toDictionary(), uniquingKeysWith: { lhs, _ in return lhs })
             dictionary = result
         }
     }
     
-    public func replace(_ object: Value, forKey key: Key) {
+    @_spi(SendbirdInternal) public func replace(_ object: Value, forKey key: Key) {
         queue.sync {
             guard dictionary[key] != nil else { return }
             dictionary[key] = object
@@ -84,13 +84,13 @@ public final class SafeDictionary<Key: Hashable & Codable, Value> {
     }
     
     @discardableResult
-    public func remove(forKey key: Key) -> Value? {
+    @_spi(SendbirdInternal) public func remove(forKey key: Key) -> Value? {
         return queue.sync {
             return dictionary.removeValue(forKey: key)
         }
     }
     
-    public func remove(forKeys keys: [Key]) {
+    @_spi(SendbirdInternal) public func remove(forKeys keys: [Key]) {
         return queue.sync {
             keys.forEach {
                 dictionary.removeValue(forKey: $0)
@@ -98,7 +98,7 @@ public final class SafeDictionary<Key: Hashable & Codable, Value> {
         }
     }
     
-    public func remove(condition: (_ key: Key, _ value: Value?) -> Bool) {
+    @_spi(SendbirdInternal) public func remove(condition: (_ key: Key, _ value: Value?) -> Bool) {
         return queue.sync {
             let keys = Array(dictionary.keys)
             keys.forEach {
@@ -109,25 +109,25 @@ public final class SafeDictionary<Key: Hashable & Codable, Value> {
         }
     }
     
-    public func removeAll() {
+    @_spi(SendbirdInternal) public func removeAll() {
         queue.sync {
             dictionary = [:]
         }
     }
     
-    public func toDictionary() -> [Key: Value] {
+    @_spi(SendbirdInternal) public func toDictionary() -> [Key: Value] {
         queue.sync {
             dictionary
         }
     }
     
-    public func map<T>(_ transform: ((Key, Value)) -> T) -> [T] {
+    @_spi(SendbirdInternal) public func map<T>(_ transform: ((Key, Value)) -> T) -> [T] {
         queue.sync {
             dictionary.map(transform)
         }
     }
     
-    public func forEach(_ body: ((key: Key, value: Value)) -> Void) {
+    @_spi(SendbirdInternal) public func forEach(_ body: ((key: Key, value: Value)) -> Void) {
         queue.sync {
             dictionary.forEach(body)
         }
@@ -135,26 +135,26 @@ public final class SafeDictionary<Key: Hashable & Codable, Value> {
 }
 
 extension SafeDictionary: CustomStringConvertible {
-    public var description: String {
+    @_spi(SendbirdInternal) public var description: String {
         String(describing: toDictionary())
     }
 }
 
 extension SafeDictionary: ExpressibleByDictionaryLiteral {
-    public convenience init(dictionaryLiteral elements: (Key, Value)...) {
+    @_spi(SendbirdInternal) public convenience init(dictionaryLiteral elements: (Key, Value)...) {
         self.init(elements.map { (key: $0.0, value: $0.1) })
     }
 }
 
 extension SafeDictionary : Encodable where Key : Encodable, Value : Encodable {
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(toDictionary())
     }
 }
 
 extension SafeDictionary : Decodable where Key : Decodable, Value : Decodable {
-    public convenience init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public convenience init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let dictionary = try container.decode([Key: Value].self)
 
@@ -163,7 +163,7 @@ extension SafeDictionary : Decodable where Key : Decodable, Value : Decodable {
 }
 
 extension SafeDictionary: Equatable where Value: Equatable {
-    public static func == (lhs: SafeDictionary<Key, Value>, rhs: SafeDictionary<Key, Value>) -> Bool {
+    @_spi(SendbirdInternal) public static func == (lhs: SafeDictionary<Key, Value>, rhs: SafeDictionary<Key, Value>) -> Bool {
         let lhsDictionary = lhs.toDictionary()
         let rhsDictionary = rhs.toDictionary()
         return lhsDictionary == rhsDictionary

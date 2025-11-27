@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol HTTPClientInterface: NSObject, Injectable {
+@_spi(SendbirdInternal) public protocol HTTPClientInterface: NSObject, Injectable {
     var routerConfig: CommandRouterConfiguration { get set }
     func prefetch()
     func clear()
@@ -30,39 +30,39 @@ public protocol HTTPClientInterface: NSObject, Injectable {
     func registerObservers(identifier: String)
 }
 
-public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLSessionTaskDelegate, URLSessionDataDelegate {
-    public struct Constants {
-        public static let queueName = "com.sendbird.core.networking.queue"
-        public static let boundary = "uwhQ9Ho7y873Ha"
-        public static let newline = "\r\n"
-        public static let fileUploadTimeout: Double = 60 // timesout after 60s
+@_spi(SendbirdInternal) public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLSessionTaskDelegate, URLSessionDataDelegate {
+    @_spi(SendbirdInternal) public struct Constants {
+        @_spi(SendbirdInternal) public static let queueName = "com.sendbird.core.networking.queue"
+        @_spi(SendbirdInternal) public static let boundary = "uwhQ9Ho7y873Ha"
+        @_spi(SendbirdInternal) public static let newline = "\r\n"
+        @_spi(SendbirdInternal) public static let fileUploadTimeout: Double = 60 // timesout after 60s
     }
     
     // MARK: Injectable
     @DependencyWrapper var dependency: Dependency?
-    public var config: SendbirdConfiguration? { dependency?.config }
+    @_spi(SendbirdInternal) public var config: SendbirdConfiguration? { dependency?.config }
     private var statManager: StatManager? { dependency?.statManager }
     private var connectionManager: DeviceConnectionManager? { dependency?.deviceConnectionManager }
 
-    public var routerConfig: CommandRouterConfiguration
+    @_spi(SendbirdInternal) public var routerConfig: CommandRouterConfiguration
 
-    public var delegateQueue: OperationQueue
-    public var uploadSizeLimit: Int64 = .max
+    @_spi(SendbirdInternal) public var delegateQueue: OperationQueue
+    @_spi(SendbirdInternal) public var uploadSizeLimit: Int64 = .max
     
-    public var sharedContainerIdentifier: String?
+    @_spi(SendbirdInternal) public var sharedContainerIdentifier: String?
     
-    public var canceledRequests: [String: Bool] = [:] // Request Id : Canceled Status
-    public var uploadTasks: [String: Int] = [:] // Request Id : Upload Task ID
-    public var backgroundTasks: [Int: URLBackgroundTask] = [:] // Upload Task ID: Upload Task
+    @_spi(SendbirdInternal) public var canceledRequests: [String: Bool] = [:] // Request Id : Canceled Status
+    @_spi(SendbirdInternal) public var uploadTasks: [String: Int] = [:] // Request Id : Upload Task ID
+    @_spi(SendbirdInternal) public var backgroundTasks: [Int: URLBackgroundTask] = [:] // Upload Task ID: Upload Task
     private var cancellableTasks: SafeDictionary<String, URLSessionSafeCancellableDataTask> = [:] // UUID: URLCancellableTask
     
-    public lazy var backgroundURLSession: URLSession = {
+    @_spi(SendbirdInternal) public lazy var backgroundURLSession: URLSession = {
         return createBackgroundURLSession()
     }()
     
     private var urlSession: URLSession
     
-    public init(routerConfig: CommandRouterConfiguration) {
+    @_spi(SendbirdInternal) public init(routerConfig: CommandRouterConfiguration) {
         let queue = OperationQueue()
         queue.name = "com.sendbird.core.networking.http"
         queue.maxConcurrentOperationCount = 10
@@ -73,11 +73,11 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         urlSession = Self.createURLSession()
     }
     
-    public func getBackgroundURLSessionConfig() -> URLSessionConfiguration {
+    @_spi(SendbirdInternal) public func getBackgroundURLSessionConfig() -> URLSessionConfiguration {
         return self.backgroundURLSession.configuration
     }
     
-    public func createBackgroundURLSession() -> URLSession {
+    @_spi(SendbirdInternal) public func createBackgroundURLSession() -> URLSession {
         let config = URLSessionConfiguration.background(withIdentifier: "com.sendbird.core.networking.background_session.\(UUID().uuidString)")
         config.sharedContainerIdentifier = sharedContainerIdentifier
         config.sessionSendsLaunchEvents = true
@@ -96,7 +96,7 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         return request.urlRequest(baseURL: routerConfig.apiHost)
     }
     
-    public func send<R: APIRequestable>(
+    @_spi(SendbirdInternal) public func send<R: APIRequestable>(
         request: R,
         headers: [String: String] = [:],
         completionHandler: R.CommandHandler? = nil
@@ -184,7 +184,7 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         dataTask.resume()
     }
     
-    public func send(urlRequest: URLRequest, completionHandler: AnyResponseHandler?) {
+    @_spi(SendbirdInternal) public func send(urlRequest: URLRequest, completionHandler: AnyResponseHandler?) {
         let dataTask = urlSession.dataTask(with: urlRequest as URLRequest) { (data, response, error) in
             guard error == nil else {
                 if (error as? NSError)?.code != URLError.Code.cancelled.rawValue {
@@ -215,7 +215,7 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         dataTask.resume()
     }
     
-    public func send<R: APIRequestable>(
+    @_spi(SendbirdInternal) public func send<R: APIRequestable>(
         multipartRequest request: R,
         headers: [String: String] = [:],
         progressHandler: MultiProgressHandler? = nil,
@@ -293,7 +293,7 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         backgroundTask.start()
     }
     
-    public func buildHeader<R: APIRequestable>(
+    @_spi(SendbirdInternal) public func buildHeader<R: APIRequestable>(
         with request: URLRequest,
         underlyingRequest: R,
         headers: [String: String] = [:]
@@ -308,7 +308,7 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         return request
     }
     
-    public func cancelUpload(with requestId: String, completionHandler: BoolHandler?) {
+    @_spi(SendbirdInternal) public func cancelUpload(with requestId: String, completionHandler: BoolHandler?) {
         if let taskID = uploadTasks[requestId],
            let backgroundTask = backgroundTasks[taskID] {
             backgroundTask.abort()
@@ -321,12 +321,12 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         }
     }
     
-    public func addWaitingForUpload(with requestId: String) {
+    @_spi(SendbirdInternal) public func addWaitingForUpload(with requestId: String) {
         canceledRequests[requestId] = false
     }
     
     // reduce TLS handshaking time for later api calls
-    public func prefetch() {
+    @_spi(SendbirdInternal) public func prefetch() {
         let request = DummyRequest()
         guard var urlRequest = request.urlRequest(baseURL: routerConfig.apiHost) else { return }
         urlRequest = buildHeader(
@@ -339,7 +339,7 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         task.resume()
     }
         
-    public func clear() {
+    @_spi(SendbirdInternal) public func clear() {
         // 1. Cancel all tasks (~ oldSession)
         cancellableTasks.values.forEach { $0.cancel() }
         backgroundTasks.values.forEach { $0.abort() }
@@ -361,7 +361,7 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         }
     }
     
-    public func registerObservers(identifier: String) {
+    @_spi(SendbirdInternal) public func registerObservers(identifier: String) {
         
     }
     
@@ -373,16 +373,16 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         return URLSession(configuration: urlConfig)
     }
     
-    public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+    @_spi(SendbirdInternal) public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         Logger.http.info("All tasks are finished.")
     }
     
-    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+    @_spi(SendbirdInternal) public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         Logger.http.info("url session data task received data. task id: \(dataTask.taskIdentifier)")
         self.backgroundTasks[dataTask.taskIdentifier]?.data = data
     }
     
-    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    @_spi(SendbirdInternal) public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         Logger.http.info("url session task completed. task id: \(task.taskIdentifier)")
         
         guard let backgroundTask = self.backgroundTasks[task.taskIdentifier] else {
@@ -392,7 +392,7 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
         backgroundTask.finish(response: task.response, error: error)
     }
     
-    public func urlSession(
+    @_spi(SendbirdInternal) public func urlSession(
         _ session: URLSession,
         task: URLSessionTask,
         didSendBodyData bytesSent: Int64,
@@ -413,21 +413,21 @@ public class HTTPClient: NSObject, HTTPClientInterface, URLSessionDelegate, URLS
     }
     
     // MARK: Injectable
-    public func resolve(with dependency: (any Dependency)?) {
+    @_spi(SendbirdInternal) public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
 }
 
-public class URLCancellableTask {
-    public let task: URLSessionTask
-    public var cancelCompletion: VoidHandler?
+@_spi(SendbirdInternal) public class URLCancellableTask {
+    @_spi(SendbirdInternal) public let task: URLSessionTask
+    @_spi(SendbirdInternal) public var cancelCompletion: VoidHandler?
     
-    public init(task: URLSessionTask, cancelCompletion: @escaping VoidHandler) {
+    @_spi(SendbirdInternal) public init(task: URLSessionTask, cancelCompletion: @escaping VoidHandler) {
         self.task = task
         self.cancelCompletion = cancelCompletion
     }
     
-    public func cancel() {
+    @_spi(SendbirdInternal) public func cancel() {
         if task.state == .running {
             task.cancel()
         }
@@ -436,26 +436,26 @@ public class URLCancellableTask {
     }
 }
 
-public class URLBackgroundTask {
-    public var isFinished: Bool = false
+@_spi(SendbirdInternal) public class URLBackgroundTask {
+    @_spi(SendbirdInternal) public var isFinished: Bool = false
     
     @ImmutableDependencyWrapper private(set) var dependency: Dependency?
     private var connectionManager: DeviceConnectionManager? { dependency?.deviceConnectionManager }
     
-    public var requestId: String?
-    public var data: Data?
+    @_spi(SendbirdInternal) public var requestId: String?
+    @_spi(SendbirdInternal) public var data: Data?
     
-    public var backgroundTask: URLSessionUploadTask
-    public var transferTimeout: TimeInterval
+    @_spi(SendbirdInternal) public var backgroundTask: URLSessionUploadTask
+    @_spi(SendbirdInternal) public var transferTimeout: TimeInterval
     
-    public var progressTask: MultiProgressHandler?
+    @_spi(SendbirdInternal) public var progressTask: MultiProgressHandler?
     
-    public var completionTask: DataResponseHandler?
+    @_spi(SendbirdInternal) public var completionTask: DataResponseHandler?
     
-    public var timerQueue: DispatchQueue  // A serial queue that updates the timer.
+    @_spi(SendbirdInternal) public var timerQueue: DispatchQueue  // A serial queue that updates the timer.
     
     // A timer that times out if URLSessionUploadTask has no progress for 60 seconds.
-    public lazy var timer: Timer = {
+    @_spi(SendbirdInternal) public lazy var timer: Timer = {
         let timer = Timer(
             timeInterval: transferTimeout,
             target: self,
@@ -483,7 +483,7 @@ public class URLBackgroundTask {
         self.dependency = dependency
     }
     
-    public func start() {
+    @_spi(SendbirdInternal) public func start() {
         // Start the timer.
         timerQueue.async { [weak self] in
             guard let self = self else { return }
@@ -496,11 +496,11 @@ public class URLBackgroundTask {
         backgroundTask.resume()
     }
     
-    public func abort() {
+    @_spi(SendbirdInternal) public func abort() {
         backgroundTask.cancel()
     }
     
-    public func triggerProgress(bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+    @_spi(SendbirdInternal) public func triggerProgress(bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
         guard isFinished == false else { return }
         
         // Restart the timer everytime we get a progress update for the URLSessionUploadTask.
@@ -524,7 +524,7 @@ public class URLBackgroundTask {
         progressTask?(requestId, bytesSent, totalBytesSent, totalBytesExpectedToSend)
     }
     
-    public func finish(response: URLResponse?, error: Error?) {
+    @_spi(SendbirdInternal) public func finish(response: URLResponse?, error: Error?) {
         guard isFinished == false else { return }
         
         isFinished = true
@@ -573,7 +573,7 @@ public class URLBackgroundTask {
     }
     
     @objc
-    public func didTimerExpired() {
+    @_spi(SendbirdInternal) public func didTimerExpired() {
         guard isFinished == false else { return }
         
         Logger.http.info("backgroundTask expired.")
@@ -705,9 +705,9 @@ extension URLSession {
 
 #if TESTCASE
 extension HTTPClient {
-    public var dependencyForTest: Dependency? { dependency }
+    @_spi(SendbirdInternal) public var dependencyForTest: Dependency? { dependency }
     
-    public func createUrlRequestForTest(request: any APIRequestable) -> URLRequest? {
+    @_spi(SendbirdInternal) public func createUrlRequestForTest(request: any APIRequestable) -> URLRequest? {
         return createURLRequest(request: request)
     }
 }

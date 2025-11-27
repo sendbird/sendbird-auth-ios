@@ -7,12 +7,12 @@
 
 import Foundation
 
-public struct SessionRefreshedEvent: Decodable, SBCommand {
-    public let cmd: CommandType = .login
+@_spi(SendbirdInternal) public struct SessionRefreshedEvent: Decodable, SBCommand {
+    @_spi(SendbirdInternal) public let cmd: CommandType = .login
     
-    public let sessionKey: String?
+    @_spi(SendbirdInternal) public let sessionKey: String?
     
-    public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         Logger.session.info("Got a new session key.")

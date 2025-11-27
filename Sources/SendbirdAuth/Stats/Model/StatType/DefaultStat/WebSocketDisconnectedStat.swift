@@ -7,19 +7,19 @@
 
 import Foundation
 
-public typealias WebSocketDisconnectedReason = WebSocketDisconnectedStat.DisconnectedReason
-public final class WebSocketDisconnectedStat: DefaultRecordStat {
-    public enum CodingKeys: String, CodingKey {
+@_spi(SendbirdInternal) public typealias WebSocketDisconnectedReason = WebSocketDisconnectedStat.DisconnectedReason
+@_spi(SendbirdInternal) public final class WebSocketDisconnectedStat: DefaultRecordStat {
+    @_spi(SendbirdInternal) public enum CodingKeys: String, CodingKey {
         case success = "success"
         case errorCode = "error_code"
         case errorDescription = "error_description"
     }
     
-    public let success: Bool
-    public let errorCode: Int
-    public let errorDescription: String
+    @_spi(SendbirdInternal) public let success: Bool
+    @_spi(SendbirdInternal) public let errorCode: Int
+    @_spi(SendbirdInternal) public let errorDescription: String
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         success: Bool,
         errorCode: Int,
         reason: DisconnectedReason,
@@ -31,7 +31,7 @@ public final class WebSocketDisconnectedStat: DefaultRecordStat {
         super.init(statType: .webSocketDisconnect, timestamp: timestamp)
     }
     
-    public required init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
         let container = try Self.nestedDecodeContainer(decoder: decoder, keyedBy: CodingKeys.self)
         
         success = try container.decode(Bool.self, forKey: .success)
@@ -41,7 +41,7 @@ public final class WebSocketDisconnectedStat: DefaultRecordStat {
         try super.init(from: decoder)
     }
     
-    public override func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
         
         var container = nestedEncodeContainer(encoder: encoder, keyedBy: CodingKeys.self)
@@ -51,7 +51,7 @@ public final class WebSocketDisconnectedStat: DefaultRecordStat {
         try container.encode(errorDescription, forKey: .errorDescription)
     }
     
-    public override var description: String {
+    @_spi(SendbirdInternal) public override var description: String {
         """
             WebSocketDisconnectedStat(
                 success: \(String(describing: success)),
@@ -62,8 +62,8 @@ public final class WebSocketDisconnectedStat: DefaultRecordStat {
     }
 }
 
-public extension WebSocketDisconnectedStat {
-    public enum DisconnectedReason: CustomStringConvertible {
+@_spi(SendbirdInternal) public extension WebSocketDisconnectedStat {
+    @_spi(SendbirdInternal) public enum DisconnectedReason: CustomStringConvertible {
         case background
         case sessionExpired
         case networkDisconnected
@@ -86,7 +86,7 @@ public extension WebSocketDisconnectedStat {
             }
         }
         
-        public var description: String {
+        @_spi(SendbirdInternal) public var description: String {
             switch self {
             case .otherReason(let closeCode):
                 return "cause=\(closeCode.rawValue)"

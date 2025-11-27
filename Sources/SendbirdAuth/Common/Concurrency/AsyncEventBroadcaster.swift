@@ -82,7 +82,7 @@ extension AsyncEventBroadcaster {
         subscribers
     }
     
-    public func simulateYield(_ value: T) {
+    @_spi(SendbirdInternal) public func simulateYield(_ value: T) {
         yield(value)
     }
 }

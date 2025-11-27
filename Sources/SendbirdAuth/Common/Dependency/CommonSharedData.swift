@@ -7,14 +7,14 @@
 
 import Foundation
 
-public class CommonSharedData {
-    public private(set) var eKey: String?
+@_spi(SendbirdInternal) public class CommonSharedData {
+    @_spi(SendbirdInternal) public private(set) var eKey: String?
 
-    public init(eKey: String?) {
+    @_spi(SendbirdInternal) public init(eKey: String?) {
         self.eKey = eKey
     }
     
-    public func update(eKey: String?) {
+    @_spi(SendbirdInternal) public func update(eKey: String?) {
         self.eKey = eKey
     }
 }

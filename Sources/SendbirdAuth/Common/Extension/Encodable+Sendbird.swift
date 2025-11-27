@@ -7,14 +7,14 @@
 
 import Foundation
 
-public extension JSONEncoder {
+@_spi(SendbirdInternal) public extension JSONEncoder {
     convenience init(keyStrategy strategy: JSONEncoder.KeyEncodingStrategy) {
         self.init()
         self.keyEncodingStrategy = strategy
     }
 }
 
-public extension JSONDecoder {
+@_spi(SendbirdInternal) public extension JSONDecoder {
     convenience init(keyStrategy strategy: JSONDecoder.KeyDecodingStrategy) {
         self.init()
         self.keyDecodingStrategy = strategy
@@ -22,17 +22,17 @@ public extension JSONDecoder {
     
 }
 
-public protocol StrategyCodable: StrategyDecodable, StrategyEncodable { }
+@_spi(SendbirdInternal) public protocol StrategyCodable: StrategyDecodable, StrategyEncodable { }
 
-public protocol StrategyDecodable: Decodable {
+@_spi(SendbirdInternal) public protocol StrategyDecodable: Decodable {
     static var keyStrategy: JSONDecoder.KeyDecodingStrategy { get }
 }
 
-public protocol StrategyEncodable: Encodable {
+@_spi(SendbirdInternal) public protocol StrategyEncodable: Encodable {
     static var keyStrategy: JSONEncoder.KeyEncodingStrategy { get }
 }
 
-public extension StrategyEncodable {
+@_spi(SendbirdInternal) public extension StrategyEncodable {
     var keyStrategy: JSONEncoder.KeyEncodingStrategy { Self.keyStrategy }
 }
 

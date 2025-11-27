@@ -7,11 +7,11 @@
 
 import Foundation
 
-public typealias ConnectionContext = WebSocketContext
+@_spi(SendbirdInternal) public typealias ConnectionContext = WebSocketContext
 
-public typealias WebSocketContext = WebSocketDataSource & WebSocketActionable & Injectable
+@_spi(SendbirdInternal) public typealias WebSocketContext = WebSocketDataSource & WebSocketActionable & Injectable
 
-public protocol WebSocketDataSource: AnyObject {
+@_spi(SendbirdInternal) public protocol WebSocketDataSource: AnyObject {
     var configForWebSocket: SendbirdConfiguration? { get }
     var serviceForWebSocket: QueueService? { get }
     var dataSourceForWebSocket: ConnectionStateData? { get }
@@ -34,7 +34,7 @@ public protocol WebSocketDataSource: AnyObject {
     func notifyReconnectionAttempt()
 }
 
-public protocol WebSocketActionable: AnyObject {
+@_spi(SendbirdInternal) public protocol WebSocketActionable: AnyObject {
     func changeState(to nextState: ConnectionStatable)
     func createWebSocketURL(userId: String) -> String
     
@@ -42,24 +42,24 @@ public protocol WebSocketActionable: AnyObject {
     func disconnectSocket()
 }
 
-public protocol WebSocketManagerDelegate: AnyObject {
+@_spi(SendbirdInternal) public protocol WebSocketManagerDelegate: AnyObject {
     func didReceiveMessage(_ message: String)
 }
 
-public typealias UserConnectionManager = WebSocketManager
-public class WebSocketManager {
+@_spi(SendbirdInternal) public typealias UserConnectionManager = WebSocketManager
+@_spi(SendbirdInternal) public class WebSocketManager {
     // MARK: Injectable
     @DependencyWrapper private var dependency: Dependency?
     private var service: QueueService? { dependency?.service }
-    public var stateData: ConnectionStateData? { dependency?.stateData }
-    public var config: SendbirdConfiguration? { dependency?.config }
+    @_spi(SendbirdInternal) public var stateData: ConnectionStateData? { dependency?.stateData }
+    @_spi(SendbirdInternal) public var config: SendbirdConfiguration? { dependency?.config }
     private var statManager: StatManager? { dependency?.statManager }
     
     /// Should be non-nil once connect() was explicitly called.
     /// - Since: 4.34.0
-    public var loginKey: LoginKey? = nil
+    @_spi(SendbirdInternal) public var loginKey: LoginKey? = nil
 
-    @InternalAtomic public var state: ConnectionStatable = InitializedState() {
+    @InternalAtomic @_spi(SendbirdInternal) public var state: ConnectionStatable = InitializedState() {
         didSet {
             Logger.session.info("State transition \(oldValue) -> \(state)")
 #if !RELEASE
@@ -73,36 +73,36 @@ public class WebSocketManager {
     }
     
 #if !RELEASE
-    @InternalAtomic public var previousStates: [ConnectionStatable.Type] = []
+    @InternalAtomic @_spi(SendbirdInternal) public var previousStates: [ConnectionStatable.Type] = []
 #endif
     
-    public let eventDispatcher: EventDispatcher
+    @_spi(SendbirdInternal) public let eventDispatcher: EventDispatcher
     
-    public var routerConfig: CommandRouterConfiguration {
+    @_spi(SendbirdInternal) public var routerConfig: CommandRouterConfiguration {
         get async {
             await webSocketClient.routerConfig
         }
     }
     private let initialRouterConfig: CommandRouterConfiguration
     
-    public func performOnCompletionQueue(_ block: (() -> Void)?) {
+    @_spi(SendbirdInternal) public func performOnCompletionQueue(_ block: (() -> Void)?) {
         service?.performOnCompletionQueue(block)
     }
     
-    public var connectionRetryCount: Int {
+    @_spi(SendbirdInternal) public var connectionRetryCount: Int {
         statManager?.connectionRetryCount ?? 0
     }
-    public var reconnectionTryCount: Int {
+    @_spi(SendbirdInternal) public var reconnectionTryCount: Int {
         statManager?.reconnectionTryCount ?? 0
     }
     
-    public var hostURL: String {
+    @_spi(SendbirdInternal) public var hostURL: String {
         statManager?.wsOpenedEvent?.hostURL ?? ""
     }
     
-    public weak var delegate: WebSocketManagerDelegate?
+    @_spi(SendbirdInternal) public weak var delegate: WebSocketManagerDelegate?
     
-    public var connectionState: AuthWebSocketConnectionState {
+    @_spi(SendbirdInternal) public var connectionState: AuthWebSocketConnectionState {
         queue.sync {
             if isConnecting || isReconnecting {
                 return .connecting
@@ -114,11 +114,11 @@ public class WebSocketManager {
         }
     }
     
-    public let userId: String
+    @_spi(SendbirdInternal) public let userId: String
     
-    public private(set) var netStatus: Reachability.Connection = .unavailable
+    @_spi(SendbirdInternal) public private(set) var netStatus: Reachability.Connection = .unavailable
     
-    public func changeNetworkStatus(to status: Reachability.Connection) {
+    @_spi(SendbirdInternal) public func changeNetworkStatus(to status: Reachability.Connection) {
         netStatus = status
         
         if status == .unavailable {
@@ -126,11 +126,11 @@ public class WebSocketManager {
         }
     }
     
-    public let queue: SafeSerialQueue
+    @_spi(SendbirdInternal) public let queue: SafeSerialQueue
     private var webSocketEventTask: Task<Void, Never>? // stream consumption
     // !!!: Shouldn't it be much more strict?
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         userId: String,
         queue: SafeSerialQueue,
         eventDispatcher: EventDispatcher,
@@ -163,9 +163,9 @@ public class WebSocketManager {
     
     /// Avoid changing it directly. Use `setNewWebSocketClient` method instead.
     @InternalAtomic private(set) var webSocketClient: any ChatWebSocketClientInterface
-    public weak var requestHeaderDataSource: RequestHeaderDataSource?
+    @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
     
-    public func createWebSocketURL(
+    @_spi(SendbirdInternal) public func createWebSocketURL(
         userId: String
     ) -> String {
         
@@ -217,7 +217,7 @@ public class WebSocketManager {
     }
     
     // MARK: Injectable
-    public func resolve(with dependency: (any Dependency)?) {
+    @_spi(SendbirdInternal) public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
 }
@@ -356,7 +356,7 @@ extension WebSocketManager {
 
 extension WebSocketManager: EventDelegate {
     
-    public func didReceiveSBCommandEvent(command: SBCommand) async {
+    @_spi(SendbirdInternal) public func didReceiveSBCommandEvent(command: SBCommand) async {
         switch command {
         case let command as LoginEvent:
             queue.async {
@@ -370,29 +370,29 @@ extension WebSocketManager: EventDelegate {
         }
     }
     
-    public func didReceiveInternalEvent(command: InternalEvent) {
+    @_spi(SendbirdInternal) public func didReceiveInternalEvent(command: InternalEvent) {
         // do-nothing
     }
 }
 
 extension WebSocketManager: ConnectionContext {
-    public var configForWebSocket: SendbirdConfiguration? { self.config }
-    public var serviceForWebSocket: QueueService? { self.service }
-    public var dataSourceForWebSocket: ConnectionStateData? { self.stateData }
+    @_spi(SendbirdInternal) public var configForWebSocket: SendbirdConfiguration? { self.config }
+    @_spi(SendbirdInternal) public var serviceForWebSocket: QueueService? { self.service }
+    @_spi(SendbirdInternal) public var dataSourceForWebSocket: ConnectionStateData? { self.stateData }
     
-    public var isConnecting: Bool { state is ConnectingState }
-    public var isReconnecting: Bool { state is ReconnectingState }
-    public var isConnected: Bool { state is ConnectedState }
-    public var isDisconnected: Bool { state is LogoutState || state is InternalDisconnectedState }
+    @_spi(SendbirdInternal) public var isConnecting: Bool { state is ConnectingState }
+    @_spi(SendbirdInternal) public var isReconnecting: Bool { state is ReconnectingState }
+    @_spi(SendbirdInternal) public var isConnected: Bool { state is ConnectedState }
+    @_spi(SendbirdInternal) public var isDisconnected: Bool { state is LogoutState || state is InternalDisconnectedState }
     
     // NOTE: should not be called outside of state machine due to
     // deadlock on sync
-    public func changeState(to nextState: ConnectionStatable) {
+    @_spi(SendbirdInternal) public func changeState(to nextState: ConnectionStatable) {
         Logger.session.verbose("\(state) to \(nextState)")
         state = nextState
     }
     
-    public func connect(loginKey: LoginKey, sessionKey: String?, completionHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func connect(loginKey: LoginKey, sessionKey: String?, completionHandler: AuthUserHandler?) {
         self.loginKey = loginKey
         
         queue.async {
@@ -406,7 +406,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    public func disconnect(isExplicit: Bool = false, completionHandler: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func disconnect(isExplicit: Bool = false, completionHandler: VoidHandler? = nil) {
         if isExplicit {
             self.dispatchDisconnectEventIfConnected(
                 errorType: nil,
@@ -423,7 +423,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    public func disconnectWebSocket(completionHandler: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func disconnectWebSocket(completionHandler: VoidHandler? = nil) {
         self.dispatchDisconnectEventIfConnected(
             errorType: nil,
             reasonType: .explicitDisconnectWebSocket
@@ -438,7 +438,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    public func enterBackground(completionHandler: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func enterBackground(completionHandler: VoidHandler? = nil) {
         self.dispatchDisconnectEventIfConnected(
             errorType: AuthClientError.webSocketConnectionClosed.asAuthError,
             reasonType: .background
@@ -450,7 +450,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    public func networkDisconnected(completionHandler: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func networkDisconnected(completionHandler: VoidHandler? = nil) {
         self.dispatchDisconnectEventIfConnected(
             errorType: AuthClientError.networkError.asAuthError,
             reasonType: .networkDisconnected
@@ -458,7 +458,7 @@ extension WebSocketManager: ConnectionContext {
     }
     
     @discardableResult
-    public func reconnect(sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    @_spi(SendbirdInternal) public func reconnect(sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.socket.debug("reconnect hasSessionKey: \(sessionKey != nil). currentUser: \(self.userId), by: \(String(describing: reconnectedBy?.rawValue))")
         
         if reconnectedBy == .manual {
@@ -475,7 +475,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    public func connectSocket(url: String, accessToken: String?, sessionKey: String?) {
+    @_spi(SendbirdInternal) public func connectSocket(url: String, accessToken: String?, sessionKey: String?) {
         // TODO: Shutdown websocket client silently
         // This will trigger websocket disconnectd event, and may cause changes in the state machine.
         // Is it possible to disconnect the websocket client and discard it immediately?
@@ -506,7 +506,7 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    public func disconnectSocket() {
+    @_spi(SendbirdInternal) public func disconnectSocket() {
         queue.async {
             Task { [self] in
                 Logger.socket.debug("currentUser: \(self.userId)")
@@ -515,21 +515,21 @@ extension WebSocketManager: ConnectionContext {
         }
     }
     
-    public func notifyNewConnectionStarted() {
+    @_spi(SendbirdInternal) public func notifyNewConnectionStarted() {
         statManager?.connectionId = UUID().uuidString
         statManager?.connectionRetryCount = 0
     }
     
-    public func notifyNewReconnectionStarted() {
+    @_spi(SendbirdInternal) public func notifyNewReconnectionStarted() {
         statManager?.connectionId = UUID().uuidString
         statManager?.reconnectionTryCount = 0
     }
     
-    public func notifyConnectionFailed() {
+    @_spi(SendbirdInternal) public func notifyConnectionFailed() {
         statManager?.connectionRetryCount += 1
     }
     
-    public func notifyReconnectionAttempt() {
+    @_spi(SendbirdInternal) public func notifyReconnectionAttempt() {
         statManager?.reconnectionTryCount += 1
     }
     
@@ -560,16 +560,16 @@ extension WebSocketManager {
 
 extension WebSocketManager {
 #if TESTCASE
-    public func setStatManagerForTest(_ statManager: StatManager?) {
+    @_spi(SendbirdInternal) public func setStatManagerForTest(_ statManager: StatManager?) {
         // TODO: SendbirdChatMain.statManager를 교체해야 함.
         //        self.statManager = statManager
     }
 
-    public func injectWebSocketClientForTest(_ client: any ChatWebSocketClientInterface) async {
+    @_spi(SendbirdInternal) public func injectWebSocketClientForTest(_ client: any ChatWebSocketClientInterface) async {
         await changeWebSocketClient(client)
     }
     
-    public func getWebSocketClient() -> any ChatWebSocketClientInterface {
+    @_spi(SendbirdInternal) public func getWebSocketClient() -> any ChatWebSocketClientInterface {
         webSocketClient
     }
 #endif

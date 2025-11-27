@@ -6,7 +6,7 @@
 //
 
 /// User connection statuses for `User`.
-public enum AuthUserConnectionStatus: Int, Codable {
+@_spi(SendbirdInternal) public enum AuthUserConnectionStatus: Int, Codable {
     /// For unavailable user.
     case nonAvailable = 0
     
@@ -18,9 +18,9 @@ public enum AuthUserConnectionStatus: Int, Codable {
 }
 
 extension AuthUserConnectionStatus {
-    public typealias RawValue = Bool?
+    @_spi(SendbirdInternal) public typealias RawValue = Bool?
     
-    public init(rawValue: Bool?) {
+    @_spi(SendbirdInternal) public init(rawValue: Bool?) {
         if let rawValue = rawValue {
             self = rawValue ? .online : .offline
         } else {
@@ -28,7 +28,7 @@ extension AuthUserConnectionStatus {
         }
     }
     
-    public var rawValue: Bool? {
+    @_spi(SendbirdInternal) public var rawValue: Bool? {
         switch self {
         case .offline: return false
         case .online: return true
@@ -39,7 +39,7 @@ extension AuthUserConnectionStatus {
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
-    public init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let boolValue = try container.decode(Bool.self)
         self.init(rawValue: boolValue)
@@ -48,7 +48,7 @@ extension AuthUserConnectionStatus {
     /// Encodes this object.
     ///
     /// - Parameter encoder: `Encoder` instance
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(rawValue)
     }

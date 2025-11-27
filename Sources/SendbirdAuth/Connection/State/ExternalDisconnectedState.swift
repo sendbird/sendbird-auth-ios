@@ -7,15 +7,15 @@
 
 import Foundation
 
-public class ExternalDisconnectedState: ConnectionStatable {
+@_spi(SendbirdInternal) public class ExternalDisconnectedState: ConnectionStatable {
     // For disconnect completion
-    public var completionHandler: VoidHandler?
+    @_spi(SendbirdInternal) public var completionHandler: VoidHandler?
 
-    public init(completionHandler: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public init(completionHandler: VoidHandler? = nil) {
         self.completionHandler = completionHandler
     }
 
-    public func process(context: ConnectionContext) {
+    @_spi(SendbirdInternal) public func process(context: ConnectionContext) {
         Logger.main.debug()
         context.disconnectSocket()
 
@@ -29,7 +29,7 @@ public class ExternalDisconnectedState: ConnectionStatable {
         }
     }
 
-    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.session.debug()
         // NOTE: this is problem removing existing delegates
         // context.delegate?.onRelease()
@@ -43,7 +43,7 @@ public class ExternalDisconnectedState: ConnectionStatable {
         )
     }
 
-    public func disconnect(context: ConnectionContext, completionHandler: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func disconnect(context: ConnectionContext, completionHandler: VoidHandler? = nil) {
         Logger.session.debug()
         context.changeState(
             to: LogoutState(
@@ -53,14 +53,14 @@ public class ExternalDisconnectedState: ConnectionStatable {
         )
     }
 
-    public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         context.serviceForWebSocket? {
             completionHandler?()
         }
     }
     
-    public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    @_spi(SendbirdInternal) public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.session.debug("reconnect by \(String(describing: reconnectedBy?.rawValue))")
         
         if let sessionKey, reconnectedBy == .manual {
@@ -80,7 +80,7 @@ public class ExternalDisconnectedState: ConnectionStatable {
         return false
     }
 
-    public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
+    @_spi(SendbirdInternal) public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
         Logger.session.debug()
         // case. scenario when connected -> disconnected
         //

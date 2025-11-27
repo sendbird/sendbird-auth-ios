@@ -31,12 +31,12 @@ import Foundation
 ///   - commandType: The type of command this bucket is responsible for.
 ///   - strategy: The strategy for processing requests (e.g., zero-gap or debounced).
 ///   - sendHandler: A closure to handle the dispatching of WebSocket requests.
-public actor BatchedRequestBucket {
-    public let commandType: CommandType
-    public var pendingRequestsCount: Int {
+@_spi(SendbirdInternal) public actor BatchedRequestBucket {
+    @_spi(SendbirdInternal) public let commandType: CommandType
+    @_spi(SendbirdInternal) public var pendingRequestsCount: Int {
         requestIdStack.count
     }
-    public var isFlushInProgress: Bool {
+    @_spi(SendbirdInternal) public var isFlushInProgress: Bool {
         flushingTask != nil
     }
     
@@ -45,7 +45,7 @@ public actor BatchedRequestBucket {
     private var requestIdStack: [String] = []
     private var flushingTask: Task<Void, Never>?
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         commandType: CommandType,
         strategy: Strategy,
         sendHandler: @escaping WebSocketRequestHandler
@@ -60,17 +60,17 @@ public actor BatchedRequestBucket {
     }
     
     #if TESTCASE
-    public init(commandType: CommandType, dispatcher: some WebSocketRequestSendable) {
+    @_spi(SendbirdInternal) public init(commandType: CommandType, dispatcher: some WebSocketRequestSendable) {
         self.commandType = commandType
         self.sender = dispatcher
     }
     #endif
     
-    public nonisolated func shouldHold(_ request: some WSRequestable) -> Bool {
+    @_spi(SendbirdInternal) public nonisolated func shouldHold(_ request: some WSRequestable) -> Bool {
         request.commandType == self.commandType
     }
     
-    public func shouldFlush(_ command: some Command) -> Bool {
+    @_spi(SendbirdInternal) public func shouldFlush(_ command: some Command) -> Bool {
         guard
             let command = command as? Bucketable,
             let reqId = command.reqId
@@ -88,7 +88,7 @@ public actor BatchedRequestBucket {
         return command.cmd == self.commandType
     }
     
-    public func hold(_ request: some ResultableWSRequest) async {
+    @_spi(SendbirdInternal) public func hold(_ request: some ResultableWSRequest) async {
         guard
             shouldHold(request),
             let requestId = request.requestId else {
@@ -102,7 +102,7 @@ public actor BatchedRequestBucket {
     }
     
     /// Flush will be ran in a FIFO order, in separated thread(`Task`)
-    public func flushPendingRequests(with command: some Command, _ flushHandler: @escaping (Command) async -> Void) async {
+    @_spi(SendbirdInternal) public func flushPendingRequests(with command: some Command, _ flushHandler: @escaping (Command) async -> Void) async {
         await waitForFlush()
         
         guard let command = command as? Bucketable, shouldFlush(command) else {
@@ -148,7 +148,7 @@ public actor BatchedRequestBucket {
 // Add more strategies if needed
 extension BatchedRequestBucket {
     /// WebSocket 요청 처리 전략입니다.
-    public enum Strategy {
+    @_spi(SendbirdInternal) public enum Strategy {
         /// 요청을 즉시 처리합니다
         case zeroGap
         /// 요청을 일정 시간 간격(debounce)을 기다린 후 처리합니다

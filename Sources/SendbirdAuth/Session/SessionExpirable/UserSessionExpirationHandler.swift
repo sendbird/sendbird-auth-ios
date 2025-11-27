@@ -7,23 +7,23 @@
 
 import Foundation
 
-public class UserSessionExpirationHandler: SessionExpirable {
-    public init(sessionToken: String, sessionHandler: SessionEventBroadcaster, config: SendbirdConfiguration) {
+@_spi(SendbirdInternal) public class UserSessionExpirationHandler: SessionExpirable {
+    @_spi(SendbirdInternal) public init(sessionToken: String, sessionHandler: SessionEventBroadcaster, config: SendbirdConfiguration) {
         self.sessionToken = sessionToken
         self.sessionHandler = sessionHandler
         self.config = config
     }
     
-    public var config: SendbirdConfiguration
+    @_spi(SendbirdInternal) public var config: SendbirdConfiguration
     
-    public var sessionToken: String?
-    public var sessionHandler: SessionEventBroadcaster
+    @_spi(SendbirdInternal) public var sessionToken: String?
+    @_spi(SendbirdInternal) public var sessionHandler: SessionEventBroadcaster
     
-    public var isRefreshingSession: Bool = false
+    @_spi(SendbirdInternal) public var isRefreshingSession: Bool = false
     
-    public weak var delegate: InternalSessionDelegate?
+    @_spi(SendbirdInternal) public weak var delegate: InternalSessionDelegate?
     
-    public func refreshSessionKey(shouldRetry: Bool = true, expiresIn: Int64? = nil) {
+    @_spi(SendbirdInternal) public func refreshSessionKey(shouldRetry: Bool = true, expiresIn: Int64? = nil) {
         guard !isRefreshingSession else { return }
         
         isRefreshingSession = true
@@ -49,8 +49,8 @@ public class UserSessionExpirationHandler: SessionExpirable {
         }
     }
     
-    public var timerBoard: SBTimerBoard = .init()
-    public func refreshSessionToken() {
+    @_spi(SendbirdInternal) public var timerBoard: SBTimerBoard = .init()
+    @_spi(SendbirdInternal) public func refreshSessionToken() {
         guard !isRefreshingSession else { return }
 
         isRefreshingSession = true
@@ -83,7 +83,7 @@ public class UserSessionExpirationHandler: SessionExpirable {
         }
     }
     
-    public func resetSession() {
+    @_spi(SendbirdInternal) public func resetSession() {
         self.isRefreshingSession = false
         self.sessionToken = nil
     }

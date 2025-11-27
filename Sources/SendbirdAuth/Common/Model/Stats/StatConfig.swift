@@ -7,15 +7,15 @@
 
 import Foundation
 
-public class StatConfig: Codable {
-    public let minStatCount: Int
-    public let minInterval: Int64
-    public let maxStatCountPerRequest: Int
-    public let lowerThreshold: Int
-    public let requestDelayRange: Int
-    public let modStatCount: Int = 20
+@_spi(SendbirdInternal) public class StatConfig: Codable {
+    @_spi(SendbirdInternal) public let minStatCount: Int
+    @_spi(SendbirdInternal) public let minInterval: Int64
+    @_spi(SendbirdInternal) public let maxStatCountPerRequest: Int
+    @_spi(SendbirdInternal) public let lowerThreshold: Int
+    @_spi(SendbirdInternal) public let requestDelayRange: Int
+    @_spi(SendbirdInternal) public let modStatCount: Int = 20
     
-    public enum CodingKeys: String, CodingKey {
+    @_spi(SendbirdInternal) public enum CodingKeys: String, CodingKey {
         case minStatCount = "min_stat_count"
         case minInterval = "min_interval"
         case maxStatCountPerRequest = "max_stat_count_per_request"
@@ -23,7 +23,7 @@ public class StatConfig: Codable {
         case requestDelayRange = "request_delay_range"
     }
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         minStatCount: Int, 
         minInterval: Int64,
         maxStatCountPerRequest: Int,
@@ -37,7 +37,7 @@ public class StatConfig: Codable {
         self.requestDelayRange = requestDelayRange
     }
     
-    public required init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         minStatCount = try container.decode(Int.self, forKey: .minStatCount)
@@ -47,7 +47,7 @@ public class StatConfig: Codable {
         requestDelayRange = try container.decode(Int.self, forKey: .requestDelayRange)
     }
     
-    public func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
         try container.encode(minStatCount, forKey: .minStatCount)
@@ -60,7 +60,7 @@ public class StatConfig: Codable {
 
 extension StatConfig {
     /// This is the debug description for the `StatConfig` object.
-    public var debugDescription: String {
+    @_spi(SendbirdInternal) public var debugDescription: String {
         """
         Stat config: minStatCount: \(self.minStatCount), minInterval: \(self.minInterval), maxStatCountPerRequest: \(self.maxStatCountPerRequest), lowerThreshold: \(self.lowerThreshold), requestDelayRange: \(self.requestDelayRange)
         """

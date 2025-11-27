@@ -7,22 +7,22 @@
 
 import Foundation
 
-public class StatAPIClient: StatAPIClientable {
+@_spi(SendbirdInternal) public class StatAPIClient: StatAPIClientable {
     private weak var requestQueue: RequestQueue?
-    public var deviceId: String = ""
+    @_spi(SendbirdInternal) public var deviceId: String = ""
 
     #if TESTCASE
         // For test
-        public var mockEnabled: Bool?
-        public var mockError: AuthError?
+        @_spi(SendbirdInternal) public var mockEnabled: Bool?
+        @_spi(SendbirdInternal) public var mockError: AuthError?
     #endif
 
-    public init(requestQueue: RequestQueue) {
+    @_spi(SendbirdInternal) public init(requestQueue: RequestQueue) {
         self.requestQueue = requestQueue
     }
 
     // NotificationStat을 제외한 나머지 Stat log만 전송
-    public func send<RecordStatType>(
+    @_spi(SendbirdInternal) public func send<RecordStatType>(
         stats: [RecordStatType]
     ) async throws where RecordStatType: BaseStatType {
         guard let requestQueue else {
@@ -67,7 +67,7 @@ public class StatAPIClient: StatAPIClientable {
     }
 
     // NotificationStat만 전송
-    public func sendNotificationStats(stats: [NotificationStat]) async throws {
+    @_spi(SendbirdInternal) public func sendNotificationStats(stats: [NotificationStat]) async throws {
         guard let requestQueue else {
             throw AuthClientError.invalidInitialization.asAuthError(message: "Request queue is not initialized.")
         }
@@ -109,12 +109,12 @@ public class StatAPIClient: StatAPIClientable {
         }
     }
 
-    public func setDeviceId(deviceId: String) {
+    @_spi(SendbirdInternal) public func setDeviceId(deviceId: String) {
         self.deviceId = deviceId
     }
 
     #if TESTCASE
-    public func setMockResult(enabled: Bool, error: AuthError?) {
+    @_spi(SendbirdInternal) public func setMockResult(enabled: Bool, error: AuthError?) {
         mockEnabled = enabled
         mockError = error
     }

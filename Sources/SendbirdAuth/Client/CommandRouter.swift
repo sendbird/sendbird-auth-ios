@@ -30,38 +30,38 @@ protocol CommandRouterInterface {
     func setUploadFileSizeLimit(_ limit: Int64)
 }
 
-public class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, Injectable {
+@_spi(SendbirdInternal) public class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, Injectable {
     // MARK: Injectable
     @DependencyWrapper private var dependency: Dependency?
     private var config: SendbirdConfiguration? { dependency?.config }
     private var statManager: StatManager? { dependency?.statManager }
     
-    public private(set) var routerConfig: CommandRouterConfiguration
-    public func setRouterConfig(_ config: CommandRouterConfiguration) {
+    @_spi(SendbirdInternal) public private(set) var routerConfig: CommandRouterConfiguration
+    @_spi(SendbirdInternal) public func setRouterConfig(_ config: CommandRouterConfiguration) {
         Task { 
             await webSocketManager.setRouterConfig(to: config) 
             apiClient.routerConfig = config
         }
     }
 
-    @InternalAtomic public var webSocketManager: WebSocketManager {
+    @InternalAtomic @_spi(SendbirdInternal) public var webSocketManager: WebSocketManager {
         willSet {
             Task { await webSocketManager.webSocketClient.forceDisconnect() }
         }
     }
     
-    public var apiClient: HTTPClientInterface
+    @_spi(SendbirdInternal) public var apiClient: HTTPClientInterface
     
-    public var ackTimerManager = AckTimerManager()
+    @_spi(SendbirdInternal) public var ackTimerManager = AckTimerManager()
     
-    public var eventDispatcher: EventDispatcher
+    @_spi(SendbirdInternal) public var eventDispatcher: EventDispatcher
     
-    public var webSocketConnectionState: AuthWebSocketConnectionState { webSocketManager.connectionState }
-    public var connected: Bool { webSocketManager.connectionState == .open }
+    @_spi(SendbirdInternal) public var webSocketConnectionState: AuthWebSocketConnectionState { webSocketManager.connectionState }
+    @_spi(SendbirdInternal) public var connected: Bool { webSocketManager.connectionState == .open }
     
-    public var parsingStrategy: ((String) -> (Command?))?
+    @_spi(SendbirdInternal) public var parsingStrategy: ((String) -> (Command?))?
     
-    public weak var requestHeaderDataSource: RequestHeaderDataSource?
+    @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
     
     // socket event (내꺼 말고) 수신 전용
     private let socketReceiveOperationQueue: OperationQueue
@@ -85,8 +85,8 @@ public class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, In
         }
     }()
     
-    public var onMessageReceived: ((Command) -> Void)?
-    public func didReceiveMessage(_ message: String) {
+    @_spi(SendbirdInternal) public var onMessageReceived: ((Command) -> Void)?
+    @_spi(SendbirdInternal) public func didReceiveMessage(_ message: String) {
         Logger.socket.debug("[WS Recv] \(message)")
         
         guard let command = self.parsingStrategy?(message) else {
@@ -117,7 +117,7 @@ public class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, In
         }
     }
     
-    public init(
+    @_spi(SendbirdInternal) public init(
         routerConfig: CommandRouterConfiguration,
         webSocketManager: WebSocketManager,
         httpClient: HTTPClientInterface,
@@ -176,7 +176,7 @@ public class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, In
         }
     }
     
-    public func createAPIHeaders<R: APIRequestable>(for request: R) -> [String: String] {
+    @_spi(SendbirdInternal) public func createAPIHeaders<R: APIRequestable>(for request: R) -> [String: String] {
         let paramsBuilder = RequestHeadersBuilder()
         
         paramsBuilder.append(key: "Accept", value: "application/json")
@@ -196,7 +196,7 @@ public class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, In
         return paramsBuilder.buildDictionary()
     }
     
-    public func send<R: APIRequestable>(
+    @_spi(SendbirdInternal) public func send<R: APIRequestable>(
         request: R,
         sessionKey: String?,
         wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
@@ -293,7 +293,7 @@ public class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, In
     }
     
     // MARK: Injectable
-    public func resolve(with dependency: (any Dependency)?) {
+    @_spi(SendbirdInternal) public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
 }
@@ -324,7 +324,7 @@ extension CommandRouter {
 }
 
 extension CommandRouter {
-    public func handleReceived(command: Command) {
+    @_spi(SendbirdInternal) public func handleReceived(command: Command) {
         self.eventDispatcher.dispatch(command: command) {
             if let command = command as? SBCommand,
                self.ackTimerManager.contains(command.requestId) || command.isAckFromCurrentDeviceRequest {
@@ -341,15 +341,15 @@ extension CommandRouter {
 #if TESTCASE
 // MARK: Test Helper
 extension CommandRouter {
-    public func getRequestHeaderContext() -> RequestHeadersContext? {
+    @_spi(SendbirdInternal) public func getRequestHeaderContext() -> RequestHeadersContext? {
         return self.requestHeaderDataSource?.requestHeaderContext
     }
     
-    public func getWebsocketClient() -> any ChatWebSocketClientInterface {
+    @_spi(SendbirdInternal) public func getWebsocketClient() -> any ChatWebSocketClientInterface {
         return self.webSocketManager.webSocketClient
     } 
     
-    public func getRequestHeaderDict<R: APIRequestable>(request: R) -> [String: String] {
+    @_spi(SendbirdInternal) public func getRequestHeaderDict<R: APIRequestable>(request: R) -> [String: String] {
         return self.createAPIHeaders(for: request)
     }
 }

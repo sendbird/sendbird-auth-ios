@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol EventBroadcaster<DelegateType> {
+@_spi(SendbirdInternal) public protocol EventBroadcaster<DelegateType> {
     associatedtype DelegateType: AnyObject
 
     var delegates: NSMapTable<NSString, DelegateType> { get }
@@ -30,13 +30,13 @@ public protocol EventBroadcaster<DelegateType> {
 }
 
 extension EventBroadcaster {
-    public func delegate(forKey key: String) -> DelegateType? {
+    @_spi(SendbirdInternal) public func delegate(forKey key: String) -> DelegateType? {
         return delegateLock.withLock {
             delegates.object(forKey: key as NSString)
         }
     }
 
-    public func addDelegate(_ delegate: DelegateType, forKey key: String) {
+    @_spi(SendbirdInternal) public func addDelegate(_ delegate: DelegateType, forKey key: String) {
         delegateLock.withLock {
             // Remove existing delegate first to safely clean up weak references
             delegates.removeObject(forKey: key as NSString)
@@ -44,23 +44,23 @@ extension EventBroadcaster {
         }
     }
 
-    public func removeDelegate(forKey key: String) {
+    @_spi(SendbirdInternal) public func removeDelegate(forKey key: String) {
         delegateLock.withLock {
             delegates.removeObject(forKey: key as NSString)
         }
     }
 
-    public func removeAllDelegates() {
+    @_spi(SendbirdInternal) public func removeAllDelegates() {
         delegateLock.withLock {
             delegates.removeAllObjects()
         }
     }
 
-    public func callAsFunction(task: @escaping ((DelegateType) -> Void)) {
+    @_spi(SendbirdInternal) public func callAsFunction(task: @escaping ((DelegateType) -> Void)) {
         self.broadcast(task: task)
     }
 
-    public func broadcast<OtherType>(upcast: OtherType, task: @escaping ((OtherType) -> Void)) {
+    @_spi(SendbirdInternal) public func broadcast<OtherType>(upcast: OtherType, task: @escaping ((OtherType) -> Void)) {
         service {
             // Create a thread-safe snapshot of delegates before enumeration
             let snapshot = self.delegateLock.withLock {
@@ -73,7 +73,7 @@ extension EventBroadcaster {
         }
     }
 
-    public func broadcast(task: @escaping ((DelegateType) -> Void)) {
+    @_spi(SendbirdInternal) public func broadcast(task: @escaping ((DelegateType) -> Void)) {
         service {
             // Create a thread-safe snapshot of delegates before enumeration
             let snapshot = self.delegateLock.withLock {

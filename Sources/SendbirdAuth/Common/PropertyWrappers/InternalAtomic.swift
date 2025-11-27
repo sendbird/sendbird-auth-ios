@@ -8,11 +8,11 @@
 import Foundation
 
 @propertyWrapper
-public class InternalAtomic<T> {
+@_spi(SendbirdInternal) public class InternalAtomic<T> {
     private var internalValue: T
     
     /// Actual value
-    public var wrappedValue: T {
+    @_spi(SendbirdInternal) public var wrappedValue: T {
         get {
             lock.sync {
                 return internalValue
@@ -25,7 +25,7 @@ public class InternalAtomic<T> {
         }
     }
     
-    public var projectedValue: InternalAtomic<T> { self }
+    @_spi(SendbirdInternal) public var projectedValue: InternalAtomic<T> { self }
     
     private let lock: DispatchQueue = {
         var name = "AtomicProperty_\(UUID().uuidString)_\(String(describing: T.self))"
@@ -33,11 +33,11 @@ public class InternalAtomic<T> {
     }()
     
     /// Constructor
-    public init(wrappedValue: T) {
+    @_spi(SendbirdInternal) public init(wrappedValue: T) {
         self.internalValue = wrappedValue
     }
     
-    public func atomicMutate(_ mutation: (inout T) -> Void) {
+    @_spi(SendbirdInternal) public func atomicMutate(_ mutation: (inout T) -> Void) {
         lock.sync {
             mutation(&internalValue)
         }

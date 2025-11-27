@@ -7,8 +7,8 @@
 import Foundation
 
 // swiftlint:disable identifier_name
-public enum CodeCodingKeys: String, CodingKey, Codable, CustomStringConvertible {
-    public var description: String { rawValue }
+@_spi(SendbirdInternal) public enum CodeCodingKeys: String, CodingKey, Codable, CustomStringConvertible {
+    @_spi(SendbirdInternal) public var description: String { rawValue }
     
     case accessCode = "access_code"
     case accentColor = "accent_color"

@@ -7,16 +7,16 @@
 
 import Foundation
 
-public class InitializedState: ConnectionStatable {
-    public func process(context: ConnectionContext) { }
+@_spi(SendbirdInternal) public class InitializedState: ConnectionStatable {
+    @_spi(SendbirdInternal) public func process(context: ConnectionContext) { }
     
-    public init() { }
+    @_spi(SendbirdInternal) public init() { }
 
-    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         self.connect(context: context, loginKey: loginKey, sessionKey: sessionKey, userHandler: [userHandler])
     }
     
-    public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: [AuthUserHandler?]) {
+    @_spi(SendbirdInternal) public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: [AuthUserHandler?]) {
         context.changeState(
             to: ConnectingState(
                 loginKey: loginKey,
@@ -26,7 +26,7 @@ public class InitializedState: ConnectionStatable {
         )
     }
     
-    public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
         context.changeState(
             to: LogoutState(
                 userId: context.userId,
@@ -35,17 +35,17 @@ public class InitializedState: ConnectionStatable {
         )
     }
     
-    public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         context.serviceForWebSocket? {
             completionHandler?()
         }
     }
     
-    public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    @_spi(SendbirdInternal) public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         return false
     }
     
-    public func didEnterBackground(context: ConnectionContext) {
+    @_spi(SendbirdInternal) public func didEnterBackground(context: ConnectionContext) {
         
     }
 }

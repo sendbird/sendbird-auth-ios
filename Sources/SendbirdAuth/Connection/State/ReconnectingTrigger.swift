@@ -5,7 +5,7 @@
 //  Created by Kai Lee on 6/16/25.
 //
 
-public enum ReconnectingTrigger: Int {
+@_spi(SendbirdInternal) public enum ReconnectingTrigger: Int {
     case manual
     case networkReachability
     case enteringForeground
@@ -20,7 +20,7 @@ public enum ReconnectingTrigger: Int {
 /// Extension of ReconnectingTrigger for unit test that
 /// improves the readability of the test code.
 extension ReconnectingTrigger {
-    public static var notManual: ReconnectingTrigger {
+    @_spi(SendbirdInternal) public static var notManual: ReconnectingTrigger {
         ReconnectingTrigger.enteringForeground
     }
 }

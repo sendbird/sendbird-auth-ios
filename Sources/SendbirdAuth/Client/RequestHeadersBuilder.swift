@@ -7,11 +7,11 @@
 
 import Foundation
 
-public final class RequestHeadersBuilder {
+@_spi(SendbirdInternal) public final class RequestHeadersBuilder {
     
     private var params: [String: String?]
     
-    public init(_ params: [String: String?] = [:]) {
+    @_spi(SendbirdInternal) public init(_ params: [String: String?] = [:]) {
         self.params = params
     }
     
@@ -19,7 +19,7 @@ public final class RequestHeadersBuilder {
     /// - Parameters:
     ///   - key: The param key
     ///   - value: The param value
-    public func append(key: String, value: String?) {
+    @_spi(SendbirdInternal) public func append(key: String, value: String?) {
         params[key] = value
     }
     
@@ -27,13 +27,13 @@ public final class RequestHeadersBuilder {
     /// - Parameters:
     ///   - key: The param key
     ///   - value: The boolean param value
-    public func append(key: String, value: Bool) {
+    @_spi(SendbirdInternal) public func append(key: String, value: Bool) {
         params[key] = "\(value.asInt)"
     }
     
     /// Builds joined text for URL
     /// - Returns: The text for url params
-    public func buildString() -> String {
+    @_spi(SendbirdInternal) public func buildString() -> String {
         return params.compactMapValues { $0 }
             .map { "\($0.key)=\($0.value)" }
             .joined(separator: "&")
@@ -41,7 +41,7 @@ public final class RequestHeadersBuilder {
     
     /// Builds JSON Dictionary for header
     /// - Returns: The JSON Dictionary for header
-    public func buildDictionary() -> [String: String] {
+    @_spi(SendbirdInternal) public func buildDictionary() -> [String: String] {
         return params.compactMapValues { $0 }
     }
 }
