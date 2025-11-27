@@ -24,8 +24,6 @@ let package = Package(
             name: "SendbirdAuthSDK",
             swiftSettings: [
                 .unsafeFlags(["-enable-library-evolution"]),
-                .unsafeFlags(["-package-name", "SendbirdInternal"]),
-                .unsafeFlags(["-experimental-package-interface-load"]),
                 .define("TESTCASE", .when(configuration: .debug)),
                 .unsafeFlags(["-lto=llvm-full"], .when(configuration: .release)),
                 .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release)),
