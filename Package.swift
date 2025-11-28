@@ -1,5 +1,6 @@
 // swift-tools-version:5.9
 
+import Foundation
 import PackageDescription
 
 let package = Package(
@@ -13,21 +14,18 @@ let package = Package(
             name: "SendbirdAuthSDK",
             targets: ["SendbirdAuthSDK"]
         ),
-        .library(
-            name: "SendbirdAuthDynamic",
-            type: .dynamic,
-            targets: ["SendbirdAuthSDK"]
-        ),
     ],
     targets: [
         .target(
             name: "SendbirdAuthSDK",
-            swiftSettings: [
-                .unsafeFlags(["-enable-library-evolution"]),
-                .define("TESTCASE", .when(configuration: .debug)),
-                .unsafeFlags(["-lto=llvm-full"], .when(configuration: .release)),
-                .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release)),
-            ]
+            path: "Sources/SendbirdAuth",
+            swiftSettings: swiftSettings
         ),
     ]
 )
+
+var swiftSettings: [SwiftSetting] = [
+    .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release)),
+    .define("TESTCASE", .when(configuration: .debug)),
+    .define("RELEASE", .when(configuration: .release)),
+]

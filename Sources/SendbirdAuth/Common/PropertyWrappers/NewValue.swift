@@ -19,7 +19,9 @@ class NewValue<Element: NewValuable> {
         didSet {
             oldValue.status = .inactive
             self.wrappedValue.didSetNewValue(with: oldValue)
+            #if !RELEASE
             self.delegate?.didSetNewValue(self.wrappedValue)
+            #endif
         }
     }
     

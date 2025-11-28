@@ -7,45 +7,26 @@
 
 import Foundation
 
-struct Configuration {
-    enum Environment {
-        case production
-        case test
+enum Configuration {
+    // MARK: - Environment URLs (hardcoded for SPM build config)
 
-        static var current: Environment {
-#if TESTCASE
-            return .test
-#else
-            return .production
-#endif
-        }
+    #if RELEASE
+        private static let defaultAPIHost = "https://api-@@.sendbird.com"
+        private static let defaultWSHost = "wss://ws-@@.sendbird.com"
+        private static let defaultBaseHost = "api-@@.sendbird.com"
+    #else // DEBUG, NIGHTLYDEV
+        private static let defaultAPIHost = "https://api-nightlydev.sendbirdtest.com"
+        private static let defaultWSHost = "wss://ws-nightlydev.sendbirdtest.com"
+        private static let defaultBaseHost = "api-nightlydev.sendbirdtest.com"
+    #endif
 
-        var apiHostTemplate: String {
-            switch self {
-            case .production:
-                return "https://api-@@.sendbird.com"
-            case .test:
-                return "https://test-api-@@.sendbird.com"
-            }
+    private static func hostURL(for key: String, default defaultHost: String) -> String {
+        // 1. Bundle Info.plist (xcframework)
+        if let host = Bundle(for: SendbirdAuth.self).infoDictionary?[key] as? String {
+            return host
         }
-
-        var wsHostTemplate: String {
-            switch self {
-            case .production:
-                return "wss://ws-@@.sendbird.com"
-            case .test:
-                return "wss://test-ws-@@.sendbird.com"
-            }
-        }
-
-        var baseHostTemplate: String {
-            switch self {
-            case .production:
-                return "api-@@.sendbird.com"
-            case .test:
-                return "test-api-@@.sendbird.com"
-            }
-        }
+        // 2. Fallback to compile-time default
+        return defaultHost
     }
 
     static func apiHostURL(for appId: String) -> String {
@@ -54,7 +35,8 @@ struct Configuration {
             return customAPIHost
         }
 
-        return Environment.current.apiHostTemplate.replacingOccurrences(of: "@@", with: appId)
+        let template = hostURL(for: "API_HOST_URL", default: defaultAPIHost)
+        return template.replacingOccurrences(of: "@@", with: appId)
     }
 
     static func wsHostURL(for appId: String) -> String {
@@ -63,10 +45,12 @@ struct Configuration {
             return customWsHost
         }
 
-        return Environment.current.wsHostTemplate.replacingOccurrences(of: "@@", with: appId)
+        let template = hostURL(for: "WS_HOST_URL", default: defaultWSHost)
+        return template.replacingOccurrences(of: "@@", with: appId)
     }
 
     static func baseHostURL(for appId: String) -> String? {
-        return Environment.current.baseHostTemplate.replacingOccurrences(of: "@@", with: appId)
+        let template = hostURL(for: "BASE_HOST_URL", default: defaultBaseHost)
+        return template.replacingOccurrences(of: "@@", with: appId)
     }
 }
