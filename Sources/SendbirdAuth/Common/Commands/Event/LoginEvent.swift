@@ -174,7 +174,7 @@ import Foundation
     }
 }
 
-#if TESTCASE
+#if DEBUG
 extension LoginEvent {
     @_spi(SendbirdInternal) public func updated(deviceTokenLastDeletedAt: Int64?, isUsingDeviceTokenCaching: Bool) -> Self {
         var mutating = self

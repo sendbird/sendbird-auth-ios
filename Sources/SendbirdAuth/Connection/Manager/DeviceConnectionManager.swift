@@ -265,7 +265,7 @@ extension DeviceConnectionManager: EventDelegate {
     }
 }
 
-#if TESTCASE
+#if DEBUG
 @_spi(SendbirdInternal) public extension DeviceConnectionManager {
     var isReachabilityRunningForTest: Bool {
         isReachabilityRunning

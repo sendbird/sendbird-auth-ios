@@ -27,7 +27,7 @@ import Foundation
             return nil
         }
         
-        #if !TESTCASE
+        #if !DEBUG
         headers["Session-Key"] = "********"
         #endif
         

@@ -205,7 +205,7 @@ extension SessionWebSocketEngine: URLSessionWebSocketDelegate, URLSessionDataDel
     }
 }
 
-#if TESTCASE
+#if DEBUG
 extension SessionWebSocketEngine {
     func getBroadcaster() -> AsyncEventBroadcaster<WebSocketEngineEvent> {
         eventBroadcaster

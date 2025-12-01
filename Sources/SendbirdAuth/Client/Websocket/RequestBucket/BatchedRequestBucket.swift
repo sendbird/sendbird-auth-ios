@@ -59,7 +59,7 @@ import Foundation
         }
     }
     
-    #if TESTCASE
+    #if DEBUG
     @_spi(SendbirdInternal) public init(commandType: CommandType, dispatcher: some WebSocketRequestSendable) {
         self.commandType = commandType
         self.sender = dispatcher

@@ -348,7 +348,7 @@ fileprivate extension URLSessionWebSocketTask.Message {
     }
 }
 
-#if TESTCASE
+#if DEBUG
 extension ChatWebSocketClient {
     nonisolated func createNewWebSocketEngine() -> any ChatWebSocketEngine {
         engine.createNewWebSocketEngine()

@@ -75,7 +75,7 @@ actor AsyncEventBroadcaster<T> {
     }
 }
 
-#if TESTCASE
+#if DEBUG
 extension AsyncEventBroadcaster {
     /// For tests: current number of active subscribers
     func getSubscribers() -> [Subscriber] {

@@ -315,7 +315,7 @@ extension WebSocketManager {
         }
         
         let prepare = {
-#if TESTCASE
+#if DEBUG
             // INFO: InterceptableMocking 객체로 교체하는 케이스는 기존 engine 을 사용하기때문에 disconnect 안함
             if newClient is ChatWebSocketClient {
                 await oldClient.forceDisconnect()
@@ -559,7 +559,7 @@ extension WebSocketManager {
 }
 
 extension WebSocketManager {
-#if TESTCASE
+#if DEBUG
     @_spi(SendbirdInternal) public func setStatManagerForTest(_ statManager: StatManager?) {
         // TODO: SendbirdChatMain.statManager를 교체해야 함.
         //        self.statManager = statManager

@@ -27,7 +27,7 @@ class ChatLoggerObserver: NSObject, LoggerObserver {
     #endif
     
     override init() {
-        #if TESTCASE
+        #if DEBUG
         self.limit = .verbose
         self.categories = .all
         #else

@@ -11,7 +11,7 @@ import Foundation
     func setDeviceId(deviceId: String)
     func send<RecordStatType: BaseStatType>(stats: [RecordStatType]) async throws
     func sendNotificationStats(stats: [NotificationStat]) async throws
-#if TESTCASE
+#if DEBUG
     func setMockResult(enabled: Bool, error: AuthError?)
 #endif
 }

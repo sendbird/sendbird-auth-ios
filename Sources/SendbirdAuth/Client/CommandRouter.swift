@@ -338,7 +338,7 @@ extension CommandRouter {
     }
 }
 
-#if TESTCASE
+#if DEBUG
 // MARK: Test Helper
 extension CommandRouter {
     @_spi(SendbirdInternal) public func getRequestHeaderContext() -> RequestHeadersContext? {

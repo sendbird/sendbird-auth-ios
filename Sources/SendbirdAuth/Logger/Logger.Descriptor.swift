@@ -31,7 +31,7 @@ extension Logger {
             if shouldAlwaysLog {
                 return self.result(filtered: symbols)
             } else {
-                #if TESTCASE
+                #if DEBUG
                 return self.result(filtered: symbols)
                 #else
                 return nil

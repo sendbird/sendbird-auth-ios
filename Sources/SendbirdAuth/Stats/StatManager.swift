@@ -7,7 +7,7 @@
 
 import Foundation
 
-#if TESTCASE
+#if DEBUG
 @_spi(SendbirdInternal) public protocol StatManagerInternalDelegate: AnyObject {
     func statManager(_ statManager: StatManager, didChangeState state: StatManager.State)
     func statManager(_ statManager: StatManager, didSendStats result: Result<[any BaseStatType], AuthError>)
@@ -88,7 +88,7 @@ import Foundation
         requestDelayRange: 180
     )
     
-    #if TESTCASE
+    #if DEBUG
     @_spi(SendbirdInternal) public var defaultConfigForTest: StatConfig?
     #endif
     
@@ -148,7 +148,7 @@ import Foundation
     /// - Since: 4.22.1
     private var connectionStartedAt: Int64? { // ms, (stat 수집 과정에서 데이터 오염이 발생할 수 있으면 nil 처리)
         didSet {
-            #if TESTCASE
+            #if DEBUG
             if connectionStartedAt != nil {
                 connectionStartedAtForTest = connectionStartedAt
             }
@@ -157,7 +157,7 @@ import Foundation
     }
     @_spi(SendbirdInternal) public private(set) var wsOpenedEvent: WebSocketStatEvent.WebSocketOpenedEvent? {
         didSet {
-            #if TESTCASE
+            #if DEBUG
             if wsOpenedEvent != nil {
                 wsOpenedEventForTest = wsOpenedEvent
             }
@@ -170,7 +170,7 @@ import Foundation
     /// - Since: 4.34.0
     private var hasReceivedBUSYatLeastOnce: Bool = false
     
-    #if TESTCASE
+    #if DEBUG
     @_spi(SendbirdInternal) public var connectionStartedAtForTest: Int64?
     @_spi(SendbirdInternal) public private(set) var wsOpenedEventForTest: WebSocketStatEvent.WebSocketOpenedEvent?
     #endif
@@ -248,7 +248,7 @@ import Foundation
             switch stat {
             case let stat as DailyRecordStat:
                 self.dailyStatCollector?.appendStat(stat) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -257,7 +257,7 @@ import Foundation
                 
             case let stat as NotificationStat:
                 self.notificationStatCollector?.appendStat(stat) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -265,7 +265,7 @@ import Foundation
                 }
             case let stat as DefaultRecordStat:
                 self.defaultStatCollector?.appendStat(stat) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -274,7 +274,7 @@ import Foundation
                 
             case let stat as any DailyRecordStatType:
                 self.dailyStatCollector?.appendStat(stat.toDailyRecordStat()) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -283,7 +283,7 @@ import Foundation
                 
             case let stat as any DefaultRecordStatRepresentable:
                 self.defaultStatCollector?.appendStat(stat.toDefaultRecordStat()) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -564,26 +564,26 @@ import Foundation
             self.state = .enabled
 
             self.defaultStatCollector?.trySendStats(fromAuth: fromAuth) {
-                #if TESTCASE
+                #if DEBUG
                 self.delegate?.statManager(self, didSendStatsThrough: self.defaultStatCollector)
                 #endif
             }
             self.dailyStatCollector?.trySendStats(
                 completion: {
-                    #if TESTCASE
+                    #if DEBUG
                     self.delegate?.statManager(self, didSendStatsThrough: self.dailyStatCollector)
                     #endif
                 }
             )
             self.notificationStatCollector?.trySendStats(
                 completion: {
-                    #if TESTCASE
+                    #if DEBUG
                     self.delegate?.statManager(self, didSendStatsThrough: self.notificationStatCollector)
                     #endif
                 }
             )
             
-            #if TESTCASE
+            #if DEBUG
             self.delegate?.statManager(self, didChangeState: self.state)
             #endif
         }
@@ -595,7 +595,7 @@ import Foundation
                 return
             }
             self.state = .collectOnly
-            #if TESTCASE
+            #if DEBUG
             self.delegate?.statManager(self, didChangeState: self.state)
             #endif
         }
@@ -610,7 +610,7 @@ import Foundation
             }
             self.state = .disabled
             self.removeAll()
-            #if TESTCASE
+            #if DEBUG
             self.delegate?.statManager(self, didChangeState: self.state)
             #endif
         }
@@ -651,7 +651,7 @@ import Foundation
         self.dependency = dependency
     }
     
-    #if TESTCASE
+    #if DEBUG
     // For tests
     @_spi(SendbirdInternal) public weak var delegate: StatManagerInternalDelegate?
     @_spi(SendbirdInternal) public var mockStatUploadResult: Bool?
@@ -677,7 +677,7 @@ extension StatManager: EventDelegate {
                 self.defaultStatCollector?.statConfig = defaultConfig
             }
             
-#if TESTCASE
+#if DEBUG
             if let statConfig = self.defaultConfigForTest {
                 self.defaultStatCollector?.statConfig = statConfig
             }
@@ -780,13 +780,13 @@ extension StatManager: StatManagerDelegate {
     }
     
     @_spi(SendbirdInternal) public func statManager(_ statCollector: any StatCollectorContract, didSentStats: [any BaseStatType]) {
-#if TESTCASE
+#if DEBUG
         self.delegate?.statManager(self, didSendStatsThrough: statCollector)
 #endif
     }
 }
 
-#if TESTCASE
+#if DEBUG
 // For tests
 extension StatManager {
     @_spi(SendbirdInternal) public func waitUntilAllOperationsAreFinished() {

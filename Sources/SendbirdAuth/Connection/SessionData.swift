@@ -95,7 +95,7 @@ import Foundation
     }
 }
 
-#if TESTCASE
+#if DEBUG
 extension SessionData {
     @_spi(SendbirdInternal) public func setRequestDedupIntervalMsForTest(_ interval: Int64) {
         self.requestDedupIntervalMs = interval

@@ -703,7 +703,7 @@ extension URLSession {
     }
 }
 
-#if TESTCASE
+#if DEBUG
 extension HTTPClient {
     @_spi(SendbirdInternal) public var dependencyForTest: Dependency? { dependency }
     

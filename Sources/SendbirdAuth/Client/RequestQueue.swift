@@ -541,7 +541,7 @@ import Foundation
         }
     }
     
-    #if TESTCASE
+    #if DEBUG
     var sendWSInterception: (
         (
             CommandType,
@@ -583,7 +583,7 @@ import Foundation
         additionalBody: Encodable...,
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
-        #if TESTCASE
+        #if DEBUG
         callSendWSInterceptionIfNeeded(commandType, requestId, body, additionalBody, completionHandler: completionHandler)
         #endif
         
