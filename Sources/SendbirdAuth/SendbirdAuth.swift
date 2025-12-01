@@ -17,7 +17,7 @@ import Foundation
         sdkInstance = newMain
     }
     
-    @_spi(SendbirdInternal) public static var pref = LocalPreferences(suiteName: "com.sendbird.sdk.ios")
+    @_spi(SendbirdInternal) public static let pref = LocalPreferences(suiteName: "com.sendbird.sdk.ios")
     
     @_spi(SendbirdInternal) public static var isInitialized: Bool {
         guard let sdkInstance else {
