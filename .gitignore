@@ -8,6 +8,11 @@ xcuserdata/
 DerivedData/
 *.xcworkspace
 *.xcuserstate
+*.xcodeproj
+
+# XCFramework build artifacts
+*.xcframework
+*.xcarchive
 
 # SwiftPM plugins (캐시)
 /.swiftpm/

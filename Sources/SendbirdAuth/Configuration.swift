@@ -14,7 +14,7 @@ enum Configuration {
         private static let defaultAPIHost = "https://api-@@.sendbird.com"
         private static let defaultWSHost = "wss://ws-@@.sendbird.com"
         private static let defaultBaseHost = "api-@@.sendbird.com"
-    #else // DEBUG, NIGHTLYDEV
+    #else // NIGHTLYDEV when not RELEASE by default
         private static let defaultAPIHost = "https://api-nightlydev.sendbirdtest.com"
         private static let defaultWSHost = "wss://ws-nightlydev.sendbirdtest.com"
         private static let defaultBaseHost = "api-nightlydev.sendbirdtest.com"
