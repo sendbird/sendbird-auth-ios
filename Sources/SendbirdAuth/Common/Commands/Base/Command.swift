@@ -7,9 +7,9 @@
 
 import Foundation
 
-package protocol Command { }
+@_spi(SendbirdInternal) public protocol Command { }
 
-package enum CommandType: String, Decodable {
+@_spi(SendbirdInternal) public enum CommandType: String, Decodable {
     case login = "LOGI"
     case userMessage = "MESG"
     case fileMessage = "FILE"
@@ -39,9 +39,9 @@ package enum CommandType: String, Decodable {
     case pong = "PONG"
     case sessionExpired = "EXPR"
     
-    case busy = "BUSY"  // [NEXT_VERSION]
+    case busy = "BUSY"  // 4.34.0
     
-    package var isAckRequired: Bool {
+    @_spi(SendbirdInternal) public var isAckRequired: Bool {
         switch self {
         case .userMessage, .fileMessage,
              .enterChannel, .exitChannel,
@@ -55,8 +55,8 @@ package enum CommandType: String, Decodable {
     }
 }
 
-package enum HTTPMethod: RawRepresentable {
-    package init?(rawValue: String) {
+@_spi(SendbirdInternal) public enum HTTPMethod: RawRepresentable {
+    @_spi(SendbirdInternal) public init?(rawValue: String) {
         switch rawValue {
         case "GET": self = .get(queryParams: [:])
         case "POST": self = .post(queryParams: [:])
@@ -73,13 +73,13 @@ package enum HTTPMethod: RawRepresentable {
     case delete(queryParams: [CodeCodingKeys: Any] = [:])
     case patch(queryParams: [CodeCodingKeys: Any] = [:])
     
-    package static var get: Self { .get(queryParams: [:]) }
-    package static var post: Self { .post(queryParams: [:]) }
-    package static var put: Self { .put(queryParams: [:]) }
-    package static var delete: Self { .delete(queryParams: [:]) }
-    package static var patch: Self { .patch(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var get: Self { .get(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var post: Self { .post(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var put: Self { .put(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var delete: Self { .delete(queryParams: [:]) }
+    @_spi(SendbirdInternal) public static var patch: Self { .patch(queryParams: [:]) }
     
-    package var rawValue: String {
+    @_spi(SendbirdInternal) public var rawValue: String {
         switch self {
         case .get: return "GET"
         case .post: return "POST"

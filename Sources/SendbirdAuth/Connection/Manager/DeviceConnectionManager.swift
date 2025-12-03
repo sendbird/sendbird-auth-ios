@@ -12,44 +12,44 @@ import UIKit
 import AppKit
 #endif
 
-package class DeviceConnectionManager {
-    @InternalAtomic package var broadcaster: ConnectionEventBroadcaster
-    @InternalAtomic package var internalBroadcaster: InternalConnectionEventBroadcaster
-    @InternalAtomic package var networkBroadcaster: NetworkEventBroadcaster
+@_spi(SendbirdInternal) public class DeviceConnectionManager {
+    @InternalAtomic @_spi(SendbirdInternal) public var broadcaster: ConnectionEventBroadcaster
+    @InternalAtomic @_spi(SendbirdInternal) public var internalBroadcaster: InternalConnectionEventBroadcaster
+    @InternalAtomic @_spi(SendbirdInternal) public var networkBroadcaster: NetworkEventBroadcaster
     
-    @InternalAtomic package var reachability: Reachability?
+    @InternalAtomic @_spi(SendbirdInternal) public var reachability: Reachability?
     
-    package var isOnline: Bool { !isOffline }
-    package var isOffline: Bool { networkConnection == .unavailable }
-    package var networkConnection: Reachability.Connection = .unavailable {
+    @_spi(SendbirdInternal) public var isOnline: Bool { !isOffline }
+    @_spi(SendbirdInternal) public var isOffline: Bool { networkConnection == .unavailable }
+    @_spi(SendbirdInternal) public var networkConnection: Reachability.Connection = .unavailable {
         didSet {
             webSocketManager?.changeNetworkStatus(to: networkConnection)
         }
     }
     
-    package var useReachability: Bool = true
-    package var isReachabilityRunning: Bool {
+    @_spi(SendbirdInternal) public var useReachability: Bool = true
+    @_spi(SendbirdInternal) public var isReachabilityRunning: Bool {
         reachability?.notifierRunning ?? false
     }
     
-    package private(set) var isForeground: Bool = true
+    @_spi(SendbirdInternal) public private(set) var isForeground: Bool = true
     private var currentHost: String = ""
     
-    package weak var sessionManager: SessionManager?
-    package weak var webSocketManager: WebSocketManager? {
+    @_spi(SendbirdInternal) public weak var sessionManager: SessionManager?
+    @_spi(SendbirdInternal) public weak var webSocketManager: WebSocketManager? {
         didSet {
             webSocketManager?.changeNetworkStatus(to: networkConnection)
         }
     }
     
-    package var hasSessionDelegate: Bool {
+    @_spi(SendbirdInternal) public var hasSessionDelegate: Bool {
         sessionManager?.sessionHandler.delegate(forKey: DelegateKeys.session) != nil
     }
     
     private let eventDispatcher: EventDispatcher
     private let timerBoard: SBTimerBoard
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         commandRouter: CommandRouter?,
         sessionManager: SessionManager?,
         eventDispatcher: EventDispatcher,
@@ -115,7 +115,7 @@ package class DeviceConnectionManager {
         NotificationCenter.default.removeObserver(self)
     }
     
-    package func logout() {
+    @_spi(SendbirdInternal) public func logout() {
         timerBoard.stopAll()
         stopReachability()
     }
@@ -123,7 +123,7 @@ package class DeviceConnectionManager {
 
 extension DeviceConnectionManager {
     @objc
-    package func enteredForeground() {
+    @_spi(SendbirdInternal) public func enteredForeground() {
         Logger.external.info("Entered foreground.")
         isForeground = true
         
@@ -138,7 +138,7 @@ extension DeviceConnectionManager {
         enteredBackground(completion: nil)
     }
     
-    package func enteredBackground(completion: VoidHandler?) {
+    @_spi(SendbirdInternal) public func enteredBackground(completion: VoidHandler?) {
         Logger.external.info("Entered background.")
         
         isForeground = false
@@ -146,12 +146,12 @@ extension DeviceConnectionManager {
     }
     
     @objc
-    package func willTerminate() {
+    @_spi(SendbirdInternal) public func willTerminate() {
         eventDispatcher.dispatch(command: ApplicationStateEvent.Terminate())
     }
     
     @discardableResult
-    package func startReachability(host: String? = nil) -> Bool {
+    @_spi(SendbirdInternal) public func startReachability(host: String? = nil) -> Bool {
         guard let applicationId = webSocketManager?.stateData?.applicationId else {
             return false
         }
@@ -184,7 +184,7 @@ extension DeviceConnectionManager {
         return false
     }
     
-    package func restartReachability() {
+    @_spi(SendbirdInternal) public func restartReachability() {
         Logger.main.verbose("Restart the network reachability.")
         let host = currentHost
         
@@ -192,7 +192,7 @@ extension DeviceConnectionManager {
         startReachability(host: host)
     }
     
-    package func stopReachability() {
+    @_spi(SendbirdInternal) public func stopReachability() {
         reachability?.stopNotifier()
     }
     
@@ -209,7 +209,7 @@ extension DeviceConnectionManager {
         networkConnection = newConnection
     }
     
-    package func refreshForFeed() {
+    @_spi(SendbirdInternal) public func refreshForFeed() {
         guard let session = sessionManager?.session,
               session.services.count == 1,
               session.services.contains(.feed) else { return }
@@ -220,11 +220,11 @@ extension DeviceConnectionManager {
 }
 
 extension DeviceConnectionManager: EventDelegate {
-    package func didReceiveSBCommandEvent(command _: SBCommand) async {
+    @_spi(SendbirdInternal) public func didReceiveSBCommandEvent(command _: SBCommand) async {
         // do-nothing
     }
     
-    package func didReceiveInternalEvent(command: InternalEvent) {
+    @_spi(SendbirdInternal) public func didReceiveInternalEvent(command: InternalEvent) {
         switch command {
         case let command as ConnectionStateEvent.Connected:
             if command.isReconnected {
@@ -265,8 +265,8 @@ extension DeviceConnectionManager: EventDelegate {
     }
 }
 
-#if TESTCASE
-package extension DeviceConnectionManager {
+#if DEBUG
+@_spi(SendbirdInternal) public extension DeviceConnectionManager {
     var isReachabilityRunningForTest: Bool {
         isReachabilityRunning
     }

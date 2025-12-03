@@ -10,14 +10,14 @@ import Foundation
 import UIKit.UIDevice
 #endif
 
-package protocol LogSymbol {
+@_spi(SendbirdInternal) public protocol LogSymbol {
     var symbol: String? { get }
     var priority: Logger.Priority { get }
     var wrappedSymbol: String? { get }
     var maskedSymbol: String? { get }
 }
 
-package extension LogSymbol {
+@_spi(SendbirdInternal) public extension LogSymbol {
     var symbolKey: String { priority.identifier }
     var wrappedSymbol: String? {
         guard let value = self.symbol?.uppercased() else { return nil }
@@ -26,7 +26,7 @@ package extension LogSymbol {
     var maskedSymbol: String? { nil }
 }
 
-package extension Logger {
+@_spi(SendbirdInternal) public extension Logger {
     /**
         LogSymbols will be printed like below by priority value.
         ```swift
@@ -49,13 +49,13 @@ package extension Logger {
     }
 }
 
-package extension Logger {
+@_spi(SendbirdInternal) public extension Logger {
     typealias Level = AuthLogLevel
 }
     
 extension Logger {
-    package struct Categories: OptionSet, LogSymbol {
-        package let rawValue: Int
+    @_spi(SendbirdInternal) public struct Categories: OptionSet, LogSymbol {
+        @_spi(SendbirdInternal) public let rawValue: Int
         
         static let external             = Categories(raw: .external)
         static let http                 = Categories(raw: .http)
@@ -93,9 +93,9 @@ extension Logger {
             .none
         ]
         
-        package var priority: Logger.Priority { .categories }
+        @_spi(SendbirdInternal) public var priority: Logger.Priority { .categories }
         
-        package var symbol: String? {
+        @_spi(SendbirdInternal) public var symbol: String? {
             switch self {
             case .http:                 return "HTTP"
             case .socket:               return "Socket"
@@ -115,18 +115,18 @@ extension Logger {
             }
         }
         
-        package var wrappedSymbol: String? {
+        @_spi(SendbirdInternal) public var wrappedSymbol: String? {
             guard let value = self.symbol else { return nil }
             return "[\(value)]"
         }
         
-        package init(rawValue: Int) {
+        @_spi(SendbirdInternal) public init(rawValue: Int) {
             self.rawValue = rawValue
         }
     }
 }
 
-package extension Logger.Categories {
+@_spi(SendbirdInternal) public extension Logger.Categories {
     enum Raw: Int {
         case external, http, socket, client, groupChannel
         case feedChannel, openChannel, session, user, main, localCache, messageCollection, messageRepository, messageDatabase, stat, none
@@ -136,11 +136,11 @@ package extension Logger.Categories {
 }
 
 extension Logger {
-    package enum DateFormat: LogSymbol {
+    @_spi(SendbirdInternal) public enum DateFormat: LogSymbol {
         case common
         case custom(String)
         
-        package var priority: Logger.Priority { .dateFormat }
+        @_spi(SendbirdInternal) public var priority: Logger.Priority { .dateFormat }
         
         var rawValue: String {
             switch self {
@@ -149,7 +149,7 @@ extension Logger {
             }
         }
         
-        package var symbol: String? {
+        @_spi(SendbirdInternal) public var symbol: String? {
             let formatter = DateFormatter()
             formatter.dateFormat = self.rawValue
             formatter.timeZone = TimeZone.current
@@ -188,18 +188,18 @@ extension Logger {
     }
 }
 
-package extension Logger {
+@_spi(SendbirdInternal) public extension Logger {
     enum Target: String, LogSymbol {
         case sendbirdChat = "SendbirdChat"
         case groupChannel = "GroupChannel"
         case openChannel = "OpenChannel"
         case feedChannel = "FeedChannel"
         
-        package var priority: Logger.Priority { .target }
+        @_spi(SendbirdInternal) public var priority: Logger.Priority { .target }
         
-        package var value: String { self.rawValue }
-        package var symbol: String? { self.value }
-        package var wrappedSymbol: String? { self.symbol }
+        @_spi(SendbirdInternal) public var value: String { self.rawValue }
+        @_spi(SendbirdInternal) public var symbol: String? { self.value }
+        @_spi(SendbirdInternal) public var wrappedSymbol: String? { self.symbol }
     }
     
     enum Tag: LogSymbol {
@@ -210,9 +210,9 @@ package extension Logger {
         case event(_ target: Target, _ selector: Selector)
         case status(_ status: String)
         
-        package var priority: Logger.Priority { .tag }
+        @_spi(SendbirdInternal) public var priority: Logger.Priority { .tag }
         
-        package var symbol: String? {
+        @_spi(SendbirdInternal) public var symbol: String? {
             switch self {
             case .invoked(let target, let function):    return "[Invoked] \(target.value).\(function)"
             case .success(let target, let function):    return "[Success] \(target.value).\(function)"
@@ -223,7 +223,7 @@ package extension Logger {
             }
         }
         
-        package var wrappedSymbol: String? { self.symbol }
+        @_spi(SendbirdInternal) public var wrappedSymbol: String? { self.symbol }
     }
 }
 
@@ -245,19 +245,19 @@ extension Logger {
     }
 }
 
-extension String: LogSymbol {
-    package var priority: Logger.Priority { .low }
-    package var symbol: String? { self }
-    package var wrappedSymbol: String? { self.symbol }
-    var symbolKey: String { self }
+@_spi(SendbirdInternal) extension String: LogSymbol {
+    @_spi(SendbirdInternal) public var priority: Logger.Priority { .low }
+    @_spi(SendbirdInternal) public var symbol: String? { self }
+    @_spi(SendbirdInternal) public var wrappedSymbol: String? { self.symbol }
+    @_spi(SendbirdInternal) public var symbolKey: String { self }
     
-    static let separator = String(repeating: "=", count: 30)
+    @_spi(SendbirdInternal) public static let separator = String(repeating: "=", count: 30)
 }
 
 extension AuthError: LogSymbol {
-    package var priority: Logger.Priority { .low }
-    package var symbol: String? { self.localizedDescription }
-    package var wrappedSymbol: String? { "[code: \(self.code)] \(self.localizedDescription)" }
+    @_spi(SendbirdInternal) public var priority: Logger.Priority { .low }
+    @_spi(SendbirdInternal) public var symbol: String? { self.localizedDescription }
+    @_spi(SendbirdInternal) public var wrappedSymbol: String? { "[code: \(self.code)] \(self.localizedDescription)" }
     var symbolKey: String { self.localizedDescription }
 }
 

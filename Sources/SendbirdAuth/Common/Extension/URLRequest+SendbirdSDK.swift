@@ -7,7 +7,7 @@
 
 import Foundation
 
-package extension URLRequest {
+@_spi(SendbirdInternal) public extension URLRequest {
     
     var logDescription: String {
         var result = "[\(httpMethod ?? "")] \(url?.absoluteString ?? "")"
@@ -27,7 +27,7 @@ package extension URLRequest {
             return nil
         }
         
-        #if !TESTCASE
+        #if !DEBUG
         headers["Session-Key"] = "********"
         #endif
         

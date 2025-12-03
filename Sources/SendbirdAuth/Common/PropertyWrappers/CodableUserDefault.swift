@@ -8,17 +8,17 @@
 import Foundation
 
 @propertyWrapper
-package struct CodableUserDefault<Value: Codable> {
+@_spi(SendbirdInternal) public struct CodableUserDefault<Value: Codable> {
     
     private let key: String
     var userDefaults: UserDefaults
     
-    package init(_ key: String, userDefaults: UserDefaults) {
+    @_spi(SendbirdInternal) public init(_ key: String, userDefaults: UserDefaults) {
         self.key = key
         self.userDefaults = userDefaults
     }
     
-    package var wrappedValue: Value? {
+    @_spi(SendbirdInternal) public var wrappedValue: Value? {
         get {
             guard let data = userDefaults.object(forKey: key) as? Data else { return nil }
 

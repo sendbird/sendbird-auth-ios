@@ -1,4 +1,28 @@
+# SwiftPM build artifacts
+/.build/
+/build/
+/Package.resolved
 
-.build
-.swiftpm
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcworkspace
+*.xcuserstate
+*.xcodeproj
+
+# XCFramework build artifacts
+*.xcframework
+*.xcarchive
+
+# SwiftPM plugins (캐시)
+/.swiftpm/
+
+# macOS 시스템 파일
 .DS_Store
+
+# 기타 편집기 파일
+*.swp
+*.swo
+release/
+
+*.podspec

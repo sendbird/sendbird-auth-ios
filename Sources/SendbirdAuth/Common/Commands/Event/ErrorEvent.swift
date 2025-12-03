@@ -7,20 +7,20 @@
 
 import Foundation
 
-package struct ErrorEvent: Decodable, SBCommand {
-    package let cmd: CommandType = .error
+@_spi(SendbirdInternal) public struct ErrorEvent: Decodable, SBCommand {
+    @_spi(SendbirdInternal) public let cmd: CommandType = .error
     
-    package let code: Int
-    package let message: String
-    package let timestamp: Int64
+    @_spi(SendbirdInternal) public let code: Int
+    @_spi(SendbirdInternal) public let message: String
+    @_spi(SendbirdInternal) public let timestamp: Int64
     
-    package let reqId: String?
+    @_spi(SendbirdInternal) public let reqId: String?
     
-    package let channelType: AuthChannelType?
-    package let channelId: Int?
-    package let channelURL: String?
+    @_spi(SendbirdInternal) public let channelType: AuthChannelType?
+    @_spi(SendbirdInternal) public let channelId: Int?
+    @_spi(SendbirdInternal) public let channelURL: String?
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         code: Int,
         message: String,
         timestamp: Int64,
@@ -38,7 +38,7 @@ package struct ErrorEvent: Decodable, SBCommand {
         self.channelURL = channelURL
     }
     
-    package enum CodingKeys: String, CodingKey {
+    @_spi(SendbirdInternal) public enum CodingKeys: String, CodingKey {
         case code
         case message
         case reqId = "req_id"
@@ -48,5 +48,5 @@ package struct ErrorEvent: Decodable, SBCommand {
         case channelURL = "channel_url"
     }
     
-    package var asAuthError: AuthError { AuthError(domain: message, code: code, userInfo: nil) }
+    @_spi(SendbirdInternal) public var asAuthError: AuthError { AuthError(domain: message, code: code, userInfo: nil) }
 }

@@ -7,127 +7,127 @@
 
 import Foundation
 
-package protocol ConnectionStateEventable: InternalEvent {}
+@_spi(SendbirdInternal) public protocol ConnectionStateEventable: InternalEvent {}
 
-package struct ConnectionStateEvent {
-    package init() { }
+@_spi(SendbirdInternal) public struct ConnectionStateEvent {
+    @_spi(SendbirdInternal) public init() { }
     
-    package struct Connected: ConnectionStateEventable {
-        package let loginEvent: LoginEvent
-        package let isReconnected: Bool
+    @_spi(SendbirdInternal) public struct Connected: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public let loginEvent: LoginEvent
+        @_spi(SendbirdInternal) public let isReconnected: Bool
         
-        package init(loginEvent: LoginEvent, isReconnected: Bool) {
+        @_spi(SendbirdInternal) public init(loginEvent: LoginEvent, isReconnected: Bool) {
             self.loginEvent = loginEvent
             self.isReconnected = isReconnected
         }
     }
     
-    package struct InternalDisconnected: ConnectionStateEventable {
-        package let error: AuthError?
+    @_spi(SendbirdInternal) public struct InternalDisconnected: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public let error: AuthError?
         
-        package init(error: AuthError?) {
+        @_spi(SendbirdInternal) public init(error: AuthError?) {
             self.error = error
         }
     }
     
-    package struct ReconnectionFailed: ConnectionStateEventable {
-        package let error: AuthError?
+    @_spi(SendbirdInternal) public struct ReconnectionFailed: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public let error: AuthError?
         
-        package init(error: AuthError?) {
+        @_spi(SendbirdInternal) public init(error: AuthError?) {
             self.error = error
         }
     }
     
-    package struct ReconnectingStarted: ConnectionStateEventable {
-        package let userId: String
-        package let sessionKey: String?
-        package let retryCount: Int
+    @_spi(SendbirdInternal) public struct ReconnectingStarted: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public let userId: String
+        @_spi(SendbirdInternal) public let sessionKey: String?
+        @_spi(SendbirdInternal) public let retryCount: Int
         
-        package init(userId: String, sessionKey: String?, retryCount: Int) {
+        @_spi(SendbirdInternal) public init(userId: String, sessionKey: String?, retryCount: Int) {
             self.userId = userId
             self.sessionKey = sessionKey
             self.retryCount = retryCount
         }
     }
     
-    package struct ReconnectionCanceled: ConnectionStateEventable {
-        package init() {}
+    @_spi(SendbirdInternal) public struct ReconnectionCanceled: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public init() {}
     }
     
-    package struct Logout: ConnectionStateEventable {
-        package let userId: String
-        package let error: AuthError?
+    @_spi(SendbirdInternal) public struct Logout: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public let userId: String
+        @_spi(SendbirdInternal) public let error: AuthError?
         
-        package init(userId: String, error: AuthError?) {
+        @_spi(SendbirdInternal) public init(userId: String, error: AuthError?) {
             self.userId = userId
             self.error = error
         }
     }
     
-    package struct ExternalDisconnected: ConnectionStateEventable {
-        package init() {}
+    @_spi(SendbirdInternal) public struct ExternalDisconnected: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public init() {}
     }
     
-    package struct Connecting: ConnectionStateEventable {
-        package let userId: String
-        package let accessToken: String?
-        package let sessionKey: String?
+    @_spi(SendbirdInternal) public struct Connecting: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public let userId: String
+        @_spi(SendbirdInternal) public let accessToken: String?
+        @_spi(SendbirdInternal) public let sessionKey: String?
         
-        package init(userId: String, accessToken: String?, sessionKey: String?) {
+        @_spi(SendbirdInternal) public init(userId: String, accessToken: String?, sessionKey: String?) {
             self.userId = userId
             self.accessToken = accessToken
             self.sessionKey = sessionKey
         }
     }
     
-    package struct Reconnecting: ConnectionStateEventable {
-        package let userId: String
-        package let sessionKey: String
+    @_spi(SendbirdInternal) public struct Reconnecting: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public let userId: String
+        @_spi(SendbirdInternal) public let sessionKey: String
         
-        package init(userId: String, sessionKey: String) {
+        @_spi(SendbirdInternal) public init(userId: String, sessionKey: String) {
             self.userId = userId
             self.sessionKey = sessionKey
         }
     }
     
-    package struct SessionRefreshed: ConnectionStateEventable {
-        package init() {}
+    @_spi(SendbirdInternal) public struct SessionRefreshed: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public init() {}
     }
     
-    package struct ConnectionDelayed: ConnectionStateEventable {
-        package let retryAfter: UInt  // seconds
+    @_spi(SendbirdInternal) public struct ConnectionDelayed: ConnectionStateEventable {
+        @_spi(SendbirdInternal) public let retryAfter: UInt  // seconds
     }
 }
 
-package protocol ApplicationStateEventable: InternalEvent {}
+@_spi(SendbirdInternal) public protocol ApplicationStateEventable: InternalEvent {}
 
-package struct ApplicationStateEvent {
-    package init() {}
+@_spi(SendbirdInternal) public struct ApplicationStateEvent {
+    @_spi(SendbirdInternal) public init() {}
 
-    package struct Terminate: ApplicationStateEventable {
-        package init() {}
+    @_spi(SendbirdInternal) public struct Terminate: ApplicationStateEventable {
+        @_spi(SendbirdInternal) public init() {}
     }
 }
 
-package protocol AuthenticationStateEventable: InternalEvent {}
+@_spi(SendbirdInternal) public protocol AuthenticationStateEventable: InternalEvent {}
 
-package struct AuthenticationStateEvent {
-    package init() {}
+@_spi(SendbirdInternal) public struct AuthenticationStateEvent {
+    @_spi(SendbirdInternal) public init() {}
     
-    package struct Refresh: AuthenticationStateEventable {
-        package init() {}
+    @_spi(SendbirdInternal) public struct Refresh: AuthenticationStateEventable {
+        @_spi(SendbirdInternal) public init() {}
     }
 }
 
-package protocol SessionExpirationEventable: InternalEvent {}
+@_spi(SendbirdInternal) public protocol SessionExpirationEventable: InternalEvent {}
 
-package struct SessionExpirationEvent {
-    package init() {}
+@_spi(SendbirdInternal) public struct SessionExpirationEvent {
+    @_spi(SendbirdInternal) public init() {}
     
-    package struct Refreshed: SessionExpirationEventable {
-        package init() {}
+    @_spi(SendbirdInternal) public struct Refreshed: SessionExpirationEventable {
+        @_spi(SendbirdInternal) public init() {}
     }
-    package struct RefreshFailed: SessionExpirationEventable {
-        package init() {}
+    @_spi(SendbirdInternal) public struct RefreshFailed: SessionExpirationEventable {
+        @_spi(SendbirdInternal) public init() {}
     }
 }

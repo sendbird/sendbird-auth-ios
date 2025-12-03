@@ -1,18 +1,18 @@
 import Foundation
 
 @propertyWrapper
-package struct UserDefault<Value> {
+@_spi(SendbirdInternal) public struct UserDefault<Value> {
     
     private let key: String
-    package var userDefaults: UserDefaults
+    @_spi(SendbirdInternal) public var userDefaults: UserDefaults
     private let queue = DispatchQueue(label: "UserDefault_\(UUID().uuidString)")
     
-    package init(_ key: String, userDefaults: UserDefaults) {
+    @_spi(SendbirdInternal) public init(_ key: String, userDefaults: UserDefaults) {
         self.key = key
         self.userDefaults = userDefaults
     }
     
-    package var wrappedValue: Value? {
+    @_spi(SendbirdInternal) public var wrappedValue: Value? {
         get {
             queue.sync {
                 userDefaults.object(forKey: key) as? Value

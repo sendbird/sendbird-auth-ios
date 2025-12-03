@@ -7,12 +7,12 @@
 
 import Foundation
 
-package protocol DefaultRecordStatRepresentable: BaseStatType {
+@_spi(SendbirdInternal) public protocol DefaultRecordStatRepresentable: BaseStatType {
     func makeAdditionalData() -> [String: AnyCodable]?
 }
 
 extension DefaultRecordStatRepresentable {
-    package func toDefaultRecordStat() -> DefaultRecordStat {
+    @_spi(SendbirdInternal) public func toDefaultRecordStat() -> DefaultRecordStat {
         DefaultRecordStat(
             statType: self.statType,
             timestamp: self.timestamp,
@@ -23,4 +23,4 @@ extension DefaultRecordStatRepresentable {
     }
 }
 
-package class DefaultRecordStat: BaseStat {}
+@_spi(SendbirdInternal) public class DefaultRecordStat: BaseStat {}

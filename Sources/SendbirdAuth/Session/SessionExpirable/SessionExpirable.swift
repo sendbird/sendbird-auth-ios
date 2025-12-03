@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol SessionExpirable {
+@_spi(SendbirdInternal) public protocol SessionExpirable {
     var delegate: InternalSessionDelegate? { get set }
     var isRefreshingSession: Bool { get set }
     
@@ -17,19 +17,19 @@ package protocol SessionExpirable {
 }
 
 extension SessionManager: InternalSessionDelegate {
-    package func didSessionTokenFailToRefresh(error: AuthClientError) {
+    @_spi(SendbirdInternal) public func didSessionTokenFailToRefresh(error: AuthClientError) {
         logout()
         delegate?.sessionRefreshFailed()
         sessionHandler.didHaveError(error.asAuthError)
         router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
     }
     
-    package func didSessionKeyFailToRefresh(error: AuthClientError) {
+    @_spi(SendbirdInternal) public func didSessionKeyFailToRefresh(error: AuthClientError) {
         sessionHandler.didHaveError(error.asAuthError)
         router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
     }
     
-    package func didSessionKeyRefresh(key: Session, requireReconnect: Bool) {
+    @_spi(SendbirdInternal) public func didSessionKeyRefresh(key: Session, requireReconnect: Bool) {
         stateData?.update(with: key.key)
         session = key
         
@@ -45,7 +45,7 @@ extension SessionManager: InternalSessionDelegate {
         router.eventDispatcher.dispatch(command: SessionExpirationEvent.Refreshed())
     }
     
-    package func didSessionTokenRevoke() {
+    @_spi(SendbirdInternal) public func didSessionTokenRevoke() {
         sessionHandler.wasClosed()
     }
     
@@ -53,7 +53,7 @@ extension SessionManager: InternalSessionDelegate {
     /// stays Connected (no connection state change)
     /// When refreshed via API:
     /// Connected -> InternalDisconnected -> ReconnectingStarted -> (Refreshed) -> Reconnecting -> WebSocketConnected -> Connected
-    package func refreshSessionKey(authToken: String?, expiringSession: Bool, expiresIn: Int64?, completionHandler: ((Bool, Session?, AuthError?) -> Void)?) {
+    @_spi(SendbirdInternal) public func refreshSessionKey(authToken: String?, expiringSession: Bool, expiresIn: Int64?, completionHandler: ((Bool, Session?, AuthError?) -> Void)?) {
         
         switch (router.webSocketConnectionState, expiresIn ?? 0) {
         case (.open, let time) where time >= SessionManager.minimumExpiresInForWSRefresh:

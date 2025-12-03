@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol ConnectionStatable {
+@_spi(SendbirdInternal) public protocol ConnectionStatable {
     var reconnectedBy: ReconnectingTrigger? { get }
     /**
      Responsible to do state job when it is first initialize and set to current state
@@ -60,20 +60,20 @@ package protocol ConnectionStatable {
 }
 
 extension ConnectionStatable {
-    package var reconnectedBy: ReconnectingTrigger? { nil }
+    @_spi(SendbirdInternal) public var reconnectedBy: ReconnectingTrigger? { nil }
     
-    package func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool { return false }
+    @_spi(SendbirdInternal) public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool { return false }
     
-    package func didSocketOpen(context: ConnectionContext) { }
+    @_spi(SendbirdInternal) public func didSocketOpen(context: ConnectionContext) { }
     
-    package func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) { }
+    @_spi(SendbirdInternal) public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) { }
     
-    package func didReceiveLOGI(context: ConnectionContext, command: LoginEvent) { }
+    @_spi(SendbirdInternal) public func didReceiveLOGI(context: ConnectionContext, command: LoginEvent) { }
     
-    /// - Since: [NEXT_VERSION]
-    package func didReceiveBUSY(context: ConnectionContext, command: BusyEvent) { }
+    /// - Since: 4.34.0
+    @_spi(SendbirdInternal) public func didReceiveBUSY(context: ConnectionContext, command: BusyEvent) { }
     
-    package func didSocketFail(context: ConnectionContext, error: AuthError?) { }
+    @_spi(SendbirdInternal) public func didSocketFail(context: ConnectionContext, error: AuthError?) { }
     
-    package func didEnterBackground(context: ConnectionContext) { }
+    @_spi(SendbirdInternal) public func didEnterBackground(context: ConnectionContext) { }
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 extension Encodable {
-    package func toDictionary(
+    @_spi(SendbirdInternal) public func toDictionary(
         options: [CodingUserInfoKey: Any] = [:],
         keyStrategy strategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys
     ) -> [String: Any]? {
@@ -22,7 +22,7 @@ extension Encodable {
 }
 
 extension Decodable where Self: Encodable {
-    package func makeCodableCopy(options: [CodingUserInfoKey: Any] = [:], decoder: JSONDecoder) -> Self {
+    @_spi(SendbirdInternal) public func makeCodableCopy(options: [CodingUserInfoKey: Any] = [:], decoder: JSONDecoder) -> Self {
         do {
             let encoder = JSONEncoder()
             encoder.userInfo = options
@@ -35,7 +35,7 @@ extension Decodable where Self: Encodable {
 }
 
 extension Encodable {
-    package func makeCodableCopy<T: Decodable>(as type: T.Type, decoder: JSONDecoder) -> T? {
+    @_spi(SendbirdInternal) public func makeCodableCopy<T: Decodable>(as type: T.Type, decoder: JSONDecoder) -> T? {
         do {
             let encodedData = try JSONEncoder().encode(self)
             return try decoder.decode(type, from: encodedData)
@@ -43,17 +43,13 @@ extension Encodable {
     }
 }
 
-extension Decodable {
-    /// Initializes an object with json dictionary
-    ///
-    /// - Parameter json: Dictionary, such as json.
-    /// - Returns: Sendbird object type if parameter is valid, otherwise `nil`
-    /// - Since: 4.0.15
-    static package func make(_ json: [AnyHashable: Any]) -> Self? {
-        return Self.make(from: json, decoder: SendbirdAuth.authDecoder)
+// Internal method for chat
+@_spi(SendbirdInternal) public extension Decodable {
+    static func _make(_ json: [AnyHashable: Any]) -> Self? {
+        return Self._make(from: json, decoder: SendbirdAuth.authDecoder)
     }
     
-    static package func make(from json: [AnyHashable: Any], decoder: JSONDecoder) -> Self? {
+    static func _make(from json: [AnyHashable: Any], decoder: JSONDecoder) -> Self? {
         do {
             let data = try JSONSerialization.data(withJSONObject: json, options: [])
             let object = try decoder.decode(Self.self, from: data)
@@ -70,7 +66,7 @@ extension KeyedDecodingContainer {
     /// - Parameter key: Key.
     /// - Returns: Decoded Bool value.
     /// - Throws: Decoding error.
-    package func decodeBoolAsIntOrString(forKey key: Key) throws -> Bool {
+    @_spi(SendbirdInternal) public func decodeBoolAsIntOrString(forKey key: Key) throws -> Bool {
         if let bool = try? decode(Bool.self, forKey: key) {
             return bool
         }
@@ -86,7 +82,7 @@ extension KeyedDecodingContainer {
     /// - Parameter key: Key.
     /// - Returns: Decoded Bool value.
     /// - Throws: Decoding error.
-    package func decodeBoolAsIntOrStringIfPresent(forKey key: Key) throws -> Bool? {
+    @_spi(SendbirdInternal) public func decodeBoolAsIntOrStringIfPresent(forKey key: Key) throws -> Bool? {
         if let bool = try? decodeIfPresent(Bool.self, forKey: key) {
             return bool
         }

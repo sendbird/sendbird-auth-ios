@@ -6,5 +6,5 @@
 //
 
 extension Collection {
-    package var hasElements: Bool { isEmpty == false }
+    @_spi(SendbirdInternal) public var hasElements: Bool { isEmpty == false }
 }

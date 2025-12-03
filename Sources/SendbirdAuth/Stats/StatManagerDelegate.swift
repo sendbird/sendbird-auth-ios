@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol StatManagerDelegate: AnyObject {
+@_spi(SendbirdInternal) public protocol StatManagerDelegate: AnyObject {
     func statManager(_ statCollector: any StatCollectorContract, didFailSendStats: AuthError)
     func statManager(_ statCollector: any StatCollectorContract, newState: StatManager.State)
     func isStatManagerUploadable() -> Bool

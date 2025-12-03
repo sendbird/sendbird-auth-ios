@@ -1,0 +1,75 @@
+name: SendbirdAuthSDK
+
+options:
+  bundleIdPrefix: com.sendbird
+  deploymentTarget:
+    iOS: "13.0"
+
+settingGroups:
+  preset_all:
+    MARKETING_VERSION: 1.0.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: "5.9"
+    BUILD_LIBRARY_FOR_DISTRIBUTION: "YES"
+    DEFINES_MODULE: "YES"
+
+targets:
+  SendbirdAuthSDK:
+    platform: iOS
+    type: framework
+    productName: SendbirdAuthSDK
+    postbuildScripts:
+      - name: Run Swiftlint
+        runOnlyWhenInstalling: false
+        basedOnDependencyAnalysis: false
+        script: |
+          # Skip SwiftLint during Release/Archive builds
+          if [ "$CONFIGURATION" = "Release" ] || [ "$ACTION" = "install" ]; then
+            echo "Skipping SwiftLint for Release/Archive build"
+            exit 0
+          fi
+          export PATH=$PATH:/opt/homebrew/bin
+          if which swiftlint >/dev/null; then
+            swiftlint
+          else
+            echo "warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint"
+            if [ -z "$CI" ]; then
+              exit 1
+            fi
+          fi
+        shell: /bin/sh
+    settings:
+      groups:
+        - preset_all
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sendbird.auth
+        INFOPLIST_FILE: Info.plist
+        SWIFT_OBJC_INTERFACE_HEADER_NAME: $(SWIFT_MODULE_NAME).h
+        APPLICATION_EXTENSION_API_ONLY: "YES"
+      configs:
+        Release:
+          LLVM_LTO: "YES"
+    sources:
+      - path: Sources/SendbirdAuth
+        name: SendbirdAuth
+      - path: Configurations/Config.xcconfig
+        optional: true
+
+  SendbirdAuthSDKStatic:
+    platform: iOS
+    type: framework
+    productName: SendbirdAuthSDK
+    settings:
+      groups:
+        - preset_all
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sendbird.auth.static
+        INFOPLIST_FILE: Info.plist
+        SWIFT_OBJC_INTERFACE_HEADER_NAME: $(SWIFT_MODULE_NAME).h
+        OTHER_LDFLAGS: -ObjC
+        DEFINES_MODULE: "YES"
+        MACH_O_TYPE: staticlib
+    sources:
+      - path: Sources/SendbirdAuth
+      - path: Configurations/Config.xcconfig
+        optional: true

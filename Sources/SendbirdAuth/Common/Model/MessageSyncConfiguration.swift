@@ -7,20 +7,20 @@
 
 import Foundation
 
-package class MessageSyncConfiguration: CustomStringConvertible, Codable {
-    package static let `default` = MessageSyncConfiguration(
+@_spi(SendbirdInternal) public class MessageSyncConfiguration: CustomStringConvertible, Codable {
+    @_spi(SendbirdInternal) public static let `default` = MessageSyncConfiguration(
         concurrentCallLimit: 1,
         backOffDelaySec: 0.5
     )
     
-    package let concurrentCallLimit: Int
-    package let backOffDelaySec: Double
+    @_spi(SendbirdInternal) public let concurrentCallLimit: Int
+    @_spi(SendbirdInternal) public let backOffDelaySec: Double
     
-    package var description: String {
+    @_spi(SendbirdInternal) public var description: String {
         return "MessageSyncConfiguration(concurrentCallLimit: \(concurrentCallLimit), backOffDelaySec: \(backOffDelaySec))"
     }
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         concurrentCallLimit: Int,
         backOffDelaySec: Double
     ) {
@@ -28,13 +28,13 @@ package class MessageSyncConfiguration: CustomStringConvertible, Codable {
         self.backOffDelaySec = backOffDelaySec
     }
     
-    package required init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         self.concurrentCallLimit = (try? container.decodeIfPresent(Int.self, forKey: .concurrentCallLimit)) ?? Self.default.concurrentCallLimit
         self.backOffDelaySec = (try? container.decodeIfPresent(Double.self, forKey: .backOffDelay)) ?? Self.default.backOffDelaySec
     }
     
-    package func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         try container.encode(self.concurrentCallLimit, forKey: .concurrentCallLimit)
         try container.encode(self.backOffDelaySec, forKey: .backOffDelay)

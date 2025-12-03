@@ -7,16 +7,16 @@
 
 import Foundation
 
-package struct ErrorResponse: Decodable {
-    package let message: String
-    package let code: Int
+@_spi(SendbirdInternal) public struct ErrorResponse: Decodable {
+    @_spi(SendbirdInternal) public let message: String
+    @_spi(SendbirdInternal) public let code: Int
     
-    package init(message: String, code: Int) {
+    @_spi(SendbirdInternal) public init(message: String, code: Int) {
         self.message = message
         self.code = code
     }
     
-    package var asAuthError: AuthError {
+    @_spi(SendbirdInternal) public var asAuthError: AuthError {
         AuthError(
             domain: "network",
             code: code,

@@ -6,17 +6,17 @@
 //
 import Foundation
 
-package class SBTimer: NSObject {
+@_spi(SendbirdInternal) public class SBTimer: NSObject {
     // MARK: Timer
-    package var timer: Timer?
-    package let userInfo: [String: Any]?
+    @_spi(SendbirdInternal) public var timer: Timer?
+    @_spi(SendbirdInternal) public let userInfo: [String: Any]?
     
     // MARK: Timer Info
-    package let identifier: String
+    @_spi(SendbirdInternal) public let identifier: String
     private let queue: SafeSerialQueue
 
     // MARK: state
-    package enum State: String {
+    @_spi(SendbirdInternal) public enum State: String {
         case running = "Running"
         case expired = "Expired"
         case stopped = "Stopped"
@@ -26,16 +26,16 @@ package class SBTimer: NSObject {
     
     // MARK: Expiration
     private(set) var afterExpired: VoidHandler?
-    package let repeatable: Bool
+    @_spi(SendbirdInternal) public let repeatable: Bool
     
-    package var valid: Bool {
+    @_spi(SendbirdInternal) public var valid: Bool {
         self.queue.sync {
             self.state == .running
         }
     }
     
     @discardableResult
-    package init(
+    @_spi(SendbirdInternal) public init(
         timeInterval: TimeInterval,
         userInfo: [String: Any]?,
         // SBTimerBoard should not escape init.
@@ -99,7 +99,7 @@ package class SBTimer: NSObject {
     }
     
     @objc
-    package func abort() {
+    @_spi(SendbirdInternal) public func abort() {
         queue.sync { [weak self] in
             guard let self = self else { return }
             if self.state == .running {
@@ -110,7 +110,7 @@ package class SBTimer: NSObject {
     }
     
     @objc
-    package func stop(completionHandler: ErrorHandler? = nil) {
+    @_spi(SendbirdInternal) public func stop(completionHandler: ErrorHandler? = nil) {
         queue.sync { [weak self] in
             guard let self = self else { return }
             switch self.state {

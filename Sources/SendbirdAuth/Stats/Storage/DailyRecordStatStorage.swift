@@ -7,10 +7,10 @@
 
 import Foundation
 
-package class DailyRecordStatStorage: StatStorage {
-    package let storageHelper: StatStorageHelper<DailyRecordKey, DailyRecordStat>
+@_spi(SendbirdInternal) public class DailyRecordStatStorage: StatStorage {
+    @_spi(SendbirdInternal) public let storageHelper: StatStorageHelper<DailyRecordKey, DailyRecordStat>
     
-    package init(userDefaults: UserDefaults) {
+    @_spi(SendbirdInternal) public init(userDefaults: UserDefaults) {
         storageHelper = StatStorageHelper(
             statStorageKey: StorageKey(),
             userDefaults: userDefaults,
@@ -18,20 +18,20 @@ package class DailyRecordStatStorage: StatStorage {
     }
     
     // MARK: - For convenience
-    package var uploadCandidateDailyRecordStats: [DailyRecordStat] {
+    @_spi(SendbirdInternal) public var uploadCandidateDailyRecordStats: [DailyRecordStat] {
         loadUnuploadedStats()
             .filter { $0.key.isSameDate(with: Date.now) == false }
     }
 
-    package var dailyRecordStats: [DailyRecordStat] {
+    @_spi(SendbirdInternal) public var dailyRecordStats: [DailyRecordStat] {
         loadStats()
     }
     
-    package var unuploadedDailyRecordStats: [DailyRecordStat] {
+    @_spi(SendbirdInternal) public var unuploadedDailyRecordStats: [DailyRecordStat] {
         loadUnuploadedStats()
     }
     
-    package func upsert(stat: DailyRecordStat) throws {
+    @_spi(SendbirdInternal) public func upsert(stat: DailyRecordStat) throws {
         let previousStat = storageHelper.loadStat(for: stat.key)
         let isUploaded = previousStat?.isUploaded ?? false
         
@@ -45,14 +45,14 @@ package class DailyRecordStatStorage: StatStorage {
         }
     }
     
-    package func markAsUploaded(stats: [DailyRecordStat]) {
+    @_spi(SendbirdInternal) public func markAsUploaded(stats: [DailyRecordStat]) {
         stats.forEach {
             $0.markAsUploaded()
             saveStats([$0])
         }
     }
     
-    package func getDailyRecordStat(timestamp: Int64, statType: StatType) -> DailyRecordStat? {
+    @_spi(SendbirdInternal) public func getDailyRecordStat(timestamp: Int64, statType: StatType) -> DailyRecordStat? {
         let key = DailyRecordKey(date: Date(milliSeconds: timestamp), statType: statType)
         
         return storageHelper.loadStat(for: key)
@@ -60,9 +60,9 @@ package class DailyRecordStatStorage: StatStorage {
 }
 
 extension DailyRecordStatStorage {
-    package struct StorageKey: StatStorageKeyType {
-        package let lastSentAt = "com.sendbird.sdk.chat.stat.daily_record.oldest_stat_timestamp"
-        package let wrapper = "com.sendbird.sdk.chat.stat.daily_record.stats.wrapper"
-        package let queue = "com.sendbird.sdk.chat.stat.daily_record.stats.queue"
+    @_spi(SendbirdInternal) public struct StorageKey: StatStorageKeyType {
+        @_spi(SendbirdInternal) public let lastSentAt = "com.sendbird.sdk.chat.stat.daily_record.oldest_stat_timestamp"
+        @_spi(SendbirdInternal) public let wrapper = "com.sendbird.sdk.chat.stat.daily_record.stats.wrapper"
+        @_spi(SendbirdInternal) public let queue = "com.sendbird.sdk.chat.stat.daily_record.stats.queue"
     }
 }

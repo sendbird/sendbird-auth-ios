@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol BaseStatType: Codable, CustomStringConvertible, Hashable, AnyObject {
+@_spi(SendbirdInternal) public protocol BaseStatType: Codable, CustomStringConvertible, Hashable, AnyObject {
     var description: String { get }
     var timestamp: Int64 { get }
     var statType: StatType { get }
@@ -20,7 +20,7 @@ package protocol BaseStatType: Codable, CustomStringConvertible, Hashable, AnyOb
     func copy(with zone: NSZone?) -> Any
 }
 
-package extension BaseStatType {
+@_spi(SendbirdInternal) public extension BaseStatType {
     func markAsUploaded() {
         isUploaded = true
     }
@@ -97,25 +97,25 @@ package extension BaseStatType {
     }
 }
 
-package struct EmptyAdditionalStatData: AdditionalStatDataType {
+@_spi(SendbirdInternal) public struct EmptyAdditionalStatData: AdditionalStatDataType {
     
 }
-package protocol AdditionalStatDataType: Codable { }
+@_spi(SendbirdInternal) public protocol AdditionalStatDataType: Codable { }
 
-package class BaseStat: BaseStatType {
-    package var description: String { "BaseStat" }
+@_spi(SendbirdInternal) public class BaseStat: BaseStatType {
+    @_spi(SendbirdInternal) public var description: String { "BaseStat" }
     
-    package let timestamp: Int64
-    package let statType: StatType
-    package var statId: String?
-    package var isUploaded: Bool
+    @_spi(SendbirdInternal) public let timestamp: Int64
+    @_spi(SendbirdInternal) public let statType: StatType
+    @_spi(SendbirdInternal) public var statId: String?
+    @_spi(SendbirdInternal) public var isUploaded: Bool
 
     /// This property is only used when generating stats by external request.
     /// When using Stat internally, it is used by inheriting BaseStat, and values ​​under `data` are directly mapped,
     /// so there is no need to save them in the form of a json dictionary.
-    package let data: [String: AnyCodable]?
+    @_spi(SendbirdInternal) public let data: [String: AnyCodable]?
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         statType: StatType,
         timestamp: Int64 = Date().milliSeconds,
         statId: String? = nil,
@@ -130,7 +130,7 @@ package class BaseStat: BaseStatType {
         self.data = data
     }
     
-    package required init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
         let baseProperties = try Self.decodeBaseProperties(from: decoder)
         
         self.timestamp = baseProperties.timestamp
@@ -141,7 +141,7 @@ package class BaseStat: BaseStatType {
         self.data = baseProperties.data
     }
     
-    package func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         try encodeBaseProperties(to: encoder)
     }
 }

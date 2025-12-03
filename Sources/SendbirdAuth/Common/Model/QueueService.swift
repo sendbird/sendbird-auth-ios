@@ -7,20 +7,20 @@
 
 import Foundation
 
-package class QueueService {
-    @InternalAtomic package var completionQueue: DispatchQueue
+@_spi(SendbirdInternal) public class QueueService {
+    @InternalAtomic @_spi(SendbirdInternal) public var completionQueue: DispatchQueue
     
-    package init(name: String? = nil) {
+    @_spi(SendbirdInternal) public init(name: String? = nil) {
         completionQueue = name != nil
             ? DispatchQueue(label: name!)
             : DispatchQueue.main
     }
      
-    package func callAsFunction(task: VoidHandler?) {
+    @_spi(SendbirdInternal) public func callAsFunction(task: VoidHandler?) {
         self.performOnCompletionQueue(task)
     }
     
-    package func performOnCompletionQueue(_ block: (() -> Void)?) {
+    @_spi(SendbirdInternal) public func performOnCompletionQueue(_ block: (() -> Void)?) {
         completionQueue.async { block?() }
     }
 }
@@ -28,29 +28,29 @@ package class QueueService {
 // MARK: - CustomDebugStringConvertible
 
 extension QueueService: CustomDebugStringConvertible {
-    package var debugDescription: String {
+    @_spi(SendbirdInternal) public var debugDescription: String {
         "QueueService(\(completionQueue))"
     }
 }
 
 // MARK: - QueueServiceUsable
 
-package protocol QueueServiceUsable {
+@_spi(SendbirdInternal) public protocol QueueServiceUsable {
     func callAsFunction(task: VoidHandler?)
 }
 
-extension QueueService: QueueServiceUsable { }
+@_spi(SendbirdInternal) extension QueueService: QueueServiceUsable { }
 
-extension DispatchQueue: QueueServiceUsable {
-    package func callAsFunction(task: VoidHandler?) {
+@_spi(SendbirdInternal) extension DispatchQueue: QueueServiceUsable {
+    @_spi(SendbirdInternal) public func callAsFunction(task: VoidHandler?) {
         async {
             task?()
         }
     }
 }
 
-extension Optional where Wrapped: QueueServiceUsable {
-    package func orMain() -> QueueServiceUsable {
+@_spi(SendbirdInternal) extension Optional where Wrapped: QueueServiceUsable {
+    @_spi(SendbirdInternal) public func orMain() -> QueueServiceUsable {
         switch self {
         case .some(let queue):
             return queue

@@ -11,28 +11,28 @@ import Foundation
 /// The `BUSY` command is received when:
 /// - When server is overloaded, instead of `LOGI`, we receive `BUSY`
 /// - Or while already having been connected, the server becomes overloaded.
-/// - Since : [NEXT_VERSION]
-package struct BusyEvent: Decodable, SBCommand {
-    package let cmd: CommandType = .busy
+/// - Since : 4.34.0
+@_spi(SendbirdInternal) public struct BusyEvent: Decodable, SBCommand {
+    @_spi(SendbirdInternal) public let cmd: CommandType = .busy
     
-    package let retryAfter: UInt  // unit: seconds
-    package let reasonCode: Int  // 4xxxxx
-    package let message: String  // "server is overloaded"
+    @_spi(SendbirdInternal) public let retryAfter: UInt  // unit: seconds
+    @_spi(SendbirdInternal) public let reasonCode: Int  // 4xxxxx
+    @_spi(SendbirdInternal) public let message: String  // "server is overloaded"
     
-    package init(retryAfter: UInt, reasonCode: Int, message: String) {
+    @_spi(SendbirdInternal) public init(retryAfter: UInt, reasonCode: Int, message: String) {
         self.retryAfter = retryAfter
         self.reasonCode = reasonCode
         self.message = message
     }
     
-    package init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         self.retryAfter = try container.decode(UInt.self, forKey: .retryAfter)
         self.reasonCode = try container.decode(Int.self, forKey: .reasonCode)
         self.message = (try? container.decodeIfPresent(String.self, forKey: .message)) ?? ""
     }
     
-    package func updateRetryAfter(_ newRetryAfter: UInt) -> BusyEvent {
+    @_spi(SendbirdInternal) public func updateRetryAfter(_ newRetryAfter: UInt) -> BusyEvent {
         return BusyEvent(
             retryAfter: newRetryAfter,
             reasonCode: self.reasonCode,
@@ -43,8 +43,8 @@ package struct BusyEvent: Decodable, SBCommand {
 
 /// Wrapper struct of BusyEvent.
 /// Used to pass busyEvent related data to InternalDisconnectedState.
-/// - Since : [NEXT_VERSION]
-package struct BusyEventWrapper {
-    package let busyEvent: BusyEvent
-    package let timerStartTime: TimeInterval
+/// - Since : 4.34.0
+@_spi(SendbirdInternal) public struct BusyEventWrapper {
+    @_spi(SendbirdInternal) public let busyEvent: BusyEvent
+    @_spi(SendbirdInternal) public let timerStartTime: TimeInterval
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 extension Bool {
-    package var asInt: Int {
+    @_spi(SendbirdInternal) public var asInt: Int {
         self ? 1 : 0
     }
 }

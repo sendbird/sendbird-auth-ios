@@ -7,9 +7,9 @@
 
 import Foundation
 
-package class RandomStatRequestBalancer: StatRequestBalancer {
+@_spi(SendbirdInternal) public class RandomStatRequestBalancer: StatRequestBalancer {
 
-    package static func distributeRequest(delayRange: Int = 0) async throws {
+    @_spi(SendbirdInternal) public static func distributeRequest(delayRange: Int = 0) async throws {
         let delay = TimeInterval.random(in: (0...Double(delayRange)))
         Logger.stat.debug("\(delay) seconds delay for stats")
         try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))

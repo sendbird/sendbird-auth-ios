@@ -30,41 +30,38 @@ protocol CommandRouterInterface {
     func setUploadFileSizeLimit(_ limit: Int64)
 }
 
-package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, Injectable {
+@_spi(SendbirdInternal) public class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, Injectable {
     // MARK: Injectable
     @DependencyWrapper private var dependency: Dependency?
     private var config: SendbirdConfiguration? { dependency?.config }
     private var statManager: StatManager? { dependency?.statManager }
     
-    package var routerConfig: CommandRouterConfiguration {
-        didSet {
-            webSocketManager.webSocketClient.routerConfig = routerConfig
-            apiClient.routerConfig = routerConfig
+    @_spi(SendbirdInternal) public private(set) var routerConfig: CommandRouterConfiguration
+    @_spi(SendbirdInternal) public func setRouterConfig(_ config: CommandRouterConfiguration) {
+        Task { 
+            await webSocketManager.setRouterConfig(to: config) 
+            apiClient.routerConfig = config
         }
     }
 
-    @InternalAtomic package var webSocketManager: WebSocketManager {
+    @InternalAtomic @_spi(SendbirdInternal) public var webSocketManager: WebSocketManager {
         willSet {
-            webSocketManager.webSocketClient.forceDisconnect()
+            Task { await webSocketManager.webSocketClient.forceDisconnect() }
         }
     }
-    package var webSocketClient: ChatWebSocketClientInterface {
-        get { webSocketManager.webSocketClient }
-        set { webSocketManager.webSocketClient = newValue }
-    }
     
-    package var apiClient: HTTPClientInterface
+    @_spi(SendbirdInternal) public var apiClient: HTTPClientInterface
     
-    package var ackTimerManager = AckTimerManager()
+    @_spi(SendbirdInternal) public var ackTimerManager = AckTimerManager()
     
-    package var eventDispatcher: EventDispatcher
+    @_spi(SendbirdInternal) public var eventDispatcher: EventDispatcher
     
-    package var webSocketConnectionState: AuthWebSocketConnectionState { webSocketManager.connectionState }
-    package var connected: Bool { webSocketManager.connectionState == .open }
+    @_spi(SendbirdInternal) public var webSocketConnectionState: AuthWebSocketConnectionState { webSocketManager.connectionState }
+    @_spi(SendbirdInternal) public var connected: Bool { webSocketManager.connectionState == .open }
     
-    package var parsingStrategy: ((String) -> (Command?))?
+    @_spi(SendbirdInternal) public var parsingStrategy: ((String) -> (Command?))?
     
-    package weak var requestHeaderDataSource: RequestHeaderDataSource?
+    @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
     
     // socket event (내꺼 말고) 수신 전용
     private let socketReceiveOperationQueue: OperationQueue
@@ -84,21 +81,12 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
             strategy: .zeroGap
         ) { [weak self] request in
             guard let self else { return }
-            
-            return try await withCheckedThrowingContinuation { continuation in
-                self.webSocketClient.send(request: request) { error in
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume(returning: ())
-                    }
-                }
-            }
+            try await self.webSocketManager.sendWS(request)
         }
     }()
     
-    package var onMessageReceived: ((Command) -> Void)?
-    package func didReceiveMessage(_ message: String) {
+    @_spi(SendbirdInternal) public var onMessageReceived: ((Command) -> Void)?
+    @_spi(SendbirdInternal) public func didReceiveMessage(_ message: String) {
         Logger.socket.debug("[WS Recv] \(message)")
         
         guard let command = self.parsingStrategy?(message) else {
@@ -116,9 +104,11 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
             }
                      
             if let bucket = markAsReadBucket, bucket.shouldFlush(command) {
-                Task {
-                    await bucket.flushPendingRequests(with: command) {
-                        self.handleReceived(command: $0)
+                Task { [weak self] in
+                    guard let self else { return }
+                    
+                    await bucket.flushPendingRequests(with: command) { cmd in
+                        self.handleReceived(command: cmd)
                     }
                 }
             } else {
@@ -127,7 +117,7 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
         }
     }
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         routerConfig: CommandRouterConfiguration,
         webSocketManager: WebSocketManager,
         httpClient: HTTPClientInterface,
@@ -164,8 +154,10 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
     
     func disconnect(completion: @escaping VoidHandler) {
         socketSendOperationQueue.addOperation { [weak self] in
-            self?.webSocketManager.webSocketClient.disconnect()
-            completion()
+            Task { 
+                await self?.webSocketManager.webSocketClient.disconnect() 
+                completion()
+            }
         }
     }
     
@@ -184,7 +176,7 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
         }
     }
     
-    package func createAPIHeaders<R: APIRequestable>(for request: R) -> [String: String] {
+    @_spi(SendbirdInternal) public func createAPIHeaders<R: APIRequestable>(for request: R) -> [String: String] {
         let paramsBuilder = RequestHeadersBuilder()
         
         paramsBuilder.append(key: "Accept", value: "application/json")
@@ -204,7 +196,7 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
         return paramsBuilder.buildDictionary()
     }
     
-    package func send<R: APIRequestable>(
+    @_spi(SendbirdInternal) public func send<R: APIRequestable>(
         request: R,
         sessionKey: String?,
         wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
@@ -265,17 +257,19 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
                 )
             }
             
-            let webSocketClient = self.webSocketManager.webSocketClient
-            Logger.socket.info("WebSocket client: \(webSocketClient)")
+            Logger.socket.info("WebSocket client send via manager")
             Logger.client.verbose("Sending WS Request: \(request.commandType.rawValue)(\(String(describing: type(of: request))))")
             
             if let bucket = markAsReadBucket, bucket.shouldHold(request) {
                 Task { await bucket.hold(request) }
             } else {
-                webSocketClient.send(request: request) { error in
-                    if let error = error as? AuthError {
-                        completion?(nil, error)
-                        return
+                Task { [weak self] in
+                    guard let self else { return }
+                    
+                    do {
+                        try await self.webSocketManager.sendWS(request)
+                    } catch {
+                        if let authError = error as? AuthError { completion?(nil, authError) }
                     }
                 }
             }
@@ -284,10 +278,11 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
     
     func send<R: WSRequestable>(request: R) {
         socketSendOperationQueue.addOperation { [weak self] in
-            guard let webSocketClient = self?.webSocketManager.webSocketClient else { return }
-
+            guard let self else { return }
             Logger.client.verbose("Sending WS Request: \(request.commandType.rawValue)(\(String(describing: type(of: request))))")
-            webSocketClient.send(request: request, completion: nil)
+            Task {
+                try await self.webSocketManager.sendWS(request)
+            }
         }
     }
     
@@ -298,7 +293,7 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
     }
     
     // MARK: Injectable
-    package func resolve(with dependency: (any Dependency)?) {
+    @_spi(SendbirdInternal) public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
 }
@@ -306,13 +301,15 @@ package class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, I
 // MARK: - WebSocket
 extension CommandRouter {
     func startPingTimer(pingInterval: TimeInterval, watchdogInterval: TimeInterval, completion: @escaping VoidHandler) {
-        socketSendOperationQueue.addOperation { [weak webSocketClient = self.webSocketManager.webSocketClient] in
-            guard let webSocketClient = webSocketClient else { return }
-
-            webSocketClient.setPing(interval: pingInterval > 0 ? pingInterval : 15)
-            webSocketClient.setWatchdog(interval: watchdogInterval > 0 ? watchdogInterval : 5)
-            webSocketClient.startPingTimer()
-            completion()
+        socketSendOperationQueue.addOperation { [weak self] in
+            guard let self else { return }
+            Task {
+                await self.webSocketManager.configurePing(
+                    pingInterval: pingInterval,
+                    watchdogInterval: watchdogInterval
+                )
+                completion()
+            }
         }
     }
 }
@@ -327,7 +324,7 @@ extension CommandRouter {
 }
 
 extension CommandRouter {
-    package func handleReceived(command: Command) {
+    @_spi(SendbirdInternal) public func handleReceived(command: Command) {
         self.eventDispatcher.dispatch(command: command) {
             if let command = command as? SBCommand,
                self.ackTimerManager.contains(command.requestId) || command.isAckFromCurrentDeviceRequest {
@@ -341,13 +338,19 @@ extension CommandRouter {
     }
 }
 
+#if DEBUG
 // MARK: Test Helper
 extension CommandRouter {
-    package func getRequestHeaderContext() -> RequestHeadersContext? {
+    @_spi(SendbirdInternal) public func getRequestHeaderContext() -> RequestHeadersContext? {
         return self.requestHeaderDataSource?.requestHeaderContext
     }
     
-    package func getRequestHeaderDict<R: APIRequestable>(request: R) -> [String: String] {
+    @_spi(SendbirdInternal) public func getWebsocketClient() -> any ChatWebSocketClientInterface {
+        return self.webSocketManager.webSocketClient
+    } 
+    
+    @_spi(SendbirdInternal) public func getRequestHeaderDict<R: APIRequestable>(request: R) -> [String: String] {
         return self.createAPIHeaders(for: request)
     }
 }
+#endif

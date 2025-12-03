@@ -7,14 +7,14 @@
 
 import Foundation
 
-package struct UnreadCountInfo: Codable, CustomStringConvertible {
-    package let timestamp: Int64
-    package let customTypes: [String: Int]
-    package var feedChannelCount: Int?
-    package let groupChannelCount: Int
-    package let allUnreadCount: Int  // deprecated since 4.6.0
+@_spi(SendbirdInternal) public struct UnreadCountInfo: Codable, CustomStringConvertible {
+    @_spi(SendbirdInternal) public let timestamp: Int64
+    @_spi(SendbirdInternal) public let customTypes: [String: Int]
+    @_spi(SendbirdInternal) public var feedChannelCount: Int?
+    @_spi(SendbirdInternal) public let groupChannelCount: Int
+    @_spi(SendbirdInternal) public let allUnreadCount: Int  // deprecated since 4.6.0
     
-    package init(timestamp: Int64, customTypes: [String: Int], feedChannelCount: Int?, groupChannelCount: Int, allUnreadCount: Int) {
+    @_spi(SendbirdInternal) public init(timestamp: Int64, customTypes: [String: Int], feedChannelCount: Int?, groupChannelCount: Int, allUnreadCount: Int) {
         self.timestamp = timestamp
         self.customTypes = customTypes
         self.feedChannelCount = feedChannelCount
@@ -22,7 +22,7 @@ package struct UnreadCountInfo: Codable, CustomStringConvertible {
         self.allUnreadCount = allUnreadCount
     }
     
-    package init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let rootContainer = try decoder.container(keyedBy: CodeCodingKeys.self)
         let container = (try? rootContainer.nestedContainer(keyedBy: CodeCodingKeys.self, forKey: .unreadCnt))
             ?? (try? rootContainer.nestedContainer(keyedBy: CodeCodingKeys.self, forKey: .totalUnreadCount))
@@ -35,7 +35,7 @@ package struct UnreadCountInfo: Codable, CustomStringConvertible {
         self.allUnreadCount = (try? container.decodeIfPresent(Int.self, forKey: .all)) ?? 0
     }
     
-    package func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         var unreadContainer = container
             .nestedContainer(keyedBy: CodeCodingKeys.self, forKey: .unreadCnt)
@@ -47,9 +47,9 @@ package struct UnreadCountInfo: Codable, CustomStringConvertible {
         try unreadContainer.encode(allUnreadCount, forKey: .all)
     }
     
-    package var description: String { toDictionary()?.description ?? "" }
+    @_spi(SendbirdInternal) public var description: String { toDictionary()?.description ?? "" }
     
-    package func merge(info: UnreadCountInfo) -> (hasChanged: Bool, newInfo: UnreadCountInfo) {
+    @_spi(SendbirdInternal) public func merge(info: UnreadCountInfo) -> (hasChanged: Bool, newInfo: UnreadCountInfo) {
         var hasChanged = false
         
         let merged = customTypes.merging(

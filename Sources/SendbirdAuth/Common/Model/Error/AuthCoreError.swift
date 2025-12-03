@@ -7,7 +7,7 @@
 
 import Foundation
 
-package enum AuthCoreError: Int {
+@_spi(SendbirdInternal) public enum AuthCoreError: Int {
     case unknownError = 800000
     case networkError = 800120
     case networkRoutingError = 800121
@@ -21,9 +21,9 @@ package enum AuthCoreError: Int {
 
     case internalServerError = 500901
 
-    package var code: Int { rawValue }
+    @_spi(SendbirdInternal) public var code: Int { rawValue }
     
-    package var message: String {
+    @_spi(SendbirdInternal) public var message: String {
         switch self {
         case .networkError: return "Network error has been occurred"
         case .networkRoutingError: return "Could not network request"

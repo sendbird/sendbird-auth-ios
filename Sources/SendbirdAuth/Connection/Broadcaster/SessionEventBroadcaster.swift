@@ -7,16 +7,18 @@
 
 import Foundation
 
-package class SessionEventBroadcaster: EventBroadcaster {
-    package let service: QueueService
-    package let delegates: NSMapTable<NSString, AuthSessionDelegate>
-    
-    package init(_ service: QueueService, mapTableValueOption: NSPointerFunctions.Options) {
+@_spi(SendbirdInternal) public class SessionEventBroadcaster: EventBroadcaster {
+    @_spi(SendbirdInternal) public let service: QueueService
+    @_spi(SendbirdInternal) public let delegates: NSMapTable<NSString, AuthSessionDelegate>
+    @_spi(SendbirdInternal) public let delegateLock: NSLock
+
+    @_spi(SendbirdInternal) public init(_ service: QueueService, mapTableValueOption: NSPointerFunctions.Options) {
         self.delegates = NSMapTable(keyOptions: .strongMemory, valueOptions: mapTableValueOption)
         self.service = service
+        self.delegateLock = NSLock()
     }
     
-    package func didTokenRequire(
+    @_spi(SendbirdInternal) public func didTokenRequire(
         successCompletion: @escaping (String?) -> Void,
         failCompletion: @escaping () -> Void
     ) {
@@ -28,15 +30,15 @@ package class SessionEventBroadcaster: EventBroadcaster {
         }
     }
 
-    package func wasClosed() {
+    @_spi(SendbirdInternal) public func wasClosed() {
         self.broadcast { $0.sessionWasClosed() }
     }
     
-    package func wasRefreshed() {
+    @_spi(SendbirdInternal) public func wasRefreshed() {
         self.broadcast { $0.sessionWasRefreshed?() }
     }
     
-    package func didHaveError(_ error: NSError) {
+    @_spi(SendbirdInternal) public func didHaveError(_ error: NSError) {
         self.broadcast { $0.sessionDidHaveError?(error) }
     }
 }

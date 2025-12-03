@@ -7,27 +7,27 @@
 
 import Foundation
 
-package class DailyStatCollector: StatCollectorContract {
-    package var statConfig: StatConfig
-    package var enabled: Bool = true
-    package var storage: DailyRecordStatStorage
-    package var sentStatCache: [DailyRecordKey] = []
+@_spi(SendbirdInternal) public class DailyStatCollector: StatCollectorContract {
+    @_spi(SendbirdInternal) public var statConfig: StatConfig
+    @_spi(SendbirdInternal) public var enabled: Bool = true
+    @_spi(SendbirdInternal) public var storage: DailyRecordStatStorage
+    @_spi(SendbirdInternal) public var sentStatCache: [DailyRecordKey] = []
     
-    package weak var apiClient: StatAPIClientable?
-    package weak var delegate: StatManagerDelegate?
+    @_spi(SendbirdInternal) public weak var apiClient: StatAPIClientable?
+    @_spi(SendbirdInternal) public weak var delegate: StatManagerDelegate?
     
-    package var isFlushing: Bool = false
+    @_spi(SendbirdInternal) public var isFlushing: Bool = false
     
-    package var queue = DispatchQueue(
+    @_spi(SendbirdInternal) public var queue = DispatchQueue(
         label: "com.sendbird.stat_collector.daily.\(UUID().uuidString)",
         qos: .background
     )
-    package var statCacheQueue = DispatchQueue(
+    @_spi(SendbirdInternal) public var statCacheQueue = DispatchQueue(
         label: "com.sendbird.stat_collector.daily.dedup_cache.\(UUID().uuidString)",
         qos: .background
     )
 
-    package required init(
+    @_spi(SendbirdInternal) public required init(
         statConfig: StatConfig,
         apiClient: StatAPIClientable,
         userDefaults: UserDefaults,
@@ -41,7 +41,7 @@ package class DailyStatCollector: StatCollectorContract {
         self.enabled = enabled
     }
     
-    package func appendStat(
+    @_spi(SendbirdInternal) public func appendStat(
         _ stat: DailyRecordStat,
         completion: VoidHandler? = nil
     ) {
@@ -65,7 +65,7 @@ package class DailyStatCollector: StatCollectorContract {
         }
     }
     
-    package func trySendStats(
+    @_spi(SendbirdInternal) public func trySendStats(
         fromAuth: Bool? = nil,
         completion: VoidHandler? = nil
     ) {
@@ -137,16 +137,16 @@ package class DailyStatCollector: StatCollectorContract {
         }
     }
     
-    package func removeAll() {
+    @_spi(SendbirdInternal) public func removeAll() {
         self.storage.removeAll()
     }
     
-    package func isSendable(fromAuth: Bool) -> Bool {
+    @_spi(SendbirdInternal) public func isSendable(fromAuth: Bool) -> Bool {
         // Not used.
         return true
     }
     
-    package func splitStatsByMaxStatCountPerRequest(stats: [DailyRecordStat]) -> [[DailyRecordStat]]? {
+    @_spi(SendbirdInternal) public func splitStatsByMaxStatCountPerRequest(stats: [DailyRecordStat]) -> [[DailyRecordStat]]? {
         if stats.count == 0 || self.statConfig.maxStatCountPerRequest == 0 {
             return nil
         }
@@ -158,7 +158,7 @@ package class DailyStatCollector: StatCollectorContract {
     /// Checks if a given `BaseStat` has already been sent by looking it up in the `sentStatDedupCache`.
     /// - Parameter stat: The `BaseStat` instance to check.
     /// - Returns: A Boolean value indicating whether the stat has been sent.
-    package func lookUpSentStatCache(_ stat: DailyRecordStat) -> Bool {
+    @_spi(SendbirdInternal) public func lookUpSentStatCache(_ stat: DailyRecordStat) -> Bool {
         self.statCacheQueue.sync {
             self.sentStatCache.contains(stat.key)
         }
@@ -166,7 +166,7 @@ package class DailyStatCollector: StatCollectorContract {
     
     /// Saves a `NotificationStat` to the `sentStatDedupCache` to prevent re-sending.
     /// - Parameter stat: The `BaseStat` instance to be saved.
-    package func saveSentStatToCache(_ stat: DailyRecordStat) {
+    @_spi(SendbirdInternal) public func saveSentStatToCache(_ stat: DailyRecordStat) {
         self.statCacheQueue.sync {
             self.sentStatCache.append(stat.key)
         }

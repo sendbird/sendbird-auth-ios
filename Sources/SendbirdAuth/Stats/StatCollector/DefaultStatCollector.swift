@@ -7,22 +7,22 @@
 
 import Foundation
 
-package class DefaultStatCollector: StatCollectorContract {
-    package var statConfig: StatConfig
-    package var enabled: Bool = true
-    package var storage: DefaultRecordStatStorage
+@_spi(SendbirdInternal) public class DefaultStatCollector: StatCollectorContract {
+    @_spi(SendbirdInternal) public var statConfig: StatConfig
+    @_spi(SendbirdInternal) public var enabled: Bool = true
+    @_spi(SendbirdInternal) public var storage: DefaultRecordStatStorage
     
-    package weak var apiClient: StatAPIClientable?
-    package weak var delegate: StatManagerDelegate?
+    @_spi(SendbirdInternal) public weak var apiClient: StatAPIClientable?
+    @_spi(SendbirdInternal) public weak var delegate: StatManagerDelegate?
     
-    package var isFlushing: Bool = false
+    @_spi(SendbirdInternal) public var isFlushing: Bool = false
     
-    package var queue = DispatchQueue(
+    @_spi(SendbirdInternal) public var queue = DispatchQueue(
         label: "com.sendbird.stat_collector.default.\(UUID().uuidString)",
         qos: .background
     )
     
-    package required init(
+    @_spi(SendbirdInternal) public required init(
         statConfig: StatConfig,
         apiClient: StatAPIClientable, 
         userDefaults: UserDefaults,
@@ -36,7 +36,7 @@ package class DefaultStatCollector: StatCollectorContract {
         self.enabled = enabled
     }
     
-    package func appendStat(
+    @_spi(SendbirdInternal) public func appendStat(
         _ stat: DefaultRecordStat,
         completion: VoidHandler? = nil
     ) {
@@ -60,7 +60,7 @@ package class DefaultStatCollector: StatCollectorContract {
         }
     }
     
-    package func trySendStats(
+    @_spi(SendbirdInternal) public func trySendStats(
         fromAuth: Bool? = nil,
         completion: VoidHandler? = nil
     ) {
@@ -130,11 +130,11 @@ package class DefaultStatCollector: StatCollectorContract {
         }
     }
     
-    package func removeAll() {
+    @_spi(SendbirdInternal) public func removeAll() {
         self.storage.removeAll()
     }
     
-    package func isSendable(fromAuth: Bool) -> Bool {
+    @_spi(SendbirdInternal) public func isSendable(fromAuth: Bool) -> Bool {
         let count = self.storage.loadUnuploadedStats().count
         let lowerThreshold = self.statConfig.lowerThreshold
         
@@ -163,7 +163,7 @@ package class DefaultStatCollector: StatCollectorContract {
         }
     }
     
-    package func splitStatsByMaxStatCountPerRequest(stats: [DefaultRecordStat]) -> [[DefaultRecordStat]]? {
+    @_spi(SendbirdInternal) public func splitStatsByMaxStatCountPerRequest(stats: [DefaultRecordStat]) -> [[DefaultRecordStat]]? {
         if stats.count == 0 || self.statConfig.maxStatCountPerRequest == 0 {
             return nil
         }

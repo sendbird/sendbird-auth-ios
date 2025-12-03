@@ -8,21 +8,21 @@
 import Foundation
 import Network
 
-package class InternalDisconnectedState: ConnectionStatable {
+@_spi(SendbirdInternal) public class InternalDisconnectedState: ConnectionStatable {
     // For retry
-    package let error: AuthError?
-    package let task: ReconnectionTask?
-    package let shouldRetry: Bool
+    @_spi(SendbirdInternal) public let error: AuthError?
+    @_spi(SendbirdInternal) public let task: ReconnectionTask?
+    @_spi(SendbirdInternal) public let shouldRetry: Bool
     
     // For busy state
-    package let busyEventWrapper: BusyEventWrapper?
+    @_spi(SendbirdInternal) public let busyEventWrapper: BusyEventWrapper?
     
     // For disconnect completion
-    package var completionHandler: VoidHandler?
+    @_spi(SendbirdInternal) public var completionHandler: VoidHandler?
     
-    package var reconnectedBy: ReconnectingTrigger?
+    @_spi(SendbirdInternal) public var reconnectedBy: ReconnectingTrigger?
 
-    package init(
+    @_spi(SendbirdInternal) public init(
         error: AuthError?,
         task: ReconnectionTask?,
         shouldRetry: Bool,
@@ -38,7 +38,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         self.completionHandler = completionHandler
     }
     
-    package func process(context: ConnectionContext) {
+    @_spi(SendbirdInternal) public func process(context: ConnectionContext) {
         Logger.main.debug()
         context.disconnectSocket()
         
@@ -71,7 +71,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         }
     }
     
-    package func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func connect(context: ConnectionContext, loginKey: LoginKey, sessionKey: String?, userHandler: AuthUserHandler?) {
         Logger.session.debug()
         
         context.changeState(
@@ -83,7 +83,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         )
     }
     
-    package func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnect(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         context.changeState(
             to: LogoutState(
@@ -93,7 +93,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         )
     }
     
-    package func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
+    @_spi(SendbirdInternal) public func disconnectWebSocket(context: ConnectionContext, completionHandler: VoidHandler?) {
         Logger.session.debug()
         context.changeState(
             to: ExternalDisconnectedState(
@@ -102,7 +102,7 @@ package class InternalDisconnectedState: ConnectionStatable {
         )
     }
 
-    package func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
+    @_spi(SendbirdInternal) public func reconnect(context: ConnectionContext, sessionKey: String?, reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.session.debug("reconnect by \(String(describing: reconnectedBy?.rawValue))")
         
         if let busyEventWrapper {
@@ -166,11 +166,11 @@ package class InternalDisconnectedState: ConnectionStatable {
         }
     }
     
-    package func didEnterBackground(context: any ConnectionContext) {
+    @_spi(SendbirdInternal) public func didEnterBackground(context: any ConnectionContext) {
         Logger.session.debug("")
     }
     
-    package func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
+    @_spi(SendbirdInternal) public func didSocketClose(context: ConnectionContext, code: ChatWebSocketStatusCode) {
         Logger.session.debug()
         // case. scenario when connected -> disconnected
         //

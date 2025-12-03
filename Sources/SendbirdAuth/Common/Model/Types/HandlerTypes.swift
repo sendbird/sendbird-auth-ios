@@ -8,36 +8,36 @@
 import Foundation
 
 /// User handler
-package typealias AuthUserHandler = ((_ user: AuthUser?, _ error: AuthError?) -> Void)
+@_spi(SendbirdInternal) public typealias AuthUserHandler = ((_ user: AuthUser?, _ error: AuthError?) -> Void)
 
 /// Void handler
-package typealias VoidHandler = (() -> Void)
+@_spi(SendbirdInternal) public typealias VoidHandler = (() -> Void)
 
 /// Error handler
-package typealias AuthErrorHandler = ((_ error: AuthError?) -> Void)
+@_spi(SendbirdInternal) public typealias AuthErrorHandler = ((_ error: AuthError?) -> Void)
 
 /// Binary progress handler
-package typealias ProgressHandler = ((_ bytesSent: Int64,
+@_spi(SendbirdInternal) public typealias ProgressHandler = ((_ bytesSent: Int64,
                                         _ totalBytesSent: Int64,
                                         _ totalBytesExpectedToSend: Int64) -> Void)
 
 /// multi file progress handler
-package typealias MultiProgressHandler = ((_ requestId: String?,
+@_spi(SendbirdInternal) public typealias MultiProgressHandler = ((_ requestId: String?,
                                           _ bytesSent: Int64,
                                         _ totalBytesSent: Int64,
                                         _ totalBytesExpectedToSend: Int64) -> Void)
 
-package typealias DataResponseHandler = ((Data?, AuthError?) -> Void)
+@_spi(SendbirdInternal) public typealias DataResponseHandler = ((Data?, AuthError?) -> Void)
 
-package typealias ResponseHandler = (([String: Any]?, AuthError?) -> Void)
+@_spi(SendbirdInternal) public typealias ResponseHandler = (([String: Any]?, AuthError?) -> Void)
 
-package typealias AnyResponseHandler = ((Any?, AuthError?) -> Void)
+@_spi(SendbirdInternal) public typealias AnyResponseHandler = ((Any?, AuthError?) -> Void)
 
 /// bool handler
-package typealias BoolHandler = ((Bool, AuthError?) -> Void)
+@_spi(SendbirdInternal) public typealias BoolHandler = ((Bool, AuthError?) -> Void)
 
 /// timer handler
-package typealias TimerHandler = (SBTimer) -> Void
+@_spi(SendbirdInternal) public typealias TimerHandler = (SBTimer) -> Void
 
 /// internal error handler
-package typealias ErrorHandler = (Error?) -> Void
+@_spi(SendbirdInternal) public typealias ErrorHandler = (Error?) -> Void

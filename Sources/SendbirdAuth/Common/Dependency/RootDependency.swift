@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol Dependency: AnyObject {
+@_spi(SendbirdInternal) public protocol Dependency: AnyObject {
     var service: QueueService { get }
     var config: SendbirdConfiguration { get }
     var stateData: ConnectionStateData { get }

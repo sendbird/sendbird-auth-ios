@@ -7,29 +7,29 @@
 
 import Foundation
 
-package protocol RawDataRespondable {
+@_spi(SendbirdInternal) public protocol RawDataRespondable {
     init(from rawData: Data) throws
 }
 
-package protocol Respondable: Command, Decodable {}
+@_spi(SendbirdInternal) public protocol Respondable: Command, Decodable {}
 
-package struct VoidResponse: Respondable {}
+@_spi(SendbirdInternal) public struct VoidResponse: Respondable {}
 
 extension Command where Self: Decodable {
-    package static func decodeCommand(with data: Data?) -> Command? {
+    @_spi(SendbirdInternal) public static func decodeCommand(with data: Data?) -> Command? {
         guard let data = data else { return nil }
         guard let command = try? JSONDecoder().decode(Self.self, from: data) else { return nil }
         return command
     }
 }
 
-package struct EmptyResponse: Respondable {
-    package init() {}
+@_spi(SendbirdInternal) public struct EmptyResponse: Respondable {
+    @_spi(SendbirdInternal) public init() {}
 }
 
-package typealias DecodableCommand = (Command & Decodable)
+@_spi(SendbirdInternal) public typealias DecodableCommand = (Command & Decodable)
 
-package enum SYEVCommandType: Int {
+@_spi(SendbirdInternal) public enum SYEVCommandType: Int {
     case join = 10000
     case leave = 10001
     
@@ -41,7 +41,7 @@ package enum SYEVCommandType: Int {
     }
 }
 
-package enum USERCommandType: String {
+@_spi(SendbirdInternal) public enum USERCommandType: String {
     case ban
     case unban
 

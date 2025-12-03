@@ -6,10 +6,9 @@
 //
 
 import Foundation
-import Gzip
 
 /// https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
-package enum ChatWebSocketStatusCode: Int {
+@_spi(SendbirdInternal) public enum ChatWebSocketStatusCode: Int {
     case invalid = 0
     case normal = 1000
     case goingAway = 1001
@@ -49,47 +48,27 @@ package enum ChatWebSocketStatusCode: Int {
     }
 }
 
-package enum ChatWebSocketClientTimerType {
+@_spi(SendbirdInternal) public enum ChatWebSocketClientTimerType {
     case ping
     case watchdog
 }
 
-package protocol ChatWebSocketClientDelegate: AnyObject {
-    func webSocketClient(startWith client: ChatWebSocketClientInterface)
-    func webSocketClient(openWith client: ChatWebSocketClientInterface)
-    func webSocketClient(_ client: ChatWebSocketClientInterface, failWith error: Error?)
-    func webSocketClient(_ client: ChatWebSocketClientInterface, closeWith code: ChatWebSocketStatusCode, reason: String?)
-    func webSocketClient(_ client: ChatWebSocketClientInterface, receive message: String)
-    func webSocketClient(_ client: ChatWebSocketClientInterface, timerExpiredFor type: ChatWebSocketClientTimerType)
-}
-
-package protocol ChatWebSocketDelegate: AnyObject {
-    func webSocket(openWith engine: ChatWebSocketEngine)
-    func webSocket(_ engine: ChatWebSocketEngine, failWith error: Error?)
-    func webSocket(_ engine: ChatWebSocketEngine, closeWith code: ChatWebSocketStatusCode, reason: String?)
-    func webSocket(_ engine: ChatWebSocketEngine, receive data: ChatWebSocketData)
-}
-
-package protocol ChatWebSocketEngine: AnyObject {
+@_spi(SendbirdInternal) public protocol ChatWebSocketEngine: Actor, EventStreamable<WebSocketEngineEvent> {
     init()
     
     var state: AuthWebSocketConnectionState { get }
-    var delegate: ChatWebSocketDelegate? { get set }
     var currentRequest: URLRequest? { get }
-    var identifier: String { get }
     
-    func start(with urlRequest: URLRequest)
-    func stop(statusCode: ChatWebSocketStatusCode)
-    func forceStop()
+    func start(with urlRequest: URLRequest) async
+    func stop(statusCode: ChatWebSocketStatusCode) async
+    func forceStop() async
+    
+    func send(_ message: URLSessionWebSocketTask.Message) async throws
 
-    func sendData(_ data: Data, completionHandler: ErrorHandler?)
-    func sendString(_ string: String, completionHandler: ErrorHandler?)
-    
-    func createNewWebSocketEngine() -> ChatWebSocketEngine?
-    func registerObservers(identifier: String)
+    nonisolated func createNewWebSocketEngine() -> Self
 }
 
-package enum ChatWebSocketData {
+@_spi(SendbirdInternal) public enum ChatWebSocketData {
     case string(String)
     case data(Data)
 }
@@ -99,14 +78,13 @@ extension ChatWebSocketData {
     /// If data is gzip compressed, decompress and returns UTF8 string value, otherwise returns UTF8 string of original data.
     ///
     /// [SDK Design - WebSocket payload compression]( https://sendbird.atlassian.net/wiki/spaces/SDK/pages/2002354587/SDK+Design+-+WebSocket+payload+compression )
-    package var unzippedString: String? {
+    @_spi(SendbirdInternal) public var unzippedString: String? {
         guard data.isGzipped else {
             return string
         }
         
         guard let gunzipped = try? data.gunzipped() else {
             let message = "unzip error: \(data)"
-            assertionFailure(message)
             Logger.socket.error(message)
             return nil
         }

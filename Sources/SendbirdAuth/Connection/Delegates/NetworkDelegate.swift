@@ -9,7 +9,7 @@ import Foundation
 
 /// Represents a delegate to receive network event
 @objc(SBDNetworkDelegate)
-package protocol NetworkDelegate {
+@_spi(SendbirdInternal) public protocol NetworkDelegate {
     ///  Call when reconnection succeeds
     func didReconnect()
 }

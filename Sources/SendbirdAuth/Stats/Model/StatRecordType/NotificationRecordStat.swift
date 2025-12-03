@@ -7,5 +7,5 @@
 
 import Foundation
 
-package struct AdditionalNotificationStatData: AdditionalStatDataType {}
-package class NotificationRecordStat: BaseStat {}
+@_spi(SendbirdInternal) public struct AdditionalNotificationStatData: AdditionalStatDataType {}
+@_spi(SendbirdInternal) public class NotificationRecordStat: BaseStat {}

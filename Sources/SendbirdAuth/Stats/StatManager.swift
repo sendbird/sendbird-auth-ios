@@ -7,20 +7,20 @@
 
 import Foundation
 
-//#if TESTCASE
-package protocol StatManagerInternalDelegate: AnyObject {
+#if DEBUG
+@_spi(SendbirdInternal) public protocol StatManagerInternalDelegate: AnyObject {
     func statManager(_ statManager: StatManager, didChangeState state: StatManager.State)
     func statManager(_ statManager: StatManager, didSendStats result: Result<[any BaseStatType], AuthError>)
     func statManager(_ statManager: StatManager, appendStat stat: any BaseStatType)
     func statManager(_ statManager: StatManager, didSendStatsThrough collector: (any StatCollectorContract)?)
 }
-//#endif
+#endif
 
 /// An instance that manages the stat collectors for each stat types.
 /// - Since: 4.18.0
-package final class StatManager: Injectable {
+@_spi(SendbirdInternal) public final class StatManager: Injectable {
     /// The enum that represents the state of the stat manager
-    package enum State {
+    @_spi(SendbirdInternal) public enum State {
         /// Initial state
         case pending
         /// The state that the stat manager is able to collect and upload the stats
@@ -31,7 +31,7 @@ package final class StatManager: Injectable {
         case disabled
         
         /// Represents whether the stat manager can append stat logs or not.
-        package var isAppendable: Bool {
+        @_spi(SendbirdInternal) public var isAppendable: Bool {
             switch self {
             case .pending, .collectOnly, .enabled:
                 return true
@@ -41,7 +41,7 @@ package final class StatManager: Injectable {
         }
         
         /// Represents whether the stat manager can upload the appended stat logs or not.
-        package var isUploadable: Bool {
+        @_spi(SendbirdInternal) public var isUploadable: Bool {
             switch self {
             case .enabled:
                 return true
@@ -54,14 +54,14 @@ package final class StatManager: Injectable {
     /// The enum that represents the stat type for each stat config.
     ///
     /// - Since: 4.18.0
-    package enum StatConfigType: String {
+    @_spi(SendbirdInternal) public enum StatConfigType: String {
         case `default` = "default"
         case daily = "daily"
         case notification = "notification"
     }
 
     /// Default config for the default stat collector
-    package static let defaultConfig = StatConfig(
+    @_spi(SendbirdInternal) public static let defaultConfig = StatConfig(
         minStatCount: 100,
         minInterval: 3 * 60 * 60, // 3 hours
         maxStatCountPerRequest: 1000,
@@ -70,7 +70,7 @@ package final class StatManager: Injectable {
     )
     
     /// Default config for the notification stat collector
-    package static let notificationConfig = StatConfig(
+    @_spi(SendbirdInternal) public static let notificationConfig = StatConfig(
         minStatCount: 1,
         minInterval: 0,
         maxStatCountPerRequest: 1000,
@@ -80,7 +80,7 @@ package final class StatManager: Injectable {
     
     /// Default config for the daily stat collector
     /// INFO: The stat config for the daily stat is not controller by the server.
-    package static let dailyStatConfig = StatConfig(
+    @_spi(SendbirdInternal) public static let dailyStatConfig = StatConfig(
         minStatCount: 0,
         minInterval: 0,
         maxStatCountPerRequest: 1000,
@@ -88,34 +88,34 @@ package final class StatManager: Injectable {
         requestDelayRange: 180
     )
     
-    #if TESTCASE
-    package var defaultConfigForTest: StatConfig?
+    #if DEBUG
+    @_spi(SendbirdInternal) public var defaultConfigForTest: StatConfig?
     #endif
     
-    package private(set) var apiClient: StatAPIClientable
+    @_spi(SendbirdInternal) public private(set) var apiClient: StatAPIClientable
     
     /// The state of the stat manager
-    package private(set) var state: State
+    @_spi(SendbirdInternal) public private(set) var state: State
     
     /// The stat types that will be collected.
     /// This value is updated when LOGI command is received.
-    package var allowedStatTypes = Set<StatType>()
+    @_spi(SendbirdInternal) public var allowedStatTypes = Set<StatType>()
     
     /// A dictionary to have the stat collectors by the stat type.
     /// - Since: 4.18.0
-    package var collectors: [StatConfigType: any StatCollectorContract] = [:]
+    @_spi(SendbirdInternal) public var collectors: [StatConfigType: any StatCollectorContract] = [:]
     
-    package var dailyStatCollector: DailyStatCollector? {
+    @_spi(SendbirdInternal) public var dailyStatCollector: DailyStatCollector? {
         self.collectors[StatConfigType.daily] as? DailyStatCollector
     }
-    package var defaultStatCollector: DefaultStatCollector? {
+    @_spi(SendbirdInternal) public var defaultStatCollector: DefaultStatCollector? {
         self.collectors[StatConfigType.default] as? DefaultStatCollector
     }
-    package var notificationStatCollector: NotificationStatCollector? {
+    @_spi(SendbirdInternal) public var notificationStatCollector: NotificationStatCollector? {
         self.collectors[StatConfigType.notification] as? NotificationStatCollector
     }
 
-    package let queue: OperationQueue = {
+    @_spi(SendbirdInternal) public let queue: OperationQueue = {
         let queue = OperationQueue()
         queue.name = "com.sendbird.core.stat_manager.\(UUID().uuidString)"
         queue.maxConcurrentOperationCount = 1
@@ -128,7 +128,7 @@ package final class StatManager: Injectable {
     /// The maximum of count for the uploading stat logs.
     ///
     /// - Since: 4.18.0
-    package static let maxRetryCount: Int = 20
+    @_spi(SendbirdInternal) public static let maxRetryCount: Int = 20
     
     /// The retry count for the uploading stat logs.
     /// The count will be increased when the uploading is failed.
@@ -136,28 +136,28 @@ package final class StatManager: Injectable {
     /// the state of the stat manager changes to the `collectOnly`.
     ///
     /// - Since: 4.18.0
-    package var retryCount: Int = 0
+    @_spi(SendbirdInternal) public var retryCount: Int = 0
     
     @DependencyWrapper private var dependency: Dependency?
     /// A flag that represents the local caching is enabled or not.
     /// This property is set when the stat manager is initialized.
     /// When the stat manager appends the `LocalCacheStat` after the LOGI is received, this value is used.
     /// - Since: 4.18.0
-    package var isLocalCachingEnabled: Bool
+    @_spi(SendbirdInternal) public var isLocalCachingEnabled: Bool
     
     /// - Since: 4.22.1
     private var connectionStartedAt: Int64? { // ms, (stat 수집 과정에서 데이터 오염이 발생할 수 있으면 nil 처리)
         didSet {
-            #if TESTCASE
+            #if DEBUG
             if connectionStartedAt != nil {
                 connectionStartedAtForTest = connectionStartedAt
             }
             #endif
         }
     }
-    package private(set) var wsOpenedEvent: WebSocketStatEvent.WebSocketOpenedEvent? {
+    @_spi(SendbirdInternal) public private(set) var wsOpenedEvent: WebSocketStatEvent.WebSocketOpenedEvent? {
         didSet {
-            #if TESTCASE
+            #if DEBUG
             if wsOpenedEvent != nil {
                 wsOpenedEventForTest = wsOpenedEvent
             }
@@ -167,18 +167,18 @@ package final class StatManager: Injectable {
     
     /// A flag that is true if SDK received a `BUSY` command at least once.
     /// If this falg is true, when sending the `WebSocketConnectStat`, `isSoftRateLimited` should be `true`.
-    /// - Since: [NEXT_VERSION]
+    /// - Since: 4.34.0
     private var hasReceivedBUSYatLeastOnce: Bool = false
     
-    #if TESTCASE
-    package var connectionStartedAtForTest: Int64?
-    package private(set) var wsOpenedEventForTest: WebSocketStatEvent.WebSocketOpenedEvent?
+    #if DEBUG
+    @_spi(SendbirdInternal) public var connectionStartedAtForTest: Int64?
+    @_spi(SendbirdInternal) public private(set) var wsOpenedEventForTest: WebSocketStatEvent.WebSocketOpenedEvent?
     #endif
     
-    package var connectionRetryCount: Int = 0
-    package var reconnectionTryCount: Int = 0
-    package var connectionId: String?
-    package var accumulatedTrialCount: Int {
+    @_spi(SendbirdInternal) public var connectionRetryCount: Int = 0
+    @_spi(SendbirdInternal) public var reconnectionTryCount: Int = 0
+    @_spi(SendbirdInternal) public var connectionId: String?
+    @_spi(SendbirdInternal) public var accumulatedTrialCount: Int {
         // If the SDK has connected with `ReconnectingState`,
         // the `accumulatedTrialCount` should use the `reconnectionTryCount`
         if reconnectionTryCount > 0 {
@@ -190,7 +190,7 @@ package final class StatManager: Injectable {
     
     private let configuration: SendbirdConfiguration
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         apiClient: StatAPIClientable,
         isLocalCachingEnabled: Bool,
         configuration: SendbirdConfiguration
@@ -234,7 +234,7 @@ package final class StatManager: Injectable {
     /// - Parameters:
     ///   - stat: The stat to be appended
     ///   - completion: The callback to be executed
-    package func append<RecordStatType>(_ stat: RecordStatType, fromAuth: Bool? = nil, completion: VoidHandler? = nil) where RecordStatType: BaseStatType {
+    @_spi(SendbirdInternal) public func append<RecordStatType>(_ stat: RecordStatType, fromAuth: Bool? = nil, completion: VoidHandler? = nil) where RecordStatType: BaseStatType {
         Logger.main.debug("append stat: \(stat)")
         queue.addOperation { [weak self] in
             Logger.main.debug("appendable state: \(String(describing: self?.state.isAppendable)), allowed: \(String(describing: self?.isAllowed(stat.statType)))")
@@ -248,7 +248,7 @@ package final class StatManager: Injectable {
             switch stat {
             case let stat as DailyRecordStat:
                 self.dailyStatCollector?.appendStat(stat) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -257,7 +257,7 @@ package final class StatManager: Injectable {
                 
             case let stat as NotificationStat:
                 self.notificationStatCollector?.appendStat(stat) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -265,7 +265,7 @@ package final class StatManager: Injectable {
                 }
             case let stat as DefaultRecordStat:
                 self.defaultStatCollector?.appendStat(stat) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -274,7 +274,7 @@ package final class StatManager: Injectable {
                 
             case let stat as any DailyRecordStatType:
                 self.dailyStatCollector?.appendStat(stat.toDailyRecordStat()) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -283,7 +283,7 @@ package final class StatManager: Injectable {
                 
             case let stat as any DefaultRecordStatRepresentable:
                 self.defaultStatCollector?.appendStat(stat.toDefaultRecordStat()) {
-                    #if TESTCASE
+                    #if DEBUG
                     Logger.main.debug("Append stat: \(stat), delegate: \(String(describing: self.delegate))")
                     self.delegate?.statManager(self, appendStat: stat)
                     #endif
@@ -312,7 +312,7 @@ package final class StatManager: Injectable {
     /// - `logi_latency` :currentTS - requestSentTS
     /// - `success`: true/false (LOGI 결과에 따라)
     
-    package func append(logiEvent: LoginEvent) {
+    @_spi(SendbirdInternal) public func append(logiEvent: LoginEvent) {
         // (3) case
         defer { self.restoreWebSocketOpenedEvent() }
         
@@ -515,7 +515,7 @@ package final class StatManager: Injectable {
     }
     
     // timeout 시간이 넘는 latency 는 버리기 위한 체크
-    package func isValidLatencyWithTimeout(_ latencyForOpened: Int64, _ latencyForLOGI: Int64?) -> Bool {
+    @_spi(SendbirdInternal) public func isValidLatencyWithTimeout(_ latencyForOpened: Int64, _ latencyForLOGI: Int64?) -> Bool {
         // Connection timeout: 10s
         let connectionTimeout = Int64(configuration.websocketTimeout) * 1000
         // LOGI response timeout: 10s
@@ -533,14 +533,14 @@ package final class StatManager: Injectable {
     }
     
     // webSocketOpenedEvent 관련 객체 초기화
-    package func restoreWebSocketOpenedEvent() {
+    @_spi(SendbirdInternal) public func restoreWebSocketOpenedEvent() {
         Logger.stat.debug("Appending wsConnect restore wsOpenedEvent.")
         
         self.wsOpenedEvent = nil
         self.connectionStartedAt = nil
     }
     
-    package func update(allowedStatTypes: Set<StatType>, completion: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func update(allowedStatTypes: Set<StatType>, completion: VoidHandler? = nil) {
         queue.addOperation { [weak self] in
             guard let self = self else {
                 return
@@ -551,7 +551,7 @@ package final class StatManager: Injectable {
         }
     }
     
-    package func enable(completion: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func enable(completion: VoidHandler? = nil) {
         queue.addOperation { [weak self] in
             defer { completion?() }
             guard let self = self else {
@@ -564,45 +564,45 @@ package final class StatManager: Injectable {
             self.state = .enabled
 
             self.defaultStatCollector?.trySendStats(fromAuth: fromAuth) {
-                #if TESTCASE
+                #if DEBUG
                 self.delegate?.statManager(self, didSendStatsThrough: self.defaultStatCollector)
                 #endif
             }
             self.dailyStatCollector?.trySendStats(
                 completion: {
-                    #if TESTCASE
+                    #if DEBUG
                     self.delegate?.statManager(self, didSendStatsThrough: self.dailyStatCollector)
                     #endif
                 }
             )
             self.notificationStatCollector?.trySendStats(
                 completion: {
-                    #if TESTCASE
+                    #if DEBUG
                     self.delegate?.statManager(self, didSendStatsThrough: self.notificationStatCollector)
                     #endif
                 }
             )
             
-            #if TESTCASE
+            #if DEBUG
             self.delegate?.statManager(self, didChangeState: self.state)
             #endif
         }
     }
     
-    package func changeToCollectOnly() {
+    @_spi(SendbirdInternal) public func changeToCollectOnly() {
         queue.addOperation { [weak self] in
             guard let self = self else {
                 return
             }
             self.state = .collectOnly
-            #if TESTCASE
+            #if DEBUG
             self.delegate?.statManager(self, didChangeState: self.state)
             #endif
         }
     }
     
     /// Logout할 때 쌓아둔 로그 삭제
-    package func disable(completion: VoidHandler? = nil) {
+    @_spi(SendbirdInternal) public func disable(completion: VoidHandler? = nil) {
         queue.addOperation { [weak self] in
             defer { completion?() }
             guard let self = self else {
@@ -610,7 +610,7 @@ package final class StatManager: Injectable {
             }
             self.state = .disabled
             self.removeAll()
-            #if TESTCASE
+            #if DEBUG
             self.delegate?.statManager(self, didChangeState: self.state)
             #endif
         }
@@ -635,7 +635,7 @@ package final class StatManager: Injectable {
         self.notificationStatCollector?.removeAll()
     }
     
-    package func getDeviceId() -> String {
+    @_spi(SendbirdInternal) public func getDeviceId() -> String {
         guard let deviceId = Self.baseStorage.string(forKey: Constant.uniqueDeviceId) else {
             let newDeviceId = UUID().uuidString
             Self.baseStorage.setValue(newDeviceId, forKey: Constant.uniqueDeviceId)
@@ -647,22 +647,22 @@ package final class StatManager: Injectable {
     }
     
     // MARK: Injectable
-    package func resolve(with dependency: (any Dependency)?) {
+    @_spi(SendbirdInternal) public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
     
-//    #if TESTCASE
+    #if DEBUG
     // For tests
-    package weak var delegate: StatManagerInternalDelegate?
-    package var mockStatUploadResult: Bool?
-    package var mockError: AuthError?
-//    #endif
+    @_spi(SendbirdInternal) public weak var delegate: StatManagerInternalDelegate?
+    @_spi(SendbirdInternal) public var mockStatUploadResult: Bool?
+    @_spi(SendbirdInternal) public var mockError: AuthError?
+    #endif
 }
 
 // MARK: - EventDelegate
 
 extension StatManager: EventDelegate {
-    package func didReceiveSBCommandEvent(command: SBCommand) async {
+    @_spi(SendbirdInternal) public func didReceiveSBCommandEvent(command: SBCommand) async {
         switch command {
         case let command as LoginEvent:
             // Do this only if login was successful
@@ -677,7 +677,7 @@ extension StatManager: EventDelegate {
                 self.defaultStatCollector?.statConfig = defaultConfig
             }
             
-#if TESTCASE
+#if DEBUG
             if let statConfig = self.defaultConfigForTest {
                 self.defaultStatCollector?.statConfig = statConfig
             }
@@ -707,7 +707,7 @@ extension StatManager: EventDelegate {
         }
     }
     
-    package func didReceiveInternalEvent(command: InternalEvent) {
+    @_spi(SendbirdInternal) public func didReceiveInternalEvent(command: InternalEvent) {
         switch command {
         case is ConnectionStateEvent.Logout:
             disable()
@@ -736,7 +736,7 @@ extension StatManager: EventDelegate {
         }
     }
     
-    package func allowedStatTypes(of loginEvent: LoginEvent) -> Set<StatType> {
+    @_spi(SendbirdInternal) public func allowedStatTypes(of loginEvent: LoginEvent) -> Set<StatType> {
         guard let applicationAttributes = loginEvent.appInfo?.typedApplicationAttributes else {
             return []
         }
@@ -744,7 +744,7 @@ extension StatManager: EventDelegate {
         return allowedStatTypes(of: applicationAttributes)
     }
     
-    package func allowedStatTypes(of applicationAttributes: Set<AuthAppInfo.ApplicationAttribute>) -> Set<StatType> {
+    @_spi(SendbirdInternal) public func allowedStatTypes(of applicationAttributes: Set<AuthAppInfo.ApplicationAttribute>) -> Set<StatType> {
         StatType.allCases.reduce(into: Set<StatType>()) { allowedTypes, statType in
             if applicationAttributes.contains(statType.applicationAttributeAllowUse) {
                 allowedTypes.insert(statType)
@@ -754,16 +754,16 @@ extension StatManager: EventDelegate {
 }
 
 extension StatManager {
-    package static var baseStorage: UserDefaults { UserDefaults(suiteName: Constant.suiteName) ?? .standard }
+    @_spi(SendbirdInternal) public static var baseStorage: UserDefaults { UserDefaults(suiteName: Constant.suiteName) ?? .standard }
     
-    package struct Constant {
+    @_spi(SendbirdInternal) public struct Constant {
         static let suiteName = "com.sendbird.sdk.stat.storage"
         static let uniqueDeviceId = "com.sendbird.sdk.stat.unique_device_id"
     }
 }
 
 extension StatManager: StatManagerDelegate {
-    package func statManager(_ statCollector: any StatCollectorContract, didFailSendStats: AuthError) {
+    @_spi(SendbirdInternal) public func statManager(_ statCollector: any StatCollectorContract, didFailSendStats: AuthError) {
         self.retryCount -= 1
         if self.retryCount <= 0 {
             self.retryCount = Self.maxRetryCount
@@ -771,29 +771,29 @@ extension StatManager: StatManagerDelegate {
         }
     }
     
-    package func statManager(_ statCollector: any StatCollectorContract, newState: State) {
+    @_spi(SendbirdInternal) public func statManager(_ statCollector: any StatCollectorContract, newState: State) {
         self.changeToCollectOnly()
     }
     
-    package func isStatManagerUploadable() -> Bool {
+    @_spi(SendbirdInternal) public func isStatManagerUploadable() -> Bool {
         self.state.isUploadable
     }
     
-    package func statManager(_ statCollector: any StatCollectorContract, didSentStats: [any BaseStatType]) {
-#if TESTCASE
+    @_spi(SendbirdInternal) public func statManager(_ statCollector: any StatCollectorContract, didSentStats: [any BaseStatType]) {
+#if DEBUG
         self.delegate?.statManager(self, didSendStatsThrough: statCollector)
 #endif
     }
 }
 
-#if TESTCASE
+#if DEBUG
 // For tests
 extension StatManager {
-    package func waitUntilAllOperationsAreFinished() {
+    @_spi(SendbirdInternal) public func waitUntilAllOperationsAreFinished() {
         queue.waitUntilAllOperationsAreFinished()
     }
     
-    package func setMockResult(enabled: Bool, error: AuthError?) {
+    @_spi(SendbirdInternal) public func setMockResult(enabled: Bool, error: AuthError?) {
         self.apiClient.setMockResult(enabled: enabled, error: error)
     }
 }

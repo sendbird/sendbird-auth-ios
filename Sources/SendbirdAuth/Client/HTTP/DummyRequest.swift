@@ -5,10 +5,10 @@
 //  Created by Kai Lee on 4/28/25.
 //
 
-package struct DummyRequest: APIRequestable {
-    package let method: HTTPMethod = .get
-    package let url: URLPath = ""
-    package init() {}
+@_spi(SendbirdInternal) public struct DummyRequest: APIRequestable {
+    @_spi(SendbirdInternal) public let method: HTTPMethod = .get
+    @_spi(SendbirdInternal) public let url: URLPath = ""
+    @_spi(SendbirdInternal) public init() {}
     
-    package func encode(to encoder: Encoder) throws {}
+    @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {}
 }

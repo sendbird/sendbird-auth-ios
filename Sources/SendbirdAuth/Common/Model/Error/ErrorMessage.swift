@@ -5,8 +5,8 @@
 //  Created by Kai Lee on 7/3/25.
 //
 
-package enum ErrorMessage: CustomStringConvertible {
-    package var description: String {
+@_spi(SendbirdInternal) public enum ErrorMessage: CustomStringConvertible {
+    @_spi(SendbirdInternal) public var description: String {
         switch self {
         case .notAuthorized: return "Not authorized to call"
         case .requestNotSupport: return "Not supported request type"

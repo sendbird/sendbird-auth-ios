@@ -7,13 +7,13 @@
 
 import Foundation
 
-package struct WebSocketLatencyInfo {
+@_spi(SendbirdInternal) public struct WebSocketLatencyInfo {
     var hostURL: String = ""
     var latencyForOpened: Int64 = 0
     var latencyForLOGI: Int64?
     var success: Bool = false
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         hostURL: String = "",
         latencyForOpened: Int64 = 0,
         latencyForLOGI: Int64? = nil,
@@ -26,8 +26,8 @@ package struct WebSocketLatencyInfo {
     }
 }
 
-package final class WebSocketConnectStat: DefaultRecordStat {
-    package enum CodingKeys: String, CodingKey {
+@_spi(SendbirdInternal) public final class WebSocketConnectStat: DefaultRecordStat {
+    @_spi(SendbirdInternal) public enum CodingKeys: String, CodingKey {
         case hostURL = "host_url"
         case latency
         case logiLatency = "logi_latency"
@@ -39,17 +39,17 @@ package final class WebSocketConnectStat: DefaultRecordStat {
         case isSoftRateLimited = "is_soft_rate_limited"
     }
     
-    package let hostURL: String
-    package let latency: Int64
-    package let logiLatency: Int64?
-    package let success: Bool
-    package let errorCode: Int?
-    package let errorDescription: String?
-    package let accumulatedTrial: Int
-    package let connectionId: String
-    package let isSoftRateLimited: Bool
+    @_spi(SendbirdInternal) public let hostURL: String
+    @_spi(SendbirdInternal) public let latency: Int64
+    @_spi(SendbirdInternal) public let logiLatency: Int64?
+    @_spi(SendbirdInternal) public let success: Bool
+    @_spi(SendbirdInternal) public let errorCode: Int?
+    @_spi(SendbirdInternal) public let errorDescription: String?
+    @_spi(SendbirdInternal) public let accumulatedTrial: Int
+    @_spi(SendbirdInternal) public let connectionId: String
+    @_spi(SendbirdInternal) public let isSoftRateLimited: Bool
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         latencyInfo: WebSocketLatencyInfo,
         errorCode: Int?,
         errorDescription: String?,
@@ -71,7 +71,7 @@ package final class WebSocketConnectStat: DefaultRecordStat {
         super.init(statType: .webSocketConnect, timestamp: timestamp)
     }
     
-    package required init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public required init(from decoder: Decoder) throws {
         let container = try Self.nestedDecodeContainer(decoder: decoder, keyedBy: CodingKeys.self)
         
         hostURL = try container.decode(String.self, forKey: .hostURL)
@@ -87,7 +87,7 @@ package final class WebSocketConnectStat: DefaultRecordStat {
         try super.init(from: decoder)
     }
     
-    package override func encode(to encoder: Encoder) throws {
+    @_spi(SendbirdInternal) public override func encode(to encoder: Encoder) throws {
         try super.encode(to: encoder)
         
         var container = nestedEncodeContainer(encoder: encoder, keyedBy: CodingKeys.self)
@@ -103,7 +103,7 @@ package final class WebSocketConnectStat: DefaultRecordStat {
         try container.encode(isSoftRateLimited, forKey: .isSoftRateLimited)
     }
     
-    package override var description: String {
+    @_spi(SendbirdInternal) public override var description: String {
         """
         WebSocketConnectStat(
             hostURL: \(hostURL),

@@ -8,26 +8,26 @@
 
 import Foundation
 
-package struct Queue<T> {
+@_spi(SendbirdInternal) public struct Queue<T> {
     private var elements: [T] = []
     
-    package var head: T? { elements.first }
-    package var tail: T? { elements.last }
+    @_spi(SendbirdInternal) public var head: T? { elements.first }
+    @_spi(SendbirdInternal) public var tail: T? { elements.last }
     
-    package var count: Int { elements.count }
-    package var isEmpty: Bool { elements.isEmpty }
-    package var hasElement: Bool { !elements.isEmpty }
+    @_spi(SendbirdInternal) public var count: Int { elements.count }
+    @_spi(SendbirdInternal) public var isEmpty: Bool { elements.isEmpty }
+    @_spi(SendbirdInternal) public var hasElement: Bool { !elements.isEmpty }
     
-    package init(contentsOf elements: [T] = []) {
+    @_spi(SendbirdInternal) public init(contentsOf elements: [T] = []) {
         self.elements = elements
     }
     
-    package mutating func enqueue(_ value: T) {
+    @_spi(SendbirdInternal) public mutating func enqueue(_ value: T) {
         elements.append(value)
     }
     
     @discardableResult
-    package mutating func dequeue() -> T? {
+    @_spi(SendbirdInternal) public mutating func dequeue() -> T? {
         guard !elements.isEmpty else {
             return nil
         }

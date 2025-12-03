@@ -7,10 +7,10 @@
 
 import Foundation
 
-package struct AuthenticateRequest: APIRequestable {
-    package let resultType = LoginEvent.self
+@_spi(SendbirdInternal) public struct AuthenticateRequest: APIRequestable {
+    @_spi(SendbirdInternal) public let resultType = LoginEvent.self
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         userId: String,
         applicationId: String,
         authToken: String? = nil,
@@ -35,22 +35,22 @@ package struct AuthenticateRequest: APIRequestable {
         self.configTs = requestHeaderDataSource?.configTs ?? 0
     }
     
-    package let headers: [String: String]
+    @_spi(SendbirdInternal) public let headers: [String: String]
     
-    package let method: HTTPMethod = .post
+    @_spi(SendbirdInternal) public let method: HTTPMethod = .post
     
-    package let url: URLPath
+    @_spi(SendbirdInternal) public let url: URLPath
 
-    package let applicationId: String
-    package let expiringSession: Bool
-    package let includeLOGI: Bool
-    package let includeExtraData: String
-    package let uikitConfig: Bool
+    @_spi(SendbirdInternal) public let applicationId: String
+    @_spi(SendbirdInternal) public let expiringSession: Bool
+    @_spi(SendbirdInternal) public let includeLOGI: Bool
+    @_spi(SendbirdInternal) public let includeExtraData: String
+    @_spi(SendbirdInternal) public let uikitConfig: Bool
     
-    package let useLocalCache: Bool
-    package let configTs: Int64
+    @_spi(SendbirdInternal) public let useLocalCache: Bool
+    @_spi(SendbirdInternal) public let configTs: Int64
 
-    package enum CodingKeys: String, CodingKey {
+    @_spi(SendbirdInternal) public enum CodingKeys: String, CodingKey {
         case applicationId = "app_id"
         case expiringSession = "expiring_session"
     

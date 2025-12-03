@@ -7,14 +7,14 @@
 
 import Foundation
 
-package class CommandRouterConfiguration {
-    package private(set) var cachePolicy: NSURLRequest.CachePolicy
-    package private(set) var useNativeSocket: Bool?
+@_spi(SendbirdInternal) public class CommandRouterConfiguration {
+    @_spi(SendbirdInternal) public private(set) var cachePolicy: NSURLRequest.CachePolicy
+    @_spi(SendbirdInternal) public private(set) var useNativeSocket: Bool?
 
-    package var apiHost: String
-    package var wsHost: String
+    @_spi(SendbirdInternal) public var apiHost: String
+    @_spi(SendbirdInternal) public var wsHost: String
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         useNativeSocket: Bool? = nil,
         cachePolicy: NSURLRequest.CachePolicy,
         apiHost: String,
@@ -29,14 +29,14 @@ package class CommandRouterConfiguration {
     }
     
     // Only used for before `SendbirdChat.initWithApplicationId` is called
-    package static let `default` = CommandRouterConfiguration(
+    @_spi(SendbirdInternal) public static let `default` = CommandRouterConfiguration(
         useNativeSocket: nil,
         cachePolicy: .useProtocolCachePolicy,
         apiHost: "",
         wsHost: ""
     )
     
-    package func updateHost(apiHost: String?, wsHost: String?) {
+    @_spi(SendbirdInternal) public func updateHost(apiHost: String?, wsHost: String?) {
         if let apiHost {
             self.apiHost = apiHost
         }

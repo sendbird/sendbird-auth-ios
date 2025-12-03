@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol StatStorageKeyType {
+@_spi(SendbirdInternal) public protocol StatStorageKeyType {
     var lastSentAt: String { get }
     var wrapper: String { get }
     var queue: String { get }

@@ -7,20 +7,20 @@
 
 import Foundation
 
-package class GuestSessionExpirationHandler: SessionExpirable {
-    package var expiringSession: Bool
-    package var accessToken: String?
+@_spi(SendbirdInternal) public class GuestSessionExpirationHandler: SessionExpirable {
+    @_spi(SendbirdInternal) public var expiringSession: Bool
+    @_spi(SendbirdInternal) public var accessToken: String?
 
-    package init(expiringSession: Bool, accessToken: String? = nil) {
+    @_spi(SendbirdInternal) public init(expiringSession: Bool, accessToken: String? = nil) {
         self.expiringSession = expiringSession
         self.accessToken = accessToken
     }
     
-    package weak var delegate: InternalSessionDelegate?
+    @_spi(SendbirdInternal) public weak var delegate: InternalSessionDelegate?
     
-    package var isRefreshingSession: Bool = false
+    @_spi(SendbirdInternal) public var isRefreshingSession: Bool = false
     
-    package func refreshSessionKey(shouldRetry: Bool, expiresIn: Int64?) {
+    @_spi(SendbirdInternal) public func refreshSessionKey(shouldRetry: Bool, expiresIn: Int64?) {
         guard !isRefreshingSession else { return }
         
         isRefreshingSession = true
@@ -38,8 +38,8 @@ package class GuestSessionExpirationHandler: SessionExpirable {
         })
     }
     
-    package func refreshSessionToken() { }
-    package func resetSession() {
+    @_spi(SendbirdInternal) public func refreshSessionToken() { }
+    @_spi(SendbirdInternal) public func resetSession() {
         self.isRefreshingSession = false
     }
 }

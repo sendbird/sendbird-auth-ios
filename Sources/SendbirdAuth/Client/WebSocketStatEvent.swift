@@ -5,34 +5,34 @@
 //  Created by Kai Lee on 6/16/25.
 //
 
-package struct WebSocketStatEvent {
-    package struct WebSocketStartEvent: InternalEvent {}
+@_spi(SendbirdInternal) public struct WebSocketStatEvent {
+    @_spi(SendbirdInternal) public struct WebSocketStartEvent: InternalEvent {}
     
-    package struct WebSocketOpenedEvent: InternalEvent {
-        package let hostURL: String
-        package let openedTimestampMs: Int64 // ms
+    @_spi(SendbirdInternal) public struct WebSocketOpenedEvent: InternalEvent {
+        @_spi(SendbirdInternal) public let hostURL: String
+        @_spi(SendbirdInternal) public let openedTimestampMs: Int64 // ms
     }
     
-    package struct WebSocketFailedEvent: InternalEvent {
-        package let hostURL: String
-        package let code: Int
-        package let reason: String?
+    @_spi(SendbirdInternal) public struct WebSocketFailedEvent: InternalEvent {
+        @_spi(SendbirdInternal) public let hostURL: String
+        @_spi(SendbirdInternal) public let code: Int
+        @_spi(SendbirdInternal) public let reason: String?
     }
     
-    package struct WebSocketLoginTimeoutEvent: InternalEvent {
-        package let hostURL: String
-        package let error: AuthError
-        package let retryCount: Int
+    @_spi(SendbirdInternal) public struct WebSocketLoginTimeoutEvent: InternalEvent {
+        @_spi(SendbirdInternal) public let hostURL: String
+        @_spi(SendbirdInternal) public let error: AuthError
+        @_spi(SendbirdInternal) public let retryCount: Int
     }
     
-    package struct WebSocketReconnectLoginTimeoutEvent: InternalEvent {
-        package let hostURL: String
-        package let error: AuthError
-        package let retryCount: Int
+    @_spi(SendbirdInternal) public struct WebSocketReconnectLoginTimeoutEvent: InternalEvent {
+        @_spi(SendbirdInternal) public let hostURL: String
+        @_spi(SendbirdInternal) public let error: AuthError
+        @_spi(SendbirdInternal) public let retryCount: Int
     }
     
-    package struct WebSocketDisconnectEvent: InternalEvent {
-        package let error: AuthError?
-        package let reason: WebSocketDisconnectedReason
+    @_spi(SendbirdInternal) public struct WebSocketDisconnectEvent: InternalEvent {
+        @_spi(SendbirdInternal) public let error: AuthError?
+        @_spi(SendbirdInternal) public let reason: WebSocketDisconnectedReason
     }
 }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-package extension Date {
+@_spi(SendbirdInternal) public extension Date {
     static var now: Date { Date() }
     
     static var yesterday: Date? { Date().dayBefore }

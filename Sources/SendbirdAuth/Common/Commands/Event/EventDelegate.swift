@@ -7,7 +7,7 @@
 
 import Foundation
 
-package protocol EventDelegate: AnyObject {
+@_spi(SendbirdInternal) public protocol EventDelegate: AnyObject {
     var priority: EventPriority { get }
     
     func didReceiveSBCommandEvent(command: SBCommand) async
@@ -15,11 +15,11 @@ package protocol EventDelegate: AnyObject {
 }
 
 extension EventDelegate {
-    package var priority: EventPriority { .default }
+    @_spi(SendbirdInternal) public var priority: EventPriority { .default }
 }
 
 // MARK: - Priority
-package enum EventPriority: Int {
+@_spi(SendbirdInternal) public enum EventPriority: Int {
     case lowest = 1
     case low = 2
     case `default` = 3
@@ -28,7 +28,7 @@ package enum EventPriority: Int {
 }
 
 extension EventPriority: Comparable {
-    package static func < (lhs: EventPriority, rhs: EventPriority) -> Bool {
+    @_spi(SendbirdInternal) public static func < (lhs: EventPriority, rhs: EventPriority) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
 }

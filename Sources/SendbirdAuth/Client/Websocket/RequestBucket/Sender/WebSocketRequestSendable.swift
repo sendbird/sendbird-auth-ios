@@ -7,7 +7,7 @@
 
 import Foundation
 
-package typealias WebSocketRequestHandler = @Sendable (any ResultableWSRequest) async throws -> Void
+@_spi(SendbirdInternal) public typealias WebSocketRequestHandler = @Sendable (any ResultableWSRequest) async throws -> Void
 // ResultableWSRequest -> such as `BaseWSRequest`
 
 /// A protocol that defines the ability to send WebSocket requests.
@@ -17,7 +17,7 @@ package typealias WebSocketRequestHandler = @Sendable (any ResultableWSRequest) 
 /// requests asynchronously.
 /// 
 /// - Note: This protocol is intended for use with WebSocket-based communication.
-package protocol WebSocketRequestSendable: AnyObject {
+@_spi(SendbirdInternal) public protocol WebSocketRequestSendable: AnyObject {
     var sendHandler: WebSocketRequestHandler { get }
     func send(_ request: some ResultableWSRequest) async
 }

@@ -7,14 +7,14 @@
 
 import Foundation
 
-package class SessionManager: Injectable {
-    package enum SessionState {
+@_spi(SendbirdInternal) public class SessionManager: Injectable {
+    @_spi(SendbirdInternal) public enum SessionState {
         case connected
         case refreshing
         case none
     }
     
-    package var state: SessionState {
+    @_spi(SendbirdInternal) public var state: SessionState {
         if expirationHandler.isRefreshingSession {
             return .refreshing
         } else if session != nil {
@@ -24,11 +24,11 @@ package class SessionManager: Injectable {
         }
     }
     
-    package static let minimumExpiresInForWSRefresh = 5
+    @_spi(SendbirdInternal) public static let minimumExpiresInForWSRefresh = 5
     
-    @InternalAtomic package var internalSession: Session?
+    @InternalAtomic @_spi(SendbirdInternal) public var internalSession: Session?
     
-    package var session: Session? {
+    @_spi(SendbirdInternal) public var session: Session? {
         get {
             let defaultKey = Session.buildFromUserDefaults()
             if internalSession == nil {
@@ -56,35 +56,35 @@ package class SessionManager: Injectable {
         }
     }
     
-    package let applicationId: String
-    @InternalAtomic package var eKey: String?
+    @_spi(SendbirdInternal) public let applicationId: String
+    @InternalAtomic @_spi(SendbirdInternal) public var eKey: String?
 
-    package private(set) var userId: String
+    @_spi(SendbirdInternal) public private(set) var userId: String
 
     private let board: SBTimerBoard
     
-    package var sessionHandler: SessionEventBroadcaster
+    @_spi(SendbirdInternal) public var sessionHandler: SessionEventBroadcaster
     
-    package weak var delegate: SessionManagerDelegate?
+    @_spi(SendbirdInternal) public weak var delegate: SessionManagerDelegate?
     
-    package var localCachePreference: LocalPreferences
+    @_spi(SendbirdInternal) public var localCachePreference: LocalPreferences
 
     @DependencyWrapper private var dependency: Dependency?
     private var service: QueueService? { dependency?.service }
-    package var stateData: ConnectionStateData? { dependency?.stateData }
+    @_spi(SendbirdInternal) public var stateData: ConnectionStateData? { dependency?.stateData }
     var requestQueue: RequestQueue? { dependency?.requestQueue }
     private var config: SendbirdConfiguration? { dependency?.config }
     private var isLocalCachingEnabled: Bool
     
-    package var router: CommandRouter
-    package var expirationHandler: SessionExpirable
-    package var isRefreshingSession: Bool { expirationHandler.isRefreshingSession }
+    @_spi(SendbirdInternal) public var router: CommandRouter
+    @_spi(SendbirdInternal) public var expirationHandler: SessionExpirable
+    @_spi(SendbirdInternal) public var isRefreshingSession: Bool { expirationHandler.isRefreshingSession }
     
-    @InternalAtomic package var authenticateHandlers: [AuthUserHandler?] = []
-    package var authenticateQueue: DispatchQueue
-    package var isAuthenticating = false
+    @InternalAtomic @_spi(SendbirdInternal) public var authenticateHandlers: [AuthUserHandler?] = []
+    @_spi(SendbirdInternal) public var authenticateQueue: DispatchQueue
+    @_spi(SendbirdInternal) public var isAuthenticating = false
     
-    package init(
+    @_spi(SendbirdInternal) public init(
         applicationId: String,
         userId: String,
         router: CommandRouter,
@@ -107,9 +107,9 @@ package class SessionManager: Injectable {
         self.authenticateQueue = DispatchQueue(label: "com.sendbird.chat.session.authenticate.\(userId)")
     }
 
-    package weak var requestHeaderDataSource: RequestHeaderDataSource?
+    @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
     
-    package func authenticate(authData: AuthData?, loginHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func authenticate(authData: AuthData?, loginHandler: AuthUserHandler?) {
         guard let config = self.config,
                 let stateData = self.stateData else {
             let error = AuthClientError.notResolved.asAuthError
@@ -206,7 +206,7 @@ package class SessionManager: Injectable {
         }
     }
     
-    package func connect(authToken: String?, sessionKey: String?, loginHandler: AuthUserHandler?) {
+    @_spi(SendbirdInternal) public func connect(authToken: String?, sessionKey: String?, loginHandler: AuthUserHandler?) {
         guard let config = self.config else {
             let error = AuthClientError.notResolved.asAuthError
             loginHandler?(nil, error)
@@ -227,11 +227,11 @@ package class SessionManager: Injectable {
     }
     
     @discardableResult
-    package func reconnect(reconnectedBy: ReconnectingTrigger?) -> Bool {
+    @_spi(SendbirdInternal) public func reconnect(reconnectedBy: ReconnectingTrigger?) -> Bool {
         return router.webSocketManager.reconnect(sessionKey: self.session?.key, reconnectedBy: reconnectedBy)
     }
 
-    package func logout() {
+    @_spi(SendbirdInternal) public func logout() {
         reset()
     }
     
@@ -242,15 +242,15 @@ package class SessionManager: Injectable {
     }
     
     // MARK: Injectable
-    package func resolve(with dependency: (any Dependency)?) {
+    @_spi(SendbirdInternal) public func resolve(with dependency: (any Dependency)?) {
         self.dependency = dependency
     }
 }
 
 extension SessionManager: EventDelegate {
-    package var priority: EventPriority { .highest } // higher than SendbirdChatMain (to update session from Connected event)
+    @_spi(SendbirdInternal) public var priority: EventPriority { .highest } // higher than SendbirdChatMain (to update session from Connected event)
     
-    package func didReceiveSBCommandEvent(command: SBCommand) async {
+    @_spi(SendbirdInternal) public func didReceiveSBCommandEvent(command: SBCommand) async {
         switch command {
         case let event as SessionRefreshedEvent:
             if let sessionKey = event.sessionKey {
@@ -264,7 +264,7 @@ extension SessionManager: EventDelegate {
         }
     }
     
-    package func didReceiveInternalEvent(command: InternalEvent) {
+    @_spi(SendbirdInternal) public func didReceiveInternalEvent(command: InternalEvent) {
         switch command {
         case is ConnectionStateEvent.Logout:
             logout()
@@ -303,11 +303,11 @@ extension SessionManager: EventDelegate {
         }
     }
    
-    package func shouldRemoveCurrentUserCache(error: AuthError?) -> Bool {
+    @_spi(SendbirdInternal) public func shouldRemoveCurrentUserCache(error: AuthError?) -> Bool {
         return self.isLocalCachingEnabled == true && error?.shouldRemoveCurrentUserCache == true
     }
     
-    package func consumeError(_ error: AuthError?, expiresIn: Int64? = nil) {
+    @_spi(SendbirdInternal) public func consumeError(_ error: AuthError?, expiresIn: Int64? = nil) {
         switch error?.errorCode {
         case .accessTokenNotValid:
             expirationHandler.refreshSessionToken()
@@ -331,7 +331,7 @@ extension SessionManager: EventDelegate {
 }
 
 extension SessionManager: SessionValidator {
-    package func validateSession(isSessionRequired: Bool) throws -> String? {
+    @_spi(SendbirdInternal) public func validateSession(isSessionRequired: Bool) throws -> String? {
         if !isSessionRequired { return nil }
         // for api
 
@@ -346,7 +346,7 @@ extension SessionManager: SessionValidator {
         throw AuthClientError.connectionRequired.asAuthError
     }
     
-    package func validateResponse<R>(_ response: R?, error: AuthError?) -> Bool {
+    @_spi(SendbirdInternal) public func validateResponse<R>(_ response: R?, error: AuthError?) -> Bool {
         if let injectable = response as? Injectable {
             injectable.resolve(with: dependency)
         }
@@ -357,7 +357,7 @@ extension SessionManager: SessionValidator {
     }
 }
 
-package protocol SessionManagerDelegate: AnyObject {
+@_spi(SendbirdInternal) public protocol SessionManagerDelegate: AnyObject {
     func sessionKeyChanged(_ value: String?)
     func sessionReconnectRequired()
     func sessionReconnectIfNeeded()

@@ -7,40 +7,40 @@
 
 import Foundation
 
-package struct LoginEvent: Decodable, SBCommand {
+@_spi(SendbirdInternal) public struct LoginEvent: Decodable, SBCommand {
     // Default value to conform SBCommand
-    package var requestId = ""
-    package var uniqueId = nil as String?
+    @_spi(SendbirdInternal) public var requestId = ""
+    @_spi(SendbirdInternal) public var uniqueId = nil as String?
     
-    package struct Constants {
-        static package let defaultDedupIntervalMs: Int64 = 0
-        static package let minDedupIntervalMs: Int64 = 50
+    @_spi(SendbirdInternal) public struct Constants {
+        @_spi(SendbirdInternal) static public let defaultDedupIntervalMs: Int64 = 0
+        @_spi(SendbirdInternal) static public let minDedupIntervalMs: Int64 = 50
     }
     
-    package let cmd: CommandType = .login
+    @_spi(SendbirdInternal) public let cmd: CommandType = .login
     
-    package let loginTimestamp: Int64
-    package let maxUnreadCountOnSuperGroup: Int?
+    @_spi(SendbirdInternal) public let loginTimestamp: Int64
+    @_spi(SendbirdInternal) public let maxUnreadCountOnSuperGroup: Int?
     
-    package let reconnectConfiguration: ReconnectionConfiguration?
-    package let messageSyncConfiguration: MessageSyncConfiguration
+    @_spi(SendbirdInternal) public let reconnectConfiguration: ReconnectionConfiguration?
+    @_spi(SendbirdInternal) public let messageSyncConfiguration: MessageSyncConfiguration
 
-    package let pingInterval: Double
-    package let watchdogInterval: Double
+    @_spi(SendbirdInternal) public let pingInterval: Double
+    @_spi(SendbirdInternal) public let watchdogInterval: Double
     
-    package let appInfo: AuthAppInfo?
-    package let user: AuthUser?
+    @_spi(SendbirdInternal) public let appInfo: AuthAppInfo?
+    @_spi(SendbirdInternal) public let user: AuthUser?
 
-    package let sessionKey: String?
-    package let eKey: String?
+    @_spi(SendbirdInternal) public let sessionKey: String?
+    @_spi(SendbirdInternal) public let eKey: String?
     
-    package let configSyncNeeded: Bool
+    @_spi(SendbirdInternal) public let configSyncNeeded: Bool
 
-    package private(set) var deviceTokenLastDeletedAt: Int64?
+    @_spi(SendbirdInternal) public private(set) var deviceTokenLastDeletedAt: Int64?
     
-    package let requestDedupIntervalMs: Int64
+    @_spi(SendbirdInternal) public let requestDedupIntervalMs: Int64
 
-    package var isUsingDeviceTokenCaching: Bool {
+    @_spi(SendbirdInternal) public var isUsingDeviceTokenCaching: Bool {
         if appInfo?.typedApplicationAttributes.contains(.sdkDeviceTokenCache) == true {
             return true
         }
@@ -51,12 +51,12 @@ package struct LoginEvent: Decodable, SBCommand {
     /// There was an error mapping the feature flag incorrectly, but the value is temporarily maintained to maintain the lower version.
     private var tempUsingDeviceTokenCaching: Bool?
     
-    package let hasError: Bool?
-    package let errorCode: Int?
-    package let errorMessage: String?
-    package var reqId: String?
+    @_spi(SendbirdInternal) public let hasError: Bool?
+    @_spi(SendbirdInternal) public let errorCode: Int?
+    @_spi(SendbirdInternal) public let errorMessage: String?
+    @_spi(SendbirdInternal) public var reqId: String?
 
-    package var error: AuthError? {
+    @_spi(SendbirdInternal) public var error: AuthError? {
         guard hasError == true else { return nil }
         if let errorMessage = errorMessage, let errorCode = errorCode {
             return AuthError(domain: errorMessage, code: errorCode)
@@ -65,20 +65,20 @@ package struct LoginEvent: Decodable, SBCommand {
     }
     
     /// Determines whether to send the stats log to the server
-    package var isStatsUploadAllowed: Bool {
+    @_spi(SendbirdInternal) public var isStatsUploadAllowed: Bool {
         appInfo?.isStatsUploadAllowed ?? false
     }
     
     /// Determines whether to collect the stats log
-    package var isStatsCollectAllowed: Bool {
+    @_spi(SendbirdInternal) public var isStatsCollectAllowed: Bool {
         appInfo?.isStatsCollectAllowed ?? false
     }
     
-    package var services: [Session.Service]?
-    package let expiresAt: Int64? // seconds (not millis)
-    package let unreadCountInfo: UnreadCountInfo?
+    @_spi(SendbirdInternal) public var services: [Session.Service]?
+    @_spi(SendbirdInternal) public let expiresAt: Int64? // seconds (not millis)
+    @_spi(SendbirdInternal) public let unreadCountInfo: UnreadCountInfo?
         
-    package init(
+    @_spi(SendbirdInternal) public init(
         loginTimestamp: Int64,
         maxUnreadCountOnSuperGroup: Int?,
         reconnectConfiguration: ReconnectionConfiguration,
@@ -125,7 +125,7 @@ package struct LoginEvent: Decodable, SBCommand {
         self.requestDedupIntervalMs = max(requestDedupIntervalMs, Constants.minDedupIntervalMs)
     }
     
-    package init(from decoder: Decoder) throws {
+    @_spi(SendbirdInternal) public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodeCodingKeys.self)
         
         self.user = try? AuthUser(from: decoder)
@@ -174,9 +174,9 @@ package struct LoginEvent: Decodable, SBCommand {
     }
 }
 
-#if TESTCASE
+#if DEBUG
 extension LoginEvent {
-    package func updated(deviceTokenLastDeletedAt: Int64?, isUsingDeviceTokenCaching: Bool) -> Self {
+    @_spi(SendbirdInternal) public func updated(deviceTokenLastDeletedAt: Int64?, isUsingDeviceTokenCaching: Bool) -> Self {
         var mutating = self
         mutating.deviceTokenLastDeletedAt = deviceTokenLastDeletedAt
         if isUsingDeviceTokenCaching {

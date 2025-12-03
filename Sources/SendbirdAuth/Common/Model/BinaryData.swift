@@ -7,8 +7,8 @@
 
 import Foundation
 
-package class BinaryData: NSObject {
-    package init(name: String, filename: String, type: String, data: Data) {
+@_spi(SendbirdInternal) public class BinaryData: NSObject {
+    @_spi(SendbirdInternal) public init(name: String, filename: String, type: String, data: Data) {
         self.name = name
         self.filename = filename
         self.type = type
@@ -20,5 +20,5 @@ package class BinaryData: NSObject {
     var type: String
     var data: Data
     
-    package var isValid: Bool { data.count > 0 }
+    @_spi(SendbirdInternal) public var isValid: Bool { data.count > 0 }
 }
