@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: Auth iOS SDK Public
+  description: Public repo used for releasing Auth iOS SDK
+  annotations:
+    github.com/project-slug: sendbird/sendbird-auth-ios
+spec:
+  type: library
+  lifecycle: production
+  owner: dep-client-platform
+  system: sendbird-auth
