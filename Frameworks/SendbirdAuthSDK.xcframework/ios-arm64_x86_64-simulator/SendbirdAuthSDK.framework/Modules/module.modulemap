@@ -1,4 +1,0 @@
-framework module SendbirdAuthSDK {
-  header "SendbirdAuthSDK.h"
-  requires objc
-}
