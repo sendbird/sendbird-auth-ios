@@ -9,4 +9,4 @@ spec:
   type: library
   lifecycle: production
   owner: dep-client-platform
-  system: sendbird-auth
+  system: sendbird-chat
