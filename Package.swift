@@ -1,6 +1,5 @@
 // swift-tools-version:5.9
 
-import Foundation
 import PackageDescription
 
 let package = Package(
@@ -16,14 +15,10 @@ let package = Package(
         ),
     ],
     targets: [
-        .target(
+        .binaryTarget(
             name: "SendbirdAuthSDK",
-            path: "Sources/SendbirdAuth",
-            swiftSettings: swiftSettings
+            url: "https://github.com/sendbird/sendbird-auth-ios/releases/download/0.0.3/SendbirdAuthSDK.xcframework.zip",
+            checksum: "8a3861a9bd55e220d16262acf1858eaca269786f8beaa59a386549a942bec8c4"
         ),
     ]
 )
-
-var swiftSettings: [SwiftSetting] = [
-    .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release)),
-]
