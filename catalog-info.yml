@@ -7,6 +7,6 @@ metadata:
     github.com/project-slug: sendbird/sendbird-auth-ios
 spec:
   type: library
-  lifecycle: production
+  lifecycle: experimental
   owner: dep-client-platform
   system: sendbird-chat
