@@ -1,22 +1,24 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.9
 
 import PackageDescription
 
 let package = Package(
     name: "SendbirdAuthSDK",
-    platforms: [.iOS(.v13)],
+    platforms: [
+        .iOS(.v13),
+        .macOS(.v11),
+    ],
     products: [
         .library(
             name: "SendbirdAuthSDK",
             targets: ["SendbirdAuthSDK"]
         ),
     ],
-    dependencies: [],
     targets: [
         .binaryTarget(
             name: "SendbirdAuthSDK",
             url: "https://github.com/sendbird/sendbird-auth-ios/releases/download/0.0.1/SendbirdAuthSDK.xcframework.zip",
-            checksum: "738557c09494d1dfcb1debbc92d81d695ed5419f2726ca2d20d4def8102ea7ba"
+            checksum: "c6189d71c2fb9cf1618183b9ab1491253bc541ffcbe7dd102551a98910a0b782"
         ),
     ]
 )
