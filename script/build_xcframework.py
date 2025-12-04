@@ -61,7 +61,7 @@ build_mac = args.mac
 build_dir = "build"
 release_dir = "release"
 
-# For static builds, use the Static scheme
+# For static builds, use the Static scheme and output name
 if build_static:
     scheme_name = f"{project_name}Static"
     xcframework_name = f"{project_name}Static.xcframework"
@@ -83,19 +83,19 @@ def generate_xcode_project():
     print("[Release] Generating Xcode project with XcodeGen...")
     subprocess.run(["xcodegen", "generate"], check=True)
 
-def build_command(scheme, sdk, macos=False):
+def build_command(scheme, sdk, is_static=False, macos=False):
     """Generate the build command for xcodebuild based on input parameters."""
     base_command = [
-        "xcodebuild", "clean", "archive",
+        "xcodebuild", "clean", "build" if is_static else "archive",
         "-project", f"{project_name}.xcodeproj",
         "-scheme", scheme,
         "-configuration", "Release",
         "-sdk", sdk,
-        "-archivePath", f"{build_dir}/{sdk}.xcarchive",
         "CLANG_ENABLE_CODE_COVERAGE=NO",
         "SWIFT_SERIALIZE_DEBUGGING_OPTIONS=NO",
         "GCC_INSTRUMENT_PROGRAM_FLOW_ARCS=NO",
         "GCC_GENERATE_TEST_COVERAGE_FILES=NO",
+        "-derivedDataPath" if is_static else "-archivePath", f"{build_dir}/{sdk}.xcarchive",
         "SKIP_INSTALL=NO",
         "BUILD_LIBRARY_FOR_DISTRIBUTION=YES"
     ]
@@ -103,18 +103,27 @@ def build_command(scheme, sdk, macos=False):
         base_command += ["-destination", "platform=macOS", "ARCHS=arm64 x86_64", "VALID_ARCHS=arm64 x86_64"]
     return base_command
 
-def create_xcframework(output_path, build_dir, targets):
+def create_xcframework(output_path, is_static, build_dir, targets):
     """Create an XCFramework from the provided build directories."""
     command = ["xcodebuild", "-create-xcframework"]
     for sdk in targets:
-        framework_path = os.path.join(os.getcwd(), build_dir, f"{sdk}.xcarchive", "Products/Library/Frameworks", f"{project_name}.framework")
-        dsym_path = os.path.join(os.getcwd(), build_dir, f"{sdk}.xcarchive", "dSYMs", f"{project_name}.framework.dSYM")
-        command.extend(["-framework", framework_path, "-debug-symbols", dsym_path])
+        if is_static:
+            # Static framework uses build command with derivedDataPath
+            if sdk == "macosx":
+                framework_path = os.path.join(os.getcwd(), build_dir, f"{sdk}.xcarchive", f"Build/Products/Release", f"{scheme_name}.framework")
+            else:
+                framework_path = os.path.join(os.getcwd(), build_dir, f"{sdk}.xcarchive", f"Build/Products/Release-{sdk}", f"{scheme_name}.framework")
+            command.extend(["-framework", framework_path])
+        else:
+            # Dynamic framework uses archive command
+            framework_path = os.path.join(os.getcwd(), build_dir, f"{sdk}.xcarchive", "Products/Library/Frameworks", f"{scheme_name}.framework")
+            dsym_path = os.path.join(os.getcwd(), build_dir, f"{sdk}.xcarchive", "dSYMs", f"{scheme_name}.framework.dSYM")
+            command.extend(["-framework", framework_path, "-debug-symbols", dsym_path])
     command.extend(["-output", output_path])
     subprocess.run(command, check=True)
 
 if build_static:
-    print(f"[Release] Building {project_name} as static framework.")
+    print(f"[Release] Building {project_name} as static library.")
 else:
     print(f"[Release] Building {project_name} as dynamic framework.")
 
@@ -137,7 +146,7 @@ if build_mac:
 # Build for each target
 for sdk in targets:
     print(f"[Release] Building {scheme_name} for {sdk}.")
-    command = build_command(scheme_name, sdk, macos=(sdk == "macosx"))
+    command = build_command(scheme_name, sdk, is_static=build_static, macos=(sdk == "macosx"))
     subprocess.run(command, check=True)
 
 # Remove unnecessary files
@@ -146,7 +155,7 @@ subprocess.run(f"find {build_dir} -type f -name \"*.xctestplan\" -delete", shell
 
 # Create XCFramework
 print("[Release] Creating XCFramework")
-create_xcframework(f"{build_dir}/{xcframework_name}", build_dir, targets)
+create_xcframework(f"{build_dir}/{xcframework_name}", build_static, build_dir, targets)
 
 # Finish up and cleanup
 os.chdir(build_dir)
