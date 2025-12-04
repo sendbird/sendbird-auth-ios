@@ -121,17 +121,23 @@ python3 script/build_xcframework.py -p SendbirdAuthSDK --mac
 
 ## 릴리즈 단계
 
-### Step 1: XCFramework 빌드
+### Step 1: XCFramework 빌드 (Dynamic + Static)
 
 ```bash
-python3 script//build_xcframework.py -p SendbirdAuthSDK
+# Dynamic framework
+python3 script/build_xcframework.py -p SendbirdAuthSDK
+
+# Static framework
+python3 script/build_xcframework.py -p SendbirdAuthSDK --static
 ```
 
 ### Step 2: Checksum 계산
 
 ```bash
-CHECKSUM=$(swift package compute-checksum release/SendbirdAuthSDK.xcframework.zip)
-echo "Checksum: $CHECKSUM"
+CHECKSUM_DYNAMIC=$(swift package compute-checksum release/SendbirdAuthSDK.xcframework.zip)
+CHECKSUM_STATIC=$(swift package compute-checksum release/SendbirdAuthSDKStatic.xcframework.zip)
+echo "Checksum (dynamic): $CHECKSUM_DYNAMIC"
+echo "Checksum (static):  $CHECKSUM_STATIC"
 ```
 
 ### Step 3: 커밋 및 Push (Private repo)
@@ -182,7 +188,7 @@ git push origin develop
 
 ### Step 6: Public repo Package.swift PR 생성
 
-Public repo에 binaryTarget Package.swift PR 생성:
+Public repo에 binaryTarget Package.swift PR 생성 (dynamic + static):
 
 ```bash
 # 임시 디렉토리에 public repo 클론
@@ -193,7 +199,7 @@ cd $TEMP_DIR
 # release 브랜치 생성
 git checkout -b release/$VERSION
 
-# binaryTarget Package.swift 생성
+# binaryTarget Package.swift 생성 (dynamic + static)
 cat > Package.swift << EOF
 // swift-tools-version:5.9
 
@@ -210,12 +216,21 @@ let package = Package(
             name: "SendbirdAuthSDK",
             targets: ["SendbirdAuthSDK"]
         ),
+        .library(
+            name: "SendbirdAuthSDKStatic",
+            targets: ["SendbirdAuthSDKStatic"]
+        ),
     ],
     targets: [
         .binaryTarget(
             name: "SendbirdAuthSDK",
             url: "https://github.com/sendbird/sendbird-auth-ios/releases/download/$VERSION/SendbirdAuthSDK.xcframework.zip",
-            checksum: "$CHECKSUM"
+            checksum: "$CHECKSUM_DYNAMIC"
+        ),
+        .binaryTarget(
+            name: "SendbirdAuthSDKStatic",
+            url: "https://github.com/sendbird/sendbird-auth-ios/releases/download/$VERSION/SendbirdAuthSDKStatic.xcframework.zip",
+            checksum: "$CHECKSUM_STATIC"
         ),
     ]
 )
@@ -248,12 +263,13 @@ gh pr view <PR_URL> --json merged --jq '.merged'  # true여야 함
 # Public repo에 태그 생성
 gh api repos/sendbird/sendbird-auth-ios/git/refs -f ref="refs/tags/$VERSION" -f sha="$(gh api repos/sendbird/sendbird-auth-ios/commits/main --jq '.sha')"
 
-# GitHub Release 생성 (xcframework zip 업로드)
+# GitHub Release 생성 (dynamic + static xcframework zip 업로드)
 gh release create $VERSION \
   --repo sendbird/sendbird-auth-ios \
   --title "$VERSION" \
   --notes "Release $VERSION" \
-  release/SendbirdAuthSDK.xcframework.zip
+  release/SendbirdAuthSDK.xcframework.zip \
+  release/SendbirdAuthSDKStatic.xcframework.zip
 ```
 
 ## 주의사항
