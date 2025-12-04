@@ -71,6 +71,14 @@ def build_xcframework(project, build_static, build_mac):
     run_command(args)
 
 
+def build_all_xcframeworks(project, build_mac):
+    """Build both dynamic and static XCFrameworks."""
+    print("[info] Building dynamic XCFramework...")
+    build_xcframework(project, build_static=False, build_mac=build_mac)
+    print("[info] Building static XCFramework...")
+    build_xcframework(project, build_static=True, build_mac=build_mac)
+
+
 def compute_checksum(zip_path):
     if not zip_path.exists():
         raise RuntimeError(f"XCFramework zip not found: {zip_path}")
@@ -137,9 +145,10 @@ def tag_and_backmerge(version, original_branch):
     run_command(["git", "checkout", original_branch])
 
 
-def render_public_package(project, target_name, version, checksum, public_repo):
-    zip_name = f"{target_name}.xcframework.zip"
-    url = f"https://github.com/{public_repo}/releases/download/{version}/{zip_name}"
+def render_public_package(project, version, checksum_dynamic, checksum_static, public_repo):
+    """Render Package.swift with both dynamic and static targets."""
+    url_dynamic = f"https://github.com/{public_repo}/releases/download/{version}/{project}.xcframework.zip"
+    url_static = f"https://github.com/{public_repo}/releases/download/{version}/{project}Static.xcframework.zip"
     return f"""// swift-tools-version:5.9
 
 import PackageDescription
@@ -153,28 +162,37 @@ let package = Package(
     products: [
         .library(
             name: "{project}",
-            targets: ["{target_name}"]
+            targets: ["{project}"]
+        ),
+        .library(
+            name: "{project}Static",
+            targets: ["{project}Static"]
         ),
     ],
     targets: [
         .binaryTarget(
-            name: "{target_name}",
-            url: "{url}",
-            checksum: "{checksum}"
+            name: "{project}",
+            url: "{url_dynamic}",
+            checksum: "{checksum_dynamic}"
+        ),
+        .binaryTarget(
+            name: "{project}Static",
+            url: "{url_static}",
+            checksum: "{checksum_static}"
         ),
     ]
 )
 """
 
 
-def create_public_pr(public_repo, version, checksum, project, target_name):
+def create_public_pr(public_repo, version, checksum_dynamic, checksum_static, project):
     temp_dir = Path(tempfile.mkdtemp(prefix="sendbird-auth-ios-"))
     print(f"[info] Cloning public repo into {temp_dir}")
     try:
         run_command(["gh", "repo", "clone", public_repo, str(temp_dir)])
         run_command(["git", "checkout", "-b", f"release/{version}"], cwd=temp_dir)
 
-        package_swift = render_public_package(project, target_name, version, checksum, public_repo)
+        package_swift = render_public_package(project, version, checksum_dynamic, checksum_static, public_repo)
         (temp_dir / "Package.swift").write_text(package_swift)
 
         run_command(["git", "add", "Package.swift"], cwd=temp_dir)
@@ -228,9 +246,10 @@ def wait_for_pr_merge(pr_url, label):
         print("[warn] PR is not merged yet. Please merge the PR first.")
 
 
-def create_public_release(public_repo, version, zip_path):
-    if not zip_path.exists():
-        raise RuntimeError(f"Release archive not found for upload: {zip_path}")
+def create_public_release(public_repo, version, zip_path_dynamic, zip_path_static):
+    for zip_path in (zip_path_dynamic, zip_path_static):
+        if not zip_path.exists():
+            raise RuntimeError(f"Release archive not found for upload: {zip_path}")
 
     sha = run_command(
         ["gh", "api", f"repos/{public_repo}/commits/main", "--jq", ".sha"],
@@ -253,7 +272,8 @@ def create_public_release(public_repo, version, zip_path):
             "release",
             "create",
             version,
-            str(zip_path),
+            str(zip_path_dynamic),
+            str(zip_path_static),
             "--repo",
             public_repo,
             "--title",
@@ -268,7 +288,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Automate the SPM release flow.")
     parser.add_argument("--mode", choices=["test", "release"], default="release")
     parser.add_argument("--project", default="SendbirdAuthSDK")
-    parser.add_argument("--static", action="store_true", help="Build static framework variant.")
     parser.add_argument("--mac", action="store_true", help="Include macOS build.")
     parser.add_argument("--private-repo", default="sendbird/auth-ios")
     parser.add_argument("--public-repo", default="sendbird/sendbird-auth-ios")
@@ -278,8 +297,8 @@ def parse_args():
 def main():
     args = parse_args()
     project = args.project
-    target_name = f"{project}Static" if args.static else project
-    zip_path = ROOT / "release" / f"{target_name}.xcframework.zip"
+    zip_path_dynamic = ROOT / "release" / f"{project}.xcframework.zip"
+    zip_path_static = ROOT / "release" / f"{project}Static.xcframework.zip"
 
     try:
         branch, version = ensure_release_branch()
@@ -287,9 +306,11 @@ def main():
         ensure_github_auth(args.private_repo, args.public_repo)
 
         print(f"[info] Releasing version {version} on branch {branch}")
-        build_xcframework(project, args.static, args.mac)
-        checksum = compute_checksum(zip_path)
-        print(f"[info] Checksum: {checksum}")
+        build_all_xcframeworks(project, args.mac)
+        checksum_dynamic = compute_checksum(zip_path_dynamic)
+        checksum_static = compute_checksum(zip_path_static)
+        print(f"[info] Checksum (dynamic): {checksum_dynamic}")
+        print(f"[info] Checksum (static):  {checksum_static}")
 
         if args.mode == "test":
             print("[info] Test mode completed (Step 1-2).")
@@ -299,7 +320,7 @@ def main():
         if changes_committed:
             print("[info] Commit and push completed.")
 
-        private_pr_url = create_private_pr(args.private_repo, branch, version, checksum)
+        private_pr_url = create_private_pr(args.private_repo, branch, version, checksum_dynamic)
         print(f"[info] Private repo PR created: {private_pr_url}")
 
         wait_for_pr_merge(private_pr_url, "Has the private PR been merged?")
@@ -307,14 +328,16 @@ def main():
         print("[info] Tag created and backmerged into develop.")
 
         public_pr_url = create_public_pr(
-            args.public_repo, version, checksum, project, target_name
+            args.public_repo, version, checksum_dynamic, checksum_static, project
         )
         print(f"[info] Public repo PR created: {public_pr_url}")
 
         wait_for_pr_merge(public_pr_url, "Has the public PR been merged?")
-        create_public_release(args.public_repo, version, zip_path)
+        create_public_release(args.public_repo, version, zip_path_dynamic, zip_path_static)
         print("[info] Public tag and release created.")
-        print(f"[done] Version {version} complete. Checksum: {checksum}")
+        print(f"[done] Version {version} complete.")
+        print(f"       Checksum (dynamic): {checksum_dynamic}")
+        print(f"       Checksum (static):  {checksum_static}")
     except Exception as exc:  # pylint: disable=broad-except
         print(f"[error] {exc}")
         sys.exit(1)

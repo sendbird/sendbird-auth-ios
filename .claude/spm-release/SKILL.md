@@ -98,7 +98,7 @@ gh repo view sendbird/auth-ios --json viewerPermission
 ## 빌드 스크립트
 
 ```bash
-# Dynamic framework 빌드 (기본)
+# Dynamic framework 빌드
 python3 script/build_xcframework.py -p SendbirdAuthSDK
 
 # Static framework 빌드
@@ -108,12 +108,16 @@ python3 script/build_xcframework.py -p SendbirdAuthSDK --static
 python3 script/build_xcframework.py -p SendbirdAuthSDK --mac
 ```
 
+**릴리즈 시에는 dynamic + static 둘 다 빌드됩니다.**
+
 ### 출력 파일
 
 빌드 완료 후 `release/` 디렉토리에 생성:
 
-- `SendbirdAuthSDK.xcframework/` - XCFramework 원본
-- `SendbirdAuthSDK.xcframework.zip` - GitHub Release용
+- `SendbirdAuthSDK.xcframework/` - Dynamic XCFramework
+- `SendbirdAuthSDK.xcframework.zip` - Dynamic GitHub Release용
+- `SendbirdAuthSDKStatic.xcframework/` - Static XCFramework
+- `SendbirdAuthSDKStatic.xcframework.zip` - Static GitHub Release용
 
 ## 릴리즈 단계
 

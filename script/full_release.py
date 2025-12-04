@@ -44,7 +44,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Automate full release (SPM + CocoaPods).")
     parser.add_argument("--mode", choices=["release", "test"], default="release")
     parser.add_argument("--project", default="SendbirdAuthSDK")
-    parser.add_argument("--static", action="store_true", help="Build SPM as the static variant.")
     parser.add_argument("--mac", action="store_true", help="Include macOS in the SPM build.")
     parser.add_argument("--private-repo", default="sendbird/auth-ios")
     parser.add_argument("--public-repo", default="sendbird/sendbird-auth-ios")
@@ -70,8 +69,6 @@ def run_spm_phase(args):
         "--public-repo",
         args.public_repo,
     ]
-    if args.static:
-        cmd.append("--static")
     if args.mac:
         cmd.append("--mac")
     if args.auto_continue:
