@@ -10,14 +10,14 @@ import Foundation
 enum Configuration {
     // MARK: - Environment URLs (hardcoded for SPM build config)
 
-    #if RELEASE
-        private static let defaultAPIHost = "https://api-@@.sendbird.com"
-        private static let defaultWSHost = "wss://ws-@@.sendbird.com"
-        private static let defaultBaseHost = "api-@@.sendbird.com"
-    #else // NIGHTLYDEV when not RELEASE by default
+    #if DEBUG // NIGHTLYDEV when DEBUG by default
         private static let defaultAPIHost = "https://api-nightlydev.sendbirdtest.com"
         private static let defaultWSHost = "wss://ws-nightlydev.sendbirdtest.com"
         private static let defaultBaseHost = "api-nightlydev.sendbirdtest.com"
+    #else
+        private static let defaultAPIHost = "https://api-@@.sendbird.com"
+        private static let defaultWSHost = "wss://ws-@@.sendbird.com"
+        private static let defaultBaseHost = "api-@@.sendbird.com"
     #endif
 
     private static func hostURL(for key: String, default defaultHost: String) -> String {
