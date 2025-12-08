@@ -26,4 +26,5 @@ let package = Package(
 
 var swiftSettings: [SwiftSetting] = [
     .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release)),
+    .define("RELEASE", .when(configuration: .release)),
 ]
