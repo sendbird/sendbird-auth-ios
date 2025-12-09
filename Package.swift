@@ -12,6 +12,12 @@ let package = Package(
     products: [
         .library(
             name: "SendbirdAuthSDK",
+            type: .dynamic,
+            targets: ["SendbirdAuthSDK"]
+        ),
+        .library(
+            name: "SendbirdAuthSDKStatic",
+            type: .static,
             targets: ["SendbirdAuthSDK"]
         ),
     ],
