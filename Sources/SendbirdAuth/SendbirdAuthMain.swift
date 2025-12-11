@@ -1,5 +1,5 @@
 //
-//  SendbirdAuth.swift
+//  SendbirdAuthMain.swift
 //  SendbirdChat
 //
 //  Created by Kai Lee on 6/17/25.
@@ -7,9 +7,9 @@
 
 import Foundation
 #if os(iOS)
-import UIKit
+    import UIKit
 #elseif os(macOS)
-import AppKit
+    import AppKit
 #endif
 
 @_spi(SendbirdInternal) public class SendbirdAuthMain: RequestHeaderDataSource, Dependency {
@@ -19,13 +19,15 @@ import AppKit
         queue.maxConcurrentOperationCount = 1
         return queue
     }()
-    
+
     @_spi(SendbirdInternal) public var sessionDelegate: AuthSessionDelegate? {
         sessionHandler.delegate(forKey: DelegateKeys.session)
     }
+
     @_spi(SendbirdInternal) public var configTs: Int64? {
         SendbirdAuth.pref.value(forKey: PreferenceKey.configApiTs)
     }
+
     @_spi(SendbirdInternal) public var sessionManager: SessionManager
 
     @_spi(SendbirdInternal) public let config: SendbirdConfiguration
@@ -40,22 +42,22 @@ import AppKit
     @_spi(SendbirdInternal) public let localCachePreference: LocalPreferences
     @_spi(SendbirdInternal) public let routerConfig: CommandRouterConfiguration
     @_spi(SendbirdInternal) public let sessionHandler: SessionEventBroadcaster
-    
+
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
-    
+
     #if DEBUG
-    private var websocketEngine: (any ChatWebSocketEngine)? // For test
-    @_spi(SendbirdInternal) public func injectEngineForTest(_ engine: any ChatWebSocketEngine) {
-        self.websocketEngine = engine
-    }
+        private var websocketEngine: (any ChatWebSocketEngine)? // For test
+        @_spi(SendbirdInternal) public func injectEngineForTest(_ engine: any ChatWebSocketEngine) {
+            websocketEngine = engine
+        }
     #endif
-    
+
     @InternalAtomic @_spi(SendbirdInternal) public var requestHeaderContext: RequestHeadersContext?
     @_spi(SendbirdInternal) public var logLevel: Logger.Level = .info
     @_spi(SendbirdInternal) public var appVersion: String?
     @_spi(SendbirdInternal) public var extensionVersions: [String: String]
-    @_spi(SendbirdInternal) public var extensionSdkInfo: String?  // corresponds to `sbSdkUserAgent`. new since 4.8.5
+    @_spi(SendbirdInternal) public var extensionSdkInfo: String? // corresponds to `sbSdkUserAgent`. new since 4.8.5
     @_spi(SendbirdInternal) public var userConnectionManager: WebSocketManager {
         get {
             userConnectionQueue.sync {
@@ -69,6 +71,7 @@ import AppKit
             }
         }
     }
+
     @_spi(SendbirdInternal) public var connectState: AuthWebSocketConnectionState {
         if stateData.applicationId.isEmpty {
             return .closed
@@ -76,7 +79,7 @@ import AppKit
             return router.webSocketConnectionState
         }
     }
-    
+
     @_spi(SendbirdInternal) public convenience init() {
         self.init(
             params: .init(
@@ -85,7 +88,7 @@ import AppKit
             )
         )
     }
-    
+
     @_spi(SendbirdInternal) public init(
         params: InternalInitParams,
         statAPIClient: StatAPIClientable? = nil,
@@ -95,9 +98,9 @@ import AppKit
         customSendbirdConfig: SendbirdConfiguration? = nil
     ) {
         Logger.setSDKVersion(SendbirdAuth.sdkVersion)
-        
+
         let config = customSendbirdConfig ?? SendbirdConfiguration()
-        
+
         let pref = SendbirdAuth.pref
         if let customAPIHost = params.customAPIHost {
             pref.set(value: customAPIHost, forKey: PreferenceKey.customAPIHost)
@@ -107,19 +110,19 @@ import AppKit
         }
         let apiHost = Configuration.apiHostURL(for: params.applicationId)
         let wsHost = Configuration.wsHostURL(for: params.applicationId)
-        
+
         // INFO: initialize 과정에서는 service 를 고객이 설정할 수 없음. init 후 setCompletionHandlerDelegateQueue 호출되야 queue 변경 가능
         let service = QueueService()
         let dispatcher = EventDispatcher()
-        
+
         let localCachePreference = LocalPreferences(suiteName: "com.sendbird.sdk.messaging.local_cache_preference")
-        
-        self.commonSharedData = CommonSharedData(eKey: nil)
-        
-        self.stateData = ConnectionStateData(
+
+        commonSharedData = CommonSharedData(eKey: nil)
+
+        stateData = ConnectionStateData(
             applicationId: params.applicationId
         )
-        
+
         let useNativeSocket: Bool = SendbirdAuth.pref.value(forKey: PreferenceKey.useNativeWS) ?? true
         let routerConfig = customRouterConfig ?? CommandRouterConfiguration(
             useNativeSocket: useNativeSocket,
@@ -127,7 +130,7 @@ import AppKit
             apiHost: apiHost, // only api/ws needs
             wsHost: wsHost
         )
-        
+
         let placeHolderWebSocketManager = WebSocketManager(
             userId: "",
             queue: userConnectionQueue,
@@ -137,7 +140,7 @@ import AppKit
             sendbirdConfig: config,
             webSocketEngine: webSocketEngine
         )
-        
+
         let httpClientForRouter = httpClient ?? HTTPClient(routerConfig: routerConfig)
         let router = CommandRouter(
             routerConfig: routerConfig,
@@ -146,7 +149,7 @@ import AppKit
             eventDispatcher: dispatcher
         )
         placeHolderWebSocketManager.delegate = router
-        
+
         let sessionHandler = SessionEventBroadcaster(service, mapTableValueOption: .strongMemory)
         let placeHolderSessionManager = SessionManager(
             applicationId: "",
@@ -157,8 +160,8 @@ import AppKit
             localCachePreference: localCachePreference,
             config: config
         )
-        self.sessionManager = placeHolderSessionManager
-        
+        sessionManager = placeHolderSessionManager
+
         let deviceConnectionManager = DeviceConnectionManager(
             commandRouter: router,
             sessionManager: sessionManager,
@@ -167,92 +170,93 @@ import AppKit
             networkBroadcaster: NetworkEventBroadcaster(service),
             internalBroadcaster: InternalConnectionEventBroadcaster(service)
         )
-        
+
         let requestQueue = RequestQueue(
             commandRouter: router,
             sessionValidator: sessionManager
         )
         self.requestQueue = requestQueue
-        
+
         let statManager = StatManager(
             apiClient: statAPIClient ?? StatAPIClient(requestQueue: requestQueue),
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             configuration: config
         )
-        
+
         self.router = router
-        
+
         self.statManager = statManager
-        self.eventDispatcher = dispatcher
-        
+        eventDispatcher = dispatcher
+
         self.deviceConnectionManager = deviceConnectionManager
-        
+
         self.config = config
         self.service = service
         self.localCachePreference = localCachePreference
-        self.applicationId = params.applicationId
-        self.logLevel = params.logLevel
-        self.appVersion = params.appVersion
+        applicationId = params.applicationId
+        logLevel = params.logLevel
+        appVersion = params.appVersion
         self.routerConfig = routerConfig
-        self.isLocalCachingEnabled = params.isLocalCachingEnabled
-        
+        isLocalCachingEnabled = params.isLocalCachingEnabled
+
         self.sessionHandler = sessionHandler
-        
-        self.extensionVersions = [:]
-        
-        self.requestHeaderContext = createRequestHeadersContext()
-        
+
+        extensionVersions = [:]
+
+        requestHeaderContext = createRequestHeadersContext()
+
         Logger.setLoggerLevel(logLevel)
-        
+
         SendbirdAuth.authDecoder.updateDependency(self)
-        
-        self.sessionManager.resolve(with: self)
-        self.sessionManager.delegate = self
-        
+
+        sessionManager.resolve(with: self)
+        sessionManager.delegate = self
+
         self.router.resolve(with: self)
         self.requestQueue.resolve(with: self)
-        
+
         placeHolderWebSocketManager.resolve(with: self)
         placeHolderWebSocketManager.requestHeaderDataSource = self
         router.requestHeaderDataSource = self
         sessionManager.requestHeaderDataSource = self
-        
+
         self.statManager.resolve(with: self)
         httpClientForRouter.resolve(with: self)
-        
-        self.registerEventDelegates()
-        
+
+        registerEventDelegates()
+
         self.deviceConnectionManager.startReachability()
     }
-    
+
     /// Modules that use the `Auth` object can resolve all the modules that
     /// need to be newly resolved within their own module at once.
     @_spi(SendbirdInternal) public func resolveDependency(with dependency: some Dependency) {
         Logger.main.debug("Resolving dependency with \(String(describing: dependency))")
-        
-        self.sessionManager.resolve(with: dependency)
-        self.router.resolve(with: dependency)
-        self.requestQueue.resolve(with: dependency)
+
+        sessionManager.resolve(with: dependency)
+        router.resolve(with: dependency)
+        requestQueue.resolve(with: dependency)
     }
 }
 
 // MARK: - EventDelegate
+
 extension SendbirdAuthMain: EventDelegate {
     private func registerEventDelegates() {
-        self.eventDispatcher.add(
+        eventDispatcher.add(
             receivers: [
                 deviceConnectionManager,
                 requestQueue,
                 statManager,
-                self
+                self,
             ]
         )
-        self.eventDispatcher.add(
+        eventDispatcher.add(
             receiver: sessionManager,
             forKey: "SendbirdAuth.SessionManager"
         )
     }
-    
+
     @_spi(SendbirdInternal) public func didReceiveSBCommandEvent(command: SBCommand) async {
         switch command {
         case let event as SessionExpiredEvent:
@@ -262,34 +266,34 @@ extension SendbirdAuthMain: EventDelegate {
         default: break
         }
     }
-    
+
     @_spi(SendbirdInternal) public func didReceiveInternalEvent(command: InternalEvent) {
         switch command {
         case is ConnectionStateEvent.Logout:
             reset()
-            router.reset { }
-            
+            router.reset {}
+
         case is ConnectionStateEvent.ExternalDisconnected:
             deviceConnectionManager.logout()
-            
+
         case let command as ConnectionStateEvent.Connected:
             let loginEvent = command.loginEvent
-            
+
             SendbirdAuth.pref.set(
                 value: loginEvent.appInfo?.useNativeWS ?? false,
                 forKey: PreferenceKey.useNativeWS
             )
-            
+
             if command.isReconnected == false {
                 Logger.main.info("Start reachability")
                 deviceConnectionManager.startReachability(host: routerConfig.apiHost)
             }
-            
+
             if isLocalCachingEnabled {
                 localCachePreference.set(value: loginEvent.user, forKey: LocalCachePreferenceKey.currentUser)
                 localCachePreference.set(value: loginEvent.appInfo, forKey: LocalCachePreferenceKey.currentAppInfo)
                 localCachePreference.set(value: loginEvent.reconnectConfiguration, forKey: LocalCachePreferenceKey.reconnectConfig)
-                
+
                 if let notificationEnabled: Bool = localCachePreference.value(forKey: LocalCachePreferenceKey.notificationEnabled) {
                     if notificationEnabled == false {
                         localCachePreference.set(value: loginEvent.appInfo?.notificationInfo?.isEnabled ?? false, forKey: LocalCachePreferenceKey.notificationEnabled)
@@ -298,71 +302,73 @@ extension SendbirdAuthMain: EventDelegate {
                     localCachePreference.set(value: loginEvent.appInfo?.notificationInfo?.isEnabled ?? false, forKey: LocalCachePreferenceKey.notificationEnabled)
                 }
             }
-            
+
         case is ConnectionStateEvent.Connecting:
             // Pre-initialize `apiClient`(HTTP) to prevent delays from cold-start
             router.apiClient.prefetch()
-            
+
         case is ConnectionStateEvent.Reconnecting:
             // Pre-initialize `apiClient`(HTTP) to prevent delays from cold-start
             router.apiClient.prefetch()
-            
+
         default: break
         }
     }
 }
 
 // MARK: - SessionManagerDelegate
+
 extension SendbirdAuthMain: SessionManagerDelegate {
     @_spi(SendbirdInternal) public func reset() {
         stateData.clear()
         sessionManager.logout()
         requestQueue.stateData?.clear()
         router.apiClient.clear()
-        
+
         deviceConnectionManager.logout()
-        
+
         SendbirdAuth.pref.removeAll()
         localCachePreference.removeAll()
     }
-    
+
     @_spi(SendbirdInternal) public func disconnect(isExplicit: Bool = false, completionHandler: VoidHandler? = nil) {
         Logger.main.debug("disconnect. currentUser: \(sessionManager.userId), services: \(String(describing: sessionManager.session?.services))")
         if sessionManager.session?.services == [.feed] {
             // If Websocket is not being used, call reset in order to clean up any resources from API Auth
-            self.reset()
+            reset()
             completionHandler?()
         } else {
             // If Websocket is being used, Websocket state machine will call Logout and clean resources
             router.webSocketManager.disconnect(isExplicit: isExplicit, completionHandler: completionHandler)
         }
     }
-    
+
     @_spi(SendbirdInternal) public func disconnectWebSocket(completionHandler: VoidHandler? = nil) {
         Logger.main.debug()
         router.webSocketManager.disconnectWebSocket(completionHandler: completionHandler)
     }
-    
+
     @discardableResult
     @_spi(SendbirdInternal) public func reconnect(reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.main.debug("reconnect by \(String(describing: reconnectedBy?.rawValue))")
         return sessionManager.reconnect(reconnectedBy: reconnectedBy)
     }
-    
+
     @_spi(SendbirdInternal) public func sessionReconnectRequired() {
         reconnect(reconnectedBy: .refreshedSessionKey)
     }
-    
+
     @_spi(SendbirdInternal) public func sessionReconnectIfNeeded() {
         if deviceConnectionManager.isForeground
             && !requestQueue.router.connected
-            && !(userConnectionManager.state is ExternalDisconnectedState) {
+            && !(userConnectionManager.state is ExternalDisconnectedState)
+        {
             reconnect(reconnectedBy: .sessionValidation)
         }
     }
-    
-    @_spi(SendbirdInternal) public func sessionKeyChanged(_ value: String?) { }
-    
+
+    @_spi(SendbirdInternal) public func sessionKeyChanged(_: String?) {}
+
     @_spi(SendbirdInternal) public func sessionRefreshFailed() {
         if router.webSocketManager.isReconnecting {
             deviceConnectionManager.broadcaster.failedReconnection()
@@ -372,6 +378,7 @@ extension SendbirdAuthMain: SessionManagerDelegate {
 }
 
 // MARK: - Connect
+
 extension SendbirdAuthMain {
     @_spi(SendbirdInternal) public func connect(
         userId: String,
@@ -381,8 +388,8 @@ extension SendbirdAuthMain {
         onPreparingConnection: @escaping () -> Void = {},
         completionHandler: AuthUserHandler? = nil
     ) {
-        Logger.main.debug("applicationId: \(self.applicationId), userId: \(userId), useToken: \(accessToken != nil), apiHost: \(String(describing: apiHost)), wsHost: \(String(describing: wsHost))")
-        
+        Logger.main.debug("applicationId: \(applicationId), userId: \(userId), useToken: \(accessToken != nil), apiHost: \(String(describing: apiHost)), wsHost: \(String(describing: wsHost))")
+
         // INFO: Custom hosts
         let pref = SendbirdAuth.pref
         if let apiHost {
@@ -395,9 +402,9 @@ extension SendbirdAuthMain {
         } else {
             pref.remove(forKey: PreferenceKey.customWsHost)
         }
-        
+
         guard !userId.isEmpty else {
-            self.service {
+            service {
                 let err = AuthClientError.invalidParameter.asAuthError(
                     message: .emptyParameter("userId")
                 )
@@ -405,15 +412,15 @@ extension SendbirdAuthMain {
             }
             return
         }
-        
-        guard !self.applicationId.isEmpty else {
-            self.service {
+
+        guard !applicationId.isEmpty else {
+            service {
                 Logger.session.error("Error: \(AuthClientError.invalidInitialization.asAuthError)")
                 completionHandler?(nil, AuthClientError.invalidInitialization.asAuthError)
             }
             return
         }
-        
+
         // The SDK v4 design requires that you retain one `UserConnectionManager` per userId.
         // To maintain this concept, create a new `UserConnectionManager` when SendbirdChatMain.connect is called.
         // However, there is a problem that if you create a new `UserConnectionManager`,
@@ -422,11 +429,11 @@ extension SendbirdAuthMain {
         connectionOperationQueue.addOperation(
             BlockingOperation(
                 asyncTask: { [weak self] operation in
-                    
+
                     Logger.main.debug("adding to userConnectionQueue async")
                     self?.userConnectionQueue.async {
                         onPreparingConnection()
-                        
+
                         self?.prepareConnect(userId: userId, accessToken: accessToken, apiHost: apiHost, wsHost: wsHost) {
                             guard let self = self else { return }
                             self.connect(
@@ -443,7 +450,7 @@ extension SendbirdAuthMain {
                 })
         )
     }
-    
+
     private func prepareConnect(
         userId: String,
         accessToken: String?,
@@ -452,18 +459,19 @@ extension SendbirdAuthMain {
         completionHandler: @escaping VoidHandler
     ) {
         Logger.main.debug("userId: \(userId), has authToken: \(accessToken != nil), apiHost: \(String(describing: apiHost)), wsHost: \(String(describing: wsHost))")
-        
+
         Logger.main.debug("session userId: \(sessionManager.userId), currentUserId: \(userId)")
         guard sessionManager.userId != userId else {
             completionHandler()
             return
         }
-        
+
         let cachedUser: AuthUser? = localCachePreference.value(forKey: LocalCachePreferenceKey.currentUser)
-        
+
         if sessionManager.userId.isEmpty ||
-            userId == cachedUser?.userId {
-            self.userConnectionQueue.async {
+            userId == cachedUser?.userId
+        {
+            userConnectionQueue.async {
                 self.resetConnectionState(userId: userId)
                 completionHandler()
             }
@@ -476,7 +484,7 @@ extension SendbirdAuthMain {
             }
         }
     }
-    
+
     @_spi(SendbirdInternal) public func resetConnectionState(userId: String) {
         Logger.main.debug()
         // Create new session manager
@@ -489,21 +497,21 @@ extension SendbirdAuthMain {
             localCachePreference: localCachePreference,
             config: config
         )
-        
+
         self.sessionManager = sessionManager
         self.sessionManager.delegate = self
         self.sessionManager.resolve(with: self)
         self.sessionManager.requestHeaderDataSource = self
-        self.requestQueue.sessionValidator = sessionManager
-        
+        requestQueue.sessionValidator = sessionManager
+
         // Create new websocket
         #if DEBUG // For testing
-        let websocketClient = router.webSocketManager.webSocketClient as? ChatWebSocketClient
-        let engine = self.websocketEngine ?? websocketClient?.getEngine().createNewWebSocketEngine()
+            let websocketClient = router.webSocketManager.webSocketClient as? ChatWebSocketClient
+            let engine = websocketEngine ?? websocketClient?.getEngine().createNewWebSocketEngine()
         #else
-        let engine: (any ChatWebSocketEngine)? = nil
+            let engine: (any ChatWebSocketEngine)? = nil
         #endif
-        
+
         let webSocketManager = WebSocketManager(
             userId: userId,
             queue: userConnectionQueue,
@@ -517,13 +525,13 @@ extension SendbirdAuthMain {
         webSocketManager.resolve(with: self)
         router.webSocketManager = webSocketManager
         deviceConnectionManager.webSocketManager = router.webSocketManager
-        
-        self.eventDispatcher.add(receivers: [sessionManager, webSocketManager])
-        self.deviceConnectionManager.sessionManager = sessionManager
+
+        eventDispatcher.add(receivers: [sessionManager, webSocketManager])
+        deviceConnectionManager.sessionManager = sessionManager
     }
-    
+
     private func connect(
-        userId: String,
+        userId _: String,
         accessToken: String?,
         sessionKey: String?,
         apiHost: String?,
@@ -537,6 +545,7 @@ extension SendbirdAuthMain {
 }
 
 // MARK: - Authenticate
+
 extension SendbirdAuthMain {
     @_spi(SendbirdInternal) public func authenticate(
         userId: String,
@@ -546,7 +555,7 @@ extension SendbirdAuthMain {
         completionHandler: AuthUserHandler? = nil
     ) {
         guard userId.hasElements else {
-            self.service {
+            service {
                 let err = AuthClientError.invalidParameter.asAuthError(
                     message: .emptyParameter("userId")
                 )
@@ -555,8 +564,8 @@ extension SendbirdAuthMain {
             return
         }
 
-        guard self.applicationId.hasElements else {
-            self.service {
+        guard applicationId.hasElements else {
+            service {
                 Logger.session.error("Error: \(AuthClientError.invalidInitialization.asAuthError)")
                 completionHandler?(nil, AuthClientError.invalidInitialization.asAuthError)
             }
@@ -571,7 +580,7 @@ extension SendbirdAuthMain {
         connectionOperationQueue.addOperation(BlockingOperation(asyncTask: { [weak self] operation in
             self?.userConnectionQueue.async {
                 onPreparingAuthentication()
-                
+
                 self?.prepareAuthenticate(
                     userId: userId,
                     authData: authData
@@ -599,7 +608,7 @@ extension SendbirdAuthMain {
 
     private func prepareAuthenticate(
         userId: String,
-        authData: AuthData?,
+        authData _: AuthData?,
         completionHandler: @escaping AuthErrorHandler
     ) {
         guard sessionManager.userId != userId else {
@@ -631,7 +640,7 @@ extension SendbirdAuthMain {
                     }
                 }
             } else {
-                self.userConnectionQueue.async { [weak self] in
+                userConnectionQueue.async { [weak self] in
                     self?.resetConnectionState(userId: userId)
                     completionHandler(nil)
                 }
@@ -640,9 +649,9 @@ extension SendbirdAuthMain {
     }
 
     private func authenticate(
-        userId: String,
+        userId _: String,
         authData: AuthData?,
-        sessionKey: String?,
+        sessionKey _: String?,
         apiHost: String?,
         completionHandler: AuthUserHandler?
     ) {
@@ -660,8 +669,9 @@ extension SendbirdAuthMain {
 }
 
 // MARK: - Configuration
+
 @_spi(SendbirdInternal) public extension SendbirdAuthMain {
-    struct Constants {
+    enum Constants {
         @_spi(SendbirdInternal) public static let premiumFeatureList = "premium_feature_list"
         @_spi(SendbirdInternal) public static let fileUploadSizeLimit = "file_upload_size_limit"
         @_spi(SendbirdInternal) public static let emojiHash = "emoji_hash"
@@ -669,18 +679,19 @@ extension SendbirdAuthMain {
         @_spi(SendbirdInternal) public static let notifications = "notifications"
         @_spi(SendbirdInternal) public static let messageTemplate = "message_template"
         @_spi(SendbirdInternal) public static let aiAgent = "ai_agent"
-        
+
+        @_spi(SendbirdInternal) public static let extensionChat = "sb_chat"
         @_spi(SendbirdInternal) public static let extensionUIKit = "sb_uikit"
         @_spi(SendbirdInternal) public static let extensionSyncManager = "sb_syncmanager"
         @_spi(SendbirdInternal) public static let extensionSwiftUI = "sb_swiftui"
-        
+
         @_spi(SendbirdInternal) public static let loginTimerHandlerKey = "login_timer_handler"
     }
-    
+
     var sdkVersion: String {
         SendbirdAuth.sdkVersion
     }
-    
+
     var extraDataString: String {
         [
             Constants.premiumFeatureList,
@@ -689,56 +700,62 @@ extension SendbirdAuthMain {
             Constants.applicationAttributes,
             Constants.notifications,
             Constants.messageTemplate,
-            Constants.aiAgent
+            Constants.aiAgent,
         ].joined(separator: ",")
     }
-    
+
     static var systemVersion = {
         #if os(iOS)
-        return UIDevice.current.systemVersion
+            return UIDevice.current.systemVersion
         #else
-        return ProcessInfo.processInfo.operatingSystemVersionString
+            return ProcessInfo.processInfo.operatingSystemVersionString
         #endif
     }()
-    
+
     static var systemName = {
         #if os(iOS)
-        return "iOS"
+            return "iOS"
         #else
-        return "macOS"
+            return "macOS"
         #endif
     }()
-    
+
     func getMimeType(_ file: Data?) -> String? {
         return file?.inferMimeType()
     }
-    
+
     func setNetworkAwarenessReconnection(_ enabled: Bool) {
         deviceConnectionManager.useReachability = enabled
     }
 
     var sbUserAgent: String {
-        var results: [String] = [Self.systemName, "c\(SendbirdAuth.sdkVersion)"]
-        
+        var results: [String] = [Self.systemName, "a\(SendbirdAuth.sdkVersion)"]
+
+        if let chatVersion = extensionVersions[Constants.extensionSwiftUI] {
+            results.append("c\(chatVersion)")
+        } else {
+            results.append("") // placeholder string for 'c[version_chat]'
+        }
+
         if let syncManagerVersion = extensionVersions[Constants.extensionSyncManager] {
             results.append("s\(syncManagerVersion)")
         } else {
-            results.append("")  // placeholder string for 's[version_syncmanager]'
+            results.append("") // placeholder string for 's[version_syncmanager]'
         }
-        
+
         if let uiKitVersion = extensionVersions[Constants.extensionUIKit] {
             results.append("u\(uiKitVersion)")
         } else {
-            results.append("")  // placeholder string for 'u[version_uikit]'
+            results.append("") // placeholder string for 'u[version_uikit]'
         }
-        
+
         // INFO: Jios 형태로 사용되는건 이제 사용되지 않고 SendbirdProduct 로 수집되는 데이터만 사용됨. SwiftUI 는 여기 추가하지 않음
-        
-        results.append("")  // placeholder string for 'o[device-os-platform]'
-        
+
+        results.append("") // placeholder string for 'o[device-os-platform]'
+
         return results.joined(separator: "/")
     }
-    
+
     /// a more scalable version of sbUserAgent.
     /// SB-SDK-User-Agent: <key1>=<value1>&<key2>=<value2>...
     /// since: 4.8.5
@@ -746,33 +763,33 @@ extension SendbirdAuthMain {
         var version = ["main_sdk_info=chat/\(Self.systemName.lowercased())/\(sdkVersion)"]
         version.append("device_os_platform=\(Self.systemName.lowercased())")
         version.append("os_version=\(Self.systemVersion)")
-        
+
         if let extensionSdkInfo = extensionSdkInfo {
             version.append("extension_sdk_info=\(extensionSdkInfo)")
         }
         return version.joined(separator: "&")
     }
-    
+
     var sendbirdHeader: String {
         var header = [
             Self.systemName,
             Self.systemVersion,
             sdkVersion,
-            applicationId
+            applicationId,
         ]
-        
+
         if let appVersion = appVersion?.urlEncoded {
             header.append(appVersion)
         }
-        
+
         return header.joined(separator: ",")
     }
-    
+
     var userAgent: String { "Jios/\(sdkVersion)" }
-    
+
     func createRequestHeadersContext() -> RequestHeadersContext {
         let includeUIKitConfig = (extensionVersions[Constants.extensionUIKit] != nil) || extensionVersions[Constants.extensionSwiftUI] != nil
-        
+
         return RequestHeadersContext(
             deviceVersion: Self.systemVersion,
             sdkVersion: sdkVersion,
@@ -788,14 +805,14 @@ extension SendbirdAuthMain {
             inIncludeUIKitConfig: includeUIKitConfig
         )
     }
-    
+
     func addExtension(_ key: String, version: String) {
         if key == Constants.extensionUIKit || key == Constants.extensionSyncManager || key == Constants.extensionSwiftUI {
             guard extensionVersions[key] != version else { return }
-            
+
             Logger.main.debug("Set extension version: \(key): \(version), current: \(String(describing: extensionVersions[key]))")
             extensionVersions[key] = version
-            self.requestHeaderContext = createRequestHeadersContext()
+            requestHeaderContext = createRequestHeadersContext()
         }
     }
 
@@ -850,19 +867,19 @@ extension SendbirdAuthMain {
 
         return true
     }
-    
+
     func setAppVersion(version: String) {
         guard appVersion != version else { return }
         Logger.main.debug("Set app version: \(version), current: \(String(describing: appVersion))")
-        
-        self.appVersion = version
+
+        appVersion = version
         requestHeaderContext = createRequestHeadersContext()
     }
-    
+
     func setSharedContainerIdentifier(_ identifier: String) {
-        self.router.apiClient.sharedContainerIdentifier = identifier
+        router.apiClient.sharedContainerIdentifier = identifier
     }
-    
+
     func ekey() -> String? {
         return sessionManager.eKey
     }
