@@ -50,7 +50,7 @@ import Foundation
 
         return try await withSafeThrowingContinuation { continuation in
             requestQueue.post(
-                path: .sdkStatistics,
+                path: URLPaths.sdkStatistics,
                 body: [
                     .logEntries: copiedStats,
                     .deviceId: deviceId,
@@ -93,7 +93,7 @@ import Foundation
 
         try await withSafeThrowingContinuation { continuation in
             requestQueue.post(
-                path: .notificationStatistics,
+                path: URLPaths.notificationStatistics,
                 body: [
                     .logEntries: copiedStats,
                     .deviceId: deviceId,

@@ -515,3 +515,11 @@ import Foundation
         }
     }
 }
+
+// MARK: - URLPathConvertible Conformance
+
+extension URLPaths: URLPathConvertible {
+    @_spi(SendbirdInternal) public var urlPath: URLPath {
+        URLPath(array: self.splitPath)
+    }
+}

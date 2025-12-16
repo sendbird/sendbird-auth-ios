@@ -82,7 +82,7 @@ import Foundation
     POST API Request
 
     - Parameters:
-       - path: The server endpoint to which the request is made. See `URLPaths`
+       - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
        - body: The primary content of the request, mapped from coding keys to encodable values. This is eventually encoded as a dictionary with the specified key value pairs.
        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
@@ -99,7 +99,7 @@ import Foundation
     */
 
     @_spi(SendbirdInternal) public func post<R: Decodable>(
-        path: URLPaths,
+        path: some URLPathConvertible,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
         multipart: [String: Any] = [:],
@@ -147,7 +147,7 @@ import Foundation
      PUT API Request
 
      - Parameters:
-        - path: The server endpoint to which the request is made. See `URLPaths`
+        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
         - body: The primary content of the request, mapped from coding keys to encodable values. This is eventually encoded as a dictionary with the specified key value pairs.
         - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
         - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
@@ -164,7 +164,7 @@ import Foundation
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
     @_spi(SendbirdInternal) public func put<R: Decodable>(
-        path: URLPaths,
+        path: some URLPathConvertible,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
         multipart: [String: Any] = [:],
@@ -212,7 +212,7 @@ import Foundation
      PATCH API Request
 
      - Parameters:
-        - path: The server endpoint to which the request is made. See `URLPaths`
+        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
         - body: The primary content of the request, mapped from coding keys to encodable values. This is eventually encoded as a dictionary with the specified key value pairs.
         - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
         - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
@@ -229,7 +229,7 @@ import Foundation
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
     @_spi(SendbirdInternal) public func patch<R: Decodable>(
-        path: URLPaths,
+        path: some URLPathConvertible,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
         multipart: [String: Any] = [:],
@@ -275,9 +275,9 @@ import Foundation
     
     /**
      GET API Request
-     
+
      - Parameters:
-        - path: The server endpoint to which the request is made. See `URLPaths`
+        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
         - body: The primary content of the request, mapped from coding keys to encodable values. This is eventually encoded query parameters, and encoded into the request URL for GET requests.
         - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the query parameters.
         - header: HTTP headers to include in the request.
@@ -292,7 +292,7 @@ import Foundation
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
     @_spi(SendbirdInternal) public func get<R: Decodable>(
-        path: URLPaths,
+        path: some URLPathConvertible,
         queryParams: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
         header: [String: String] = [:],
@@ -322,7 +322,7 @@ import Foundation
     DELETE API Request
 
     - Parameters:
-       - path: The server endpoint to which the request is made. See `URLPaths`
+       - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
        - body: The primary content of the request, mapped from coding keys to encodable values. This is eventually encoded as a dictionary with the specified key value pairs.
        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
@@ -338,7 +338,7 @@ import Foundation
        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
     */
     @_spi(SendbirdInternal) public func delete<R: Decodable>(
-        path: URLPaths,
+        path: some URLPathConvertible,
         body: [CodeCodingKeys: Encodable] = [:],
         multipart: [String: Encodable] = [:],
         additionalBody: Encodable...,

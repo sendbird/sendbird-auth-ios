@@ -107,7 +107,7 @@ extension WSRequestable {
     
     @_spi(SendbirdInternal) public init(
         method: HTTPMethod,
-        url: URLPaths,
+        url: some URLPathConvertible,
         version: String,
         body: [CodeCodingKeys: Encodable?],
         additionalBodies: [Encodable] = [],
@@ -117,7 +117,7 @@ extension WSRequestable {
         isLoginRequired: Bool
     ) {
         self.method = method
-        self.url = .init(array: url.splitPath)
+        self.url = url.urlPath
         self.version = version
         self.additionalBodies = additionalBodies
         self.body = body.compactMapValues { $0 }

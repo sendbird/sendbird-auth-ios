@@ -75,7 +75,7 @@ extension SessionManager: InternalSessionDelegate {
                     if let authToken { headers["Access-Token"] = authToken }
                     
                     self.requestQueue?.post(
-                        path: .usersSessionKey(userId: self.userId),
+                        path: URLPaths.usersSessionKey(userId: self.userId),
                         body: [.expiringSession: expiringSession],
                         header: headers,
                         isSessionRequired: false,
@@ -98,7 +98,7 @@ extension SessionManager: InternalSessionDelegate {
             if let authToken { headers["Access-Token"] = authToken }
             
             requestQueue?.post(
-                path: .usersSessionKey(userId: userId),
+                path: URLPaths.usersSessionKey(userId: userId),
                 body: [.expiringSession: expiringSession],
                 header: headers,
                 isSessionRequired: false,
