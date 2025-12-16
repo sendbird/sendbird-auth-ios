@@ -11,11 +11,11 @@ import Foundation
     private weak var requestQueue: RequestQueue?
     @_spi(SendbirdInternal) public var deviceId: String = ""
 
-    #if DEBUG
-        // For test
-        @_spi(SendbirdInternal) public var mockEnabled: Bool?
-        @_spi(SendbirdInternal) public var mockError: AuthError?
-    #endif
+#if DEBUG
+    // For test
+    @_spi(SendbirdInternal) public var mockEnabled: Bool?
+    @_spi(SendbirdInternal) public var mockError: AuthError?
+#endif
 
     @_spi(SendbirdInternal) public init(requestQueue: RequestQueue) {
         self.requestQueue = requestQueue
@@ -37,7 +37,7 @@ import Foundation
             copiedStats.append(copiedStat)
         }
 
-        #if DEBUG
+    #if DEBUG
         if let mockEnabled, mockEnabled == true {
             Logger.stat.debug("StatAPIClient mock enabled.")
             if let mockError = mockError {
@@ -46,9 +46,9 @@ import Foundation
                 return
             }
         }
-        #endif
-        
-        return try await withCheckedThrowingContinuation { continuation in
+    #endif
+
+        return try await withSafeThrowingContinuation { continuation in
             requestQueue.post(
                 path: .sdkStatistics,
                 body: [
@@ -80,7 +80,7 @@ import Foundation
             copiedStats.append(copiedStat)
         }
 
-        #if DEBUG
+    #if DEBUG
         if mockEnabled == true {
             Logger.stat.debug(#function, "StatAPIClient mock enabled.")
             if let mockError = mockError {
@@ -89,14 +89,14 @@ import Foundation
                 return
             }
         }
-        #endif
+    #endif
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        try await withSafeThrowingContinuation { continuation in
             requestQueue.post(
                 path: .notificationStatistics,
                 body: [
                     .logEntries: copiedStats,
-                    .deviceId: deviceId
+                    .deviceId: deviceId,
                 ]
             ) { (res: Result<DefaultResponse, AuthError>) in
                 switch res {
@@ -113,10 +113,10 @@ import Foundation
         self.deviceId = deviceId
     }
 
-    #if DEBUG
+#if DEBUG
     @_spi(SendbirdInternal) public func setMockResult(enabled: Bool, error: AuthError?) {
         mockEnabled = enabled
         mockError = error
     }
-    #endif
+#endif
 }

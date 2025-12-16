@@ -8,23 +8,30 @@
 @propertyWrapper
 @_spi(SendbirdInternal) public struct DependencyWrapper<T> {
     @_spi(SendbirdInternal) public var isResolved: Bool = false
-    private var value: T?
-    
+
+    private final class WeakBox {
+        weak var object: AnyObject?
+    }
+
+    private let box = WeakBox()
+
     @_spi(SendbirdInternal) public var wrappedValue: T? {
         get {
             if isResolved == false {
                 assertionFailure("The object is not resolved.")
             }
-            return value
+            return box.object as? T
         }
         set {
-            self.isResolved = true
-            value = newValue
+            if let object = newValue as? AnyObject {
+                self.isResolved = true
+                box.object = object
+            }
         }
     }
-    
+
     @_spi(SendbirdInternal) public init() {
         self.isResolved = false
-        self.value = nil
+        self.box.object = nil
     }
 }
