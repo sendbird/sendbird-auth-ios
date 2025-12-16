@@ -37,7 +37,7 @@ import Foundation
 }
 
 extension JSONDecoder {
-    func updateDependency(_ dependency: Dependency?) {
+    func updateAuthDependency(_ dependency: Dependency?) {
         self.userInfo[DecoderInfoKey.dependency] = dependency
     }
 }

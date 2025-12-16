@@ -44,7 +44,7 @@ import AppKit
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
     
-    #if DEBUG
+    #if TESTCASE
     private var websocketEngine: (any ChatWebSocketEngine)? // For test
     @_spi(SendbirdInternal) public func injectEngineForTest(_ engine: any ChatWebSocketEngine) {
         self.websocketEngine = engine
@@ -204,7 +204,7 @@ import AppKit
         
         Logger.setLoggerLevel(logLevel)
         
-        SendbirdAuth.authDecoder.updateDependency(self)
+        SendbirdAuth.authDecoder.updateAuthDependency(self)
         
         self.sessionManager.resolve(with: self)
         self.sessionManager.delegate = self
@@ -497,7 +497,7 @@ extension SendbirdAuthMain {
         self.requestQueue.sessionValidator = sessionManager
         
         // Create new websocket
-        #if DEBUG // For testing
+        #if TESTCASE // For testing
         let websocketClient = router.webSocketManager.webSocketClient as? ChatWebSocketClient
         let engine = self.websocketEngine ?? websocketClient?.getEngine().createNewWebSocketEngine()
         #else
