@@ -96,7 +96,7 @@ import Foundation
         webSocketEngine: (any ChatWebSocketEngine)? = nil,
         httpClient: HTTPClientInterface? = nil,
         customRouterConfig: CommandRouterConfiguration? = nil,
-        customSendbirdConfig: SendbirdConfiguration? = nil,
+        customSendbirdConfig: SendbirdConfiguration? = nil
     ) {
         Logger.setSDKVersion(SendbirdAuth.sdkVersion)
         self.mainSDKInfo = params.mainSDKInfo

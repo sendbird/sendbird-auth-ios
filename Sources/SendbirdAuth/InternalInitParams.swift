@@ -30,7 +30,7 @@ import Foundation
         isLocalCachingEnabled: Bool,
         logLevel: AuthLogLevel = .none,
         appVersion: String? = nil,
-        mainSDKInfo: SendbirdSDKInfo? = nil,
+        mainSDKInfo: SendbirdSDKInfo? = nil
     ) {
         self.applicationId = applicationId
         self.isLocalCachingEnabled = isLocalCachingEnabled
