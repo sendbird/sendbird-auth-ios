@@ -99,7 +99,7 @@ import Foundation
         customSendbirdConfig: SendbirdConfiguration? = nil
     ) {
         Logger.setSDKVersion(SendbirdAuth.sdkVersion)
-        self.mainSDKInfo = params.mainSDKInfo
+        mainSDKInfo = params.mainSDKInfo
 
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
@@ -681,7 +681,6 @@ extension SendbirdAuthMain {
         @_spi(SendbirdInternal) public static let notifications = "notifications"
         @_spi(SendbirdInternal) public static let messageTemplate = "message_template"
         @_spi(SendbirdInternal) public static let aiAgent = "ai_agent"
-        @_spi(SendbirdInternal) public static let extensionChat = "sb_chat"
         @_spi(SendbirdInternal) public static let extensionUIKit = "sb_uikit"
         @_spi(SendbirdInternal) public static let extensionSyncManager = "sb_syncmanager"
         @_spi(SendbirdInternal) public static let extensionSwiftUI = "sb_swiftui"
@@ -706,19 +705,19 @@ extension SendbirdAuthMain {
     }
 
     static var systemVersion = {
-    #if os(iOS)
-        return UIDevice.current.systemVersion
-    #else
-        return ProcessInfo.processInfo.operatingSystemVersionString
-    #endif
+        #if os(iOS)
+            return UIDevice.current.systemVersion
+        #else
+            return ProcessInfo.processInfo.operatingSystemVersionString
+        #endif
     }()
 
     static var systemName = {
-    #if os(iOS)
-        return "iOS"
-    #else
-        return "macOS"
-    #endif
+        #if os(iOS)
+            return "iOS"
+        #else
+            return "macOS"
+        #endif
     }()
 
     func getMimeType(_ file: Data?) -> String? {
@@ -730,13 +729,14 @@ extension SendbirdAuthMain {
     }
 
     var sbUserAgent: String {
-        var results: [String] = [Self.systemName, "a\(SendbirdAuth.sdkVersion)"]
+        var results: [String] = [Self.systemName]
 
-        if let chatVersion = extensionVersions[Constants.extensionChat] {
+        // If the mainSDKInfo is Chat, include chat version at the first position
+        if mainSDKInfo?.product == .chat, let chatVersion = mainSDKInfo?.version {
             results.append("c\(chatVersion)")
-        } else {
-            results.append("") // placeholder string for 'c[version_chat]'
         }
+
+        results.append("a\(SendbirdAuth.sdkVersion)")
 
         if let syncManagerVersion = extensionVersions[Constants.extensionSyncManager] {
             results.append("s\(syncManagerVersion)")
@@ -810,7 +810,7 @@ extension SendbirdAuthMain {
     }
 
     func addExtension(_ key: String, version: String) {
-        if key == Constants.extensionUIKit || key == Constants.extensionSyncManager || key == Constants.extensionSwiftUI || key == Constants.extensionChat {
+        if key == Constants.extensionUIKit || key == Constants.extensionSyncManager || key == Constants.extensionSwiftUI {
             guard extensionVersions[key] != version else { return }
 
             Logger.main.debug("Set extension version: \(key): \(version), current: \(String(describing: extensionVersions[key]))")
