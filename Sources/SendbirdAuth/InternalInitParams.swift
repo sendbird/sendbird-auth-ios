@@ -23,16 +23,20 @@ import Foundation
     @_spi(SendbirdInternal) public var customAPIHost: String?
     @_spi(SendbirdInternal) public var customWSHost: String?
 
+    @_spi(SendbirdInternal) public var mainSDKInfo: SendbirdSDKInfo?
+
     @_spi(SendbirdInternal) public init(
         applicationId: String,
         isLocalCachingEnabled: Bool,
         logLevel: AuthLogLevel = .none,
-        appVersion: String? = nil
+        appVersion: String? = nil,
+        mainSDKInfo: SendbirdSDKInfo? = nil,
     ) {
         self.applicationId = applicationId
         self.isLocalCachingEnabled = isLocalCachingEnabled
         self.logLevel = logLevel
         self.appVersion = appVersion
+        self.mainSDKInfo = mainSDKInfo
     }
     
     @_spi(SendbirdInternal) public override func isEqual(_ object: Any?) -> Bool {

@@ -58,6 +58,7 @@ import Foundation
     @_spi(SendbirdInternal) public var appVersion: String?
     @_spi(SendbirdInternal) public var extensionVersions: [String: String]
     @_spi(SendbirdInternal) public var extensionSdkInfo: String? // corresponds to `sbSdkUserAgent`. new since 4.8.5
+    @_spi(SendbirdInternal) public var mainSDKInfo: SendbirdSDKInfo?
     @_spi(SendbirdInternal) public var userConnectionManager: WebSocketManager {
         get {
             userConnectionQueue.sync {
@@ -95,9 +96,10 @@ import Foundation
         webSocketEngine: (any ChatWebSocketEngine)? = nil,
         httpClient: HTTPClientInterface? = nil,
         customRouterConfig: CommandRouterConfiguration? = nil,
-        customSendbirdConfig: SendbirdConfiguration? = nil
+        customSendbirdConfig: SendbirdConfiguration? = nil,
     ) {
         Logger.setSDKVersion(SendbirdAuth.sdkVersion)
+        self.mainSDKInfo = params.mainSDKInfo
 
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
@@ -671,7 +673,7 @@ extension SendbirdAuthMain {
 // MARK: - Configuration
 
 @_spi(SendbirdInternal) public extension SendbirdAuthMain {
-    enum Constants {
+    @_spi(SendbirdInternal) enum Constants {
         @_spi(SendbirdInternal) public static let premiumFeatureList = "premium_feature_list"
         @_spi(SendbirdInternal) public static let fileUploadSizeLimit = "file_upload_size_limit"
         @_spi(SendbirdInternal) public static let emojiHash = "emoji_hash"
@@ -730,7 +732,7 @@ extension SendbirdAuthMain {
     var sbUserAgent: String {
         var results: [String] = [Self.systemName, "a\(SendbirdAuth.sdkVersion)"]
 
-        if let chatVersion = extensionVersions[Constants.extensionSwiftUI] {
+        if let chatVersion = extensionVersions[Constants.extensionChat] {
             results.append("c\(chatVersion)")
         } else {
             results.append("") // placeholder string for 'c[version_chat]'
@@ -759,7 +761,9 @@ extension SendbirdAuthMain {
     /// SB-SDK-User-Agent: <key1>=<value1>&<key2>=<value2>...
     /// since: 4.8.5
     var sbSdkUserAgent: String {
-        var version = ["main_sdk_info=chat/\(Self.systemName.lowercased())/\(sdkVersion)"]
+        let mainProduct = mainSDKInfo?.product.rawValue ?? SendbirdProduct.auth.rawValue
+        let mainVersion = mainSDKInfo?.version ?? sdkVersion
+        var version = ["main_sdk_info=\(mainProduct)/\(Self.systemName.lowercased())/\(mainVersion)"]
         version.append("device_os_platform=\(Self.systemName.lowercased())")
         version.append("os_version=\(Self.systemVersion)")
 
@@ -791,7 +795,7 @@ extension SendbirdAuthMain {
 
         return RequestHeadersContext(
             deviceVersion: Self.systemVersion,
-            sdkVersion: sdkVersion,
+            sdkVersion: mainSDKInfo?.version ?? sdkVersion,
             applicationId: stateData.applicationId,
             appVersion: appVersion,
             extraDataString: extraDataString,
@@ -806,7 +810,7 @@ extension SendbirdAuthMain {
     }
 
     func addExtension(_ key: String, version: String) {
-        if key == Constants.extensionUIKit || key == Constants.extensionSyncManager || key == Constants.extensionSwiftUI {
+        if key == Constants.extensionUIKit || key == Constants.extensionSyncManager || key == Constants.extensionSwiftUI || key == Constants.extensionChat {
             guard extensionVersions[key] != version else { return }
 
             Logger.main.debug("Set extension version: \(key): \(version), current: \(String(describing: extensionVersions[key]))")
