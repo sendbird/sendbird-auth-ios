@@ -37,6 +37,7 @@ import Foundation
 
 /// A list of Sendbird products that use Sendbird Chat.
 @_spi(SendbirdInternal) public enum SendbirdProduct: String {
+    case auth
     case chat
     case calls
     case desk
