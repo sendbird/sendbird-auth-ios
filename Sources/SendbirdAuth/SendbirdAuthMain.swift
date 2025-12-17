@@ -46,12 +46,12 @@ import Foundation
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
 
-#if DEBUG
-    private var websocketEngine: (any ChatWebSocketEngine)? // For test
-    @_spi(SendbirdInternal) public func injectEngineForTest(_ engine: any ChatWebSocketEngine) {
-        websocketEngine = engine
-    }
-#endif
+    #if DEBUG
+        private var websocketEngine: (any ChatWebSocketEngine)? // For test
+        @_spi(SendbirdInternal) public func injectEngineForTest(_ engine: any ChatWebSocketEngine) {
+            websocketEngine = engine
+        }
+    #endif
 
     @InternalAtomic @_spi(SendbirdInternal) public var requestHeaderContext: RequestHeadersContext?
     @_spi(SendbirdInternal) public var logLevel: Logger.Level = .info
@@ -505,12 +505,12 @@ extension SendbirdAuthMain {
         requestQueue.sessionValidator = sessionManager
 
         // Create new websocket
-    #if DEBUG // For testing
-        let websocketClient = router.webSocketManager.webSocketClient as? ChatWebSocketClient
-        let engine = websocketEngine ?? websocketClient?.getEngine().createNewWebSocketEngine()
-    #else
-        let engine: (any ChatWebSocketEngine)? = nil
-    #endif
+        #if DEBUG // For testing
+            let websocketClient = router.webSocketManager.webSocketClient as? ChatWebSocketClient
+            let engine = websocketEngine ?? websocketClient?.getEngine().createNewWebSocketEngine()
+        #else
+            let engine: (any ChatWebSocketEngine)? = nil
+        #endif
 
         let webSocketManager = WebSocketManager(
             userId: userId,
@@ -679,7 +679,7 @@ extension SendbirdAuthMain {
         @_spi(SendbirdInternal) public static let notifications = "notifications"
         @_spi(SendbirdInternal) public static let messageTemplate = "message_template"
         @_spi(SendbirdInternal) public static let aiAgent = "ai_agent"
-
+        @_spi(SendbirdInternal) public static let extensionChat = "sb_chat"
         @_spi(SendbirdInternal) public static let extensionUIKit = "sb_uikit"
         @_spi(SendbirdInternal) public static let extensionSyncManager = "sb_syncmanager"
         @_spi(SendbirdInternal) public static let extensionSwiftUI = "sb_swiftui"
@@ -728,7 +728,13 @@ extension SendbirdAuthMain {
     }
 
     var sbUserAgent: String {
-        var results: [String] = [Self.systemName, "c\(SendbirdAuth.sdkVersion)"]
+        var results: [String] = [Self.systemName, "a\(SendbirdAuth.sdkVersion)"]
+
+        if let chatVersion = extensionVersions[Constants.extensionSwiftUI] {
+            results.append("c\(chatVersion)")
+        } else {
+            results.append("") // placeholder string for 'c[version_chat]'
+        }
 
         if let syncManagerVersion = extensionVersions[Constants.extensionSyncManager] {
             results.append("s\(syncManagerVersion)")

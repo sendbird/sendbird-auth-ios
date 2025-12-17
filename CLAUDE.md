@@ -1,0 +1,2 @@
+- 배포 플로우에 대한 변경이 있을 땐 /script 안의 파일과 .claude/ 안의 skills.md 파일을 같이 수정할 것.
+- co-author에 claude code를 등록하지 않을 것

@@ -10,7 +10,9 @@ import Foundation
 enum Configuration {
     // MARK: - Environment URLs (hardcoded for SPM build config)
 
-    #if DEBUG // NIGHTLYDEV when DEBUG by default
+    // NIGHTLYDEV when DEBUG by default.
+    // Otherwise, set custom host in Info.plist or use `setCustomHost(_:)` API.
+    #if DEBUG
         private static let defaultAPIHost = "https://api-nightlydev.sendbirdtest.com"
         private static let defaultWSHost = "wss://ws-nightlydev.sendbirdtest.com"
         private static let defaultBaseHost = "api-nightlydev.sendbirdtest.com"
@@ -52,5 +54,62 @@ enum Configuration {
     static func baseHostURL(for appId: String) -> String? {
         let template = hostURL(for: "BASE_HOST_URL", default: defaultBaseHost)
         return template.replacingOccurrences(of: "@@", with: appId)
+    }
+}
+
+// MARK: - Custom Host Configuration
+
+@_spi(SendbirdInternal) public extension SendbirdAuthMain {
+    enum CustomHostEnvironment {
+        case nightlydev
+        case nightlyrel
+        case no3
+        case preprod
+        case custom(apiHost: String, wsHost: String)
+
+        var apiHost: String {
+            switch self {
+            case .nightlydev:
+                return "https://api-nightlydev.sendbirdtest.com"
+            case .nightlyrel:
+                return "https://api-nightlyrel.sendbirdtest.com"
+            case .no3:
+                return "https://api-no3.sendbirdtest.com"
+            case .preprod:
+                return "https://api-preprod.sendbird.com"
+            case let .custom(apiHost, _):
+                return apiHost
+            }
+        }
+
+        var wsHost: String {
+            switch self {
+            case .nightlydev:
+                return "wss://ws-nightlydev.sendbirdtest.com"
+            case .nightlyrel:
+                return "wss://ws-nightlyrel.sendbirdtest.com"
+            case .no3:
+                return "wss://ws-no3.sendbirdtest.com"
+            case .preprod:
+                return "wss://ws-preprod.sendbird.com"
+            case let .custom(_, wsHost):
+                return wsHost
+            }
+        }
+    }
+
+    /// Sets custom host URLs for API and WebSocket connections.
+    /// - Note: If you want to use release environment's host,
+    ///        build configuration should be set to `Release` and clear custom host after setting it.
+    func setCustomHost(_ environment: CustomHostEnvironment) {
+        let pref = SendbirdAuth.pref
+        pref.set(value: environment.apiHost, forKey: PreferenceKey.customAPIHost)
+        pref.set(value: environment.wsHost, forKey: PreferenceKey.customWsHost)
+    }
+
+    func clearCustomHost() {
+        let pref = SendbirdAuth.pref
+        pref.remove(forKey: PreferenceKey.customAPIHost)
+        pref.remove(forKey: PreferenceKey.customWsHost)
     }
 }
