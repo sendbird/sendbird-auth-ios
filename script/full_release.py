@@ -1,112 +1,122 @@
 #!/usr/bin/env python3
 """
-Orchestration script for SendbirdAuthSDK full release (SPM + CocoaPods).
+Full Release: Orchestrates all release phases with PR merge prompts.
 
-Mode:
-- release (default): Run full SPM flow through CocoaPods trunk push
-- test: Run SPM build/checksum only and CocoaPods lint
+Flow:
+1. Run spm_release_phase1.py (build, checksum, private PR)
+2. Wait for "Private PR merged? (y/n)"
+3. Run spm_release_phase2.py (tag, backmerge, public PR)
+4. Wait for "Public PR merged? (y/n)"
+5. Run spm_release_phase3.py (GitHub release)
+6. Run pod_release.py (CocoaPods)
 """
 
 import argparse
-import re
-import subprocess
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-
-
-def run_command(cmd, *, capture_output=False):
-    """Helper to run shell commands."""
-    print(f"[cmd] {' '.join(cmd)}")
-    result = subprocess.run(
-        cmd,
-        text=True,
-        capture_output=capture_output,
-    )
-    if result.returncode != 0:
-        if capture_output:
-            sys.stderr.write(result.stdout)
-            sys.stderr.write(result.stderr)
-        raise RuntimeError(f"Command failed ({result.returncode}): {' '.join(cmd)}")
-    return result.stdout.strip() if capture_output else None
+from release_common import (
+    ROOT,
+    check_pr_merged,
+    load_release_state,
+    run_command,
+)
 
 
-def detect_version():
-    branch = run_command(["git", "branch", "--show-current"], capture_output=True)
-    match = re.match(r"^release/([0-9]+\.[0-9]+\.[0-9]+)$", branch or "")
-    if not match:
-        raise RuntimeError("Current branch is not release/X.X.X. Use --version option.")
-    return match.group(1)
+def run_script(script_name, extra_args=None):
+    """Run a release script."""
+    cmd = [sys.executable, str(ROOT / "script" / script_name)]
+    if extra_args:
+        cmd.extend(extra_args)
+    run_command(cmd)
+
+
+def wait_for_pr_merge(pr_url, label):
+    """Wait for user confirmation and verify PR is merged."""
+    print("")
+    print(f"[wait] {label}")
+    print(f"       PR: {pr_url}")
+    print("")
+
+    while True:
+        answer = input("Is merged? (y/n): ").strip().lower()
+        if answer == "n":
+            print("[info] Stopping. Run the next phase script manually after merging.")
+            sys.exit(0)
+
+        if answer == "y":
+            if check_pr_merged(pr_url):
+                print("[info] PR merge confirmed.")
+                return
+            print("[warn] PR is not merged yet. Please merge the PR first.")
+        else:
+            print("[info] Please enter 'y' or 'n'.")
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Automate full release (SPM + CocoaPods).")
-    parser.add_argument("--mode", choices=["release", "test"], default="release")
+    parser = argparse.ArgumentParser(description="Full release (SPM + CocoaPods).")
+    parser.add_argument("--mac", action="store_true", help="Include macOS in SPM build.")
     parser.add_argument("--project", default="SendbirdAuthSDK")
-    parser.add_argument("--mac", action="store_true", help="Include macOS in the SPM build.")
     parser.add_argument("--private-repo", default="sendbird/auth-ios")
     parser.add_argument("--public-repo", default="sendbird/sendbird-auth-ios")
-    parser.add_argument("--auto-continue", action="store_true", help="Skip prompt while waiting for SPM PR merge.")
     parser.add_argument(
         "--build-if-missing",
         action="store_true",
-        help="Allow running build_xcframework.py when the CocoaPods zip is missing.",
+        help="Allow building XCFramework if CocoaPods zip is missing.",
     )
     return parser.parse_args()
 
 
-def run_spm_phase(args):
-    cmd = [
-        sys.executable,
-        str(ROOT / "script" / "spm_release.py"),
-        "--mode",
-        args.mode,
-        "--project",
-        args.project,
-        "--private-repo",
-        args.private_repo,
-        "--public-repo",
-        args.public_repo,
-    ]
-    if args.mac:
-        cmd.append("--mac")
-    if args.auto_continue:
-        cmd.append("--auto-continue")
-    run_command(cmd)
-
-
-def run_pod_phase(args, version):
-    cmd = [
-        sys.executable,
-        str(ROOT / "script" / "pod_release.py"),
-        "--mode",
-        args.mode,
-        "--public-repo",
-        args.public_repo,
-        "--version",
-        version,
-    ]
-    if args.build_if_missing:
-        cmd.append("--build-if-missing")
-    run_command(cmd)
-
-
 def main():
     args = parse_args()
-    version = detect_version()
 
     try:
-        print(f"[info] Starting full release ({args.mode}) - version {version}")
-        print("[phase] 1/2 SPM Release")
-        run_spm_phase(args)
-        print("[phase] 2/2 CocoaPods Release")
-        run_pod_phase(args, version)
-        if args.mode == "test":
-            print("[done] Test mode complete (SPM build/checksum + CocoaPods lint).")
-        else:
-            print("[done] Full release complete (SPM + CocoaPods).")
-    except Exception as exc:  # pylint: disable=broad-except
+        print("=" * 60)
+        print("[phase 1/4] Build and create Private PR")
+        print("=" * 60)
+
+        phase1_args = ["--project", args.project, "--private-repo", args.private_repo, "--public-repo", args.public_repo]
+        if args.mac:
+            phase1_args.append("--mac")
+        run_script("spm_release_phase1.py", phase1_args)
+
+        # Wait for private PR merge
+        state = load_release_state()
+        wait_for_pr_merge(state["private_pr_url"], "Private PR merge required")
+
+        print("")
+        print("=" * 60)
+        print("[phase 2/4] Tag, backmerge, and create Public PR")
+        print("=" * 60)
+
+        run_script("spm_release_phase2.py")
+
+        # Wait for public PR merge
+        state = load_release_state()
+        wait_for_pr_merge(state["public_pr_url"], "Public PR merge required")
+
+        print("")
+        print("=" * 60)
+        print("[phase 3/4] Create GitHub Release")
+        print("=" * 60)
+
+        run_script("spm_release_phase3.py")
+
+        print("")
+        print("=" * 60)
+        print("[phase 4/4] CocoaPods Release")
+        print("=" * 60)
+
+        pod_args = ["--public-repo", args.public_repo, "--version", state["version"]]
+        if args.build_if_missing:
+            pod_args.append("--build-if-missing")
+        run_script("pod_release.py", pod_args)
+
+        print("")
+        print("=" * 60)
+        print(f"[done] Full release complete for version {state['version']}")
+        print("=" * 60)
+
+    except Exception as exc:
         print(f"[error] {exc}")
         sys.exit(1)
 

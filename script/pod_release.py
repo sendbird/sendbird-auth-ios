@@ -9,31 +9,13 @@ Modes:
 
 import argparse
 import re
-import subprocess
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from release_common import ROOT, run_command
+
 PROJECT = "SendbirdAuthSDK"
 RELEASE_ZIP = ROOT / "release" / f"{PROJECT}.zip"
 PODSPEC_PATH = ROOT / f"{PROJECT}.podspec"
-
-
-def run_command(cmd, *, cwd=None, capture_output=False):
-    """Run a shell command and optionally return stdout."""
-    print(f"[cmd] {' '.join(cmd)}")
-    result = subprocess.run(
-        cmd,
-        cwd=cwd,
-        text=True,
-        capture_output=capture_output,
-    )
-    if result.returncode != 0:
-        if capture_output:
-            sys.stderr.write(result.stdout)
-            sys.stderr.write(result.stderr)
-        raise RuntimeError(f"Command failed ({result.returncode}): {' '.join(cmd)}")
-    return result.stdout.strip() if capture_output else None
 
 
 def detect_version():
