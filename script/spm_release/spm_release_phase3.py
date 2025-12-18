@@ -13,6 +13,8 @@ Input: release/release_state.json (from phase2)
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from release_common import (
     ROOT,
     load_release_state,

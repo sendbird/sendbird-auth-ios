@@ -77,7 +77,7 @@ def main():
         phase1_args = ["--project", args.project, "--private-repo", args.private_repo, "--public-repo", args.public_repo]
         if args.mac:
             phase1_args.append("--mac")
-        run_script("spm_release_phase1.py", phase1_args)
+        run_script("spm_release/spm_release_phase1.py", phase1_args)
 
         # Wait for private PR merge
         state = load_release_state()
@@ -88,7 +88,7 @@ def main():
         print("[phase 2/4] Tag, backmerge, and create Public PR")
         print("=" * 60)
 
-        run_script("spm_release_phase2.py")
+        run_script("spm_release/spm_release_phase2.py")
 
         # Wait for public PR merge
         state = load_release_state()
@@ -99,7 +99,7 @@ def main():
         print("[phase 3/4] Create GitHub Release")
         print("=" * 60)
 
-        run_script("spm_release_phase3.py")
+        run_script("spm_release/spm_release_phase3.py")
 
         print("")
         print("=" * 60)
