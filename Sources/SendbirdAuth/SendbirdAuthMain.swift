@@ -49,13 +49,6 @@ import Foundation
     /// Instance-specific preferences (isolated per appId + apiHostUrl)
     @_spi(SendbirdInternal) public let instancePref: LocalPreferences
 
-    /// Callback invoked when this instance is destroyed
-    @_spi(SendbirdInternal) public var onDestroy: (() -> Void)?
-
-    deinit {
-        onDestroy?()
-    }
-
     #if DEBUG
         private var websocketEngine: (any ChatWebSocketEngine)? // For test
         @_spi(SendbirdInternal) public func injectEngineForTest(_ engine: any ChatWebSocketEngine) {
@@ -405,7 +398,6 @@ extension SendbirdAuthMain {
     @_spi(SendbirdInternal) public func destroy(completionHandler: VoidHandler? = nil) {
         disconnect { [weak self] in
             self?.reset()
-            self?.onDestroy?()
             completionHandler?()
         }
     }
