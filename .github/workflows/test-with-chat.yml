@@ -1,0 +1,127 @@
+name: Test with Chat SDK
+run-name: Test Auth changes with Chat SDK
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      auth_branch:
+        description: 'Auth SDK branch to test'
+        required: true
+        default: 'develop'
+      chat_branch:
+        description: 'Chat SDK branch to use'
+        required: true
+        default: 'develop'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  # Issue comment trigger: parse comment and get PR branch
+  check-comment:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/test')
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      branch_name: ${{ steps.get-branch.outputs.branch }}
+      sha: ${{ steps.get-branch.outputs.sha }}
+      chat_branch: ${{ steps.parse-args.outputs.chat_branch }}
+    steps:
+      - name: Parse arguments
+        id: parse-args
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          # Default to develop branch
+          CHAT_BRANCH="develop"
+
+          # Parse --chat-branch argument
+          if [[ "$COMMENT_BODY" =~ --chat-branch[[:space:]]+([^[:space:]]+) ]]; then
+            CHAT_BRANCH="${BASH_REMATCH[1]}"
+          fi
+
+          echo "chat_branch=$CHAT_BRANCH" >> $GITHUB_OUTPUT
+          echo "Chat branch: $CHAT_BRANCH"
+
+      - name: Check comment
+        id: check
+        run: echo "should_run=true" >> $GITHUB_OUTPUT
+
+      - name: Get PR branch
+        id: get-branch
+        uses: xt0rted/pull-request-comment-branch@v3
+
+      - name: Set pending status
+        env:
+          SHA: ${{ steps.get-branch.outputs.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" \
+            -d '{
+              "state": "pending",
+              "context": "test-with-chat",
+              "description": "Running Chat SDK tests...",
+              "target_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
+
+  # Issue comment trigger: run tests
+  test-with-chat-comment:
+    needs: check-comment
+    if: needs.check-comment.outputs.should_run == 'true'
+    uses: ./.github/workflows/test-with-chat-setup.yml
+    with:
+      auth_branch: ${{ needs.check-comment.outputs.branch_name }}
+      chat_branch: ${{ needs.check-comment.outputs.chat_branch }}
+    secrets: inherit
+
+  # Issue comment trigger: update status
+  update-status-comment:
+    needs: [check-comment, test-with-chat-comment]
+    if: always() && needs.check-comment.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update status
+        env:
+          SHA: ${{ needs.check-comment.outputs.sha }}
+          TEST_RESULT: ${{ needs.test-with-chat-comment.result }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$TEST_RESULT" == "success" ]; then
+            STATE="success"
+            DESC="Chat SDK tests passed"
+          else
+            STATE="failure"
+            DESC="Chat SDK tests failed"
+          fi
+
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" \
+            -d "{
+              \"state\": \"$STATE\",
+              \"context\": \"test-with-chat\",
+              \"description\": \"$DESC\",
+              \"target_url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+            }"
+
+  # Manual trigger (workflow_dispatch)
+  test-with-chat-manual:
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/test-with-chat-setup.yml
+    with:
+      auth_branch: ${{ inputs.auth_branch }}
+      chat_branch: ${{ inputs.chat_branch }}
+    secrets: inherit

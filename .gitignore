@@ -26,3 +26,7 @@ DerivedData/
 release/
 
 *.podspec
+
+# Python
+__pycache__/
+*.pyc
