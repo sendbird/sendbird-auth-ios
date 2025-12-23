@@ -46,6 +46,9 @@ import Foundation
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
 
+    /// Callback invoked when this instance is destroyed
+    @_spi(SendbirdInternal) public var onDestroy: (() -> Void)?
+
     #if DEBUG
         private var websocketEngine: (any ChatWebSocketEngine)? // For test
         @_spi(SendbirdInternal) public func injectEngineForTest(_ engine: any ChatWebSocketEngine) {
