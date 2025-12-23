@@ -27,6 +27,11 @@ let package = Package(
             path: "Sources/SendbirdAuth",
             swiftSettings: swiftSettings
         ),
+        .testTarget(
+            name: "SendbirdAuthTests",
+            dependencies: ["SendbirdAuthSDK"],
+            path: "Tests/SendbirdAuthTests"
+        ),
     ]
 )
 
