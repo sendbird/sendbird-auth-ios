@@ -1,0 +1,222 @@
+name: Test with Chat SDK
+run-name: Test Auth changes with Chat SDK
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.workflow }}-pr-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  check-comment:
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/test')
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      branch_name: ${{ steps.get-branch.outputs.branch }}
+      sha: ${{ steps.get-branch.outputs.sha }}
+      chat_branch: ${{ steps.parse-args.outputs.chat_branch }}
+    steps:
+      - name: Parse arguments
+        id: parse-args
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          # Default to develop branch
+          CHAT_BRANCH="develop"
+
+          # Parse --chat-branch argument
+          if [[ "$COMMENT_BODY" =~ --chat-branch[[:space:]]+([^[:space:]]+) ]]; then
+            CHAT_BRANCH="${BASH_REMATCH[1]}"
+          fi
+
+          echo "chat_branch=$CHAT_BRANCH" >> $GITHUB_OUTPUT
+          echo "Chat branch: $CHAT_BRANCH"
+
+      - name: Check comment
+        id: check
+        run: echo "should_run=true" >> $GITHUB_OUTPUT
+
+      - name: Get PR branch
+        id: get-branch
+        uses: xt0rted/pull-request-comment-branch@v3
+
+      - name: Set pending status
+        env:
+          SHA: ${{ steps.get-branch.outputs.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" \
+            -d '{
+              "state": "pending",
+              "context": "test-with-chat",
+              "description": "Running Chat SDK tests...",
+              "target_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
+
+  test-with-chat:
+    needs: check-comment
+    if: needs.check-comment.outputs.should_run == 'true'
+    runs-on: [self-hosted, macOS, ARM64, M1]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Auth (current PR branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check-comment.outputs.branch_name }}
+
+      - name: Get Auth commit SHA
+        id: auth-sha
+        run: |
+          AUTH_SHA=$(git rev-parse HEAD)
+          echo "sha=$AUTH_SHA" >> $GITHUB_OUTPUT
+          echo "Auth commit SHA: $AUTH_SHA"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Clone chat-ios
+        env:
+          CHAT_BRANCH: ${{ needs.check-comment.outputs.chat_branch }}
+        run: |
+          git clone git@github.com:sendbird/chat-ios.git chat-ios
+          cd chat-ios
+          git checkout "$CHAT_BRANCH"
+          echo "Checked out chat-ios branch: $CHAT_BRANCH"
+
+      - name: Update Auth dependency to current commit
+        env:
+          AUTH_SHA: ${{ steps.auth-sha.outputs.sha }}
+        run: |
+          cd chat-ios
+
+          # Update project.yml: change version to revision
+          sed -i '' "s|version: .*|revision: $AUTH_SHA|g" project.yml
+
+          echo "Updated project.yml:"
+          grep -A2 "SendbirdAuthSDK:" project.yml
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Install dependencies
+        run: |
+          cd chat-ios
+
+          export GEM_HOME="$(ruby -e 'puts Gem.user_dir')"
+          export PATH="$GEM_HOME/bin:$PATH"
+
+          gem install bundler:2.4.11 --user-install
+          bundle config set --local path 'vendor/bundle'
+          bundle install
+
+          brew list xcbeautify >/dev/null 2>&1 || brew install xcbeautify
+
+      - name: Create configuration
+        run: |
+          cd chat-ios
+          ./scripts/create_config.sh
+          echo "REMOTE_API_KEY = ${{ secrets.REMOTE_API_KEY }}" >> Configurations/Config.xcconfig
+          echo "SECRET_KEY = ${{ secrets.SECRET_KEY }}" >> Configurations/Config.xcconfig
+
+      - name: Generate Xcode project
+        run: |
+          cd chat-ios
+          xcodegen generate
+
+      - name: Resolve SPM dependencies
+        run: |
+          cd chat-ios
+          xcodebuild -resolvePackageDependencies \
+            -project SendbirdChat.xcodeproj \
+            -scheme SendbirdChatSDK
+
+      - name: Build
+        run: |
+          cd chat-ios
+          xcodebuild build \
+            -project SendbirdChat.xcodeproj \
+            -scheme SendbirdChatSDK \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,name=iPhone 16 Pro Max" \
+            | xcbeautify
+
+      - name: Run tests
+        id: run_tests
+        run: |
+          cd chat-ios
+
+          # Create simulator
+          DEVICE_NAME="ci-temp-auth-test-$(uuidgen | cut -c1-8)"
+          RUNTIME_ID=$(xcrun simctl list runtimes | grep "iOS" | grep -Eo 'com.apple.CoreSimulator.SimRuntime.iOS-[^)]+' | head -n1)
+          DEVICE_ID=$(xcrun simctl create "$DEVICE_NAME" "iPhone 16 Pro Max" "$RUNTIME_ID")
+
+          echo "Created simulator: $DEVICE_NAME ($DEVICE_ID)"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+
+          cleanup() {
+            echo "Cleaning up simulator..."
+            xcrun simctl shutdown "$DEVICE_ID" || true
+            xcrun simctl delete "$DEVICE_ID" || true
+          }
+          trap cleanup EXIT
+
+          # Run tests
+          set +e
+          xcodebuild test \
+            -project SendbirdChat.xcodeproj \
+            -scheme SendbirdChatSDK \
+            -configuration Debug \
+            -destination "id=$DEVICE_ID" \
+            -only-testing:SendbirdChatTests \
+            | xcbeautify
+
+          TEST_RESULT=$?
+          set -e
+
+          echo "test_result=$TEST_RESULT" >> $GITHUB_OUTPUT
+          exit $TEST_RESULT
+
+      - name: Update status
+        if: always()
+        env:
+          SHA: ${{ needs.check-comment.outputs.sha }}
+          TEST_RESULT: ${{ steps.run_tests.outcome }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$TEST_RESULT" == "success" ]; then
+            STATE="success"
+            DESC="Chat SDK tests passed"
+          else
+            STATE="failure"
+            DESC="Chat SDK tests failed"
+          fi
+
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" \
+            -d "{
+              \"state\": \"$STATE\",
+              \"context\": \"test-with-chat\",
+              \"description\": \"$DESC\",
+              \"target_url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+            }"
