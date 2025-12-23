@@ -14,8 +14,7 @@ import Foundation
 
     // MARK: - Multi-instance Support
 
-    /// Thread-safe weak reference map for storing multiple SendbirdAuthMain instances
-    /// Key: appId or appId_apiHostUrl
+    /// Map for storing multiple SendbirdAuthMain instances
     /// Uses NSMapTable with weak values to allow automatic cleanup when instances are deallocated
     private static let instances = NSMapTable<NSString, SendbirdAuthMain>(
         keyOptions: .strongMemory,
@@ -31,7 +30,8 @@ import Foundation
         return appId
     }
 
-    /// Gets or creates a SendbirdAuthMain instance
+    /// Gets or creates a SendbirdAuthMain instance.
+    /// You should hold a strong reference to the returned instance to prevent it from being deallocated.
     @_spi(SendbirdInternal) public static func getOrCreate(params: InternalInitParams) -> SendbirdAuthMain {
         let key = createInstanceKey(appId: params.applicationId, apiHostUrl: params.customAPIHost) as NSString
 
@@ -86,9 +86,9 @@ import Foundation
         }
     }
 
-    @available(*, deprecated, message: "Use getInstance(appId:apiHostUrl:) instead")
     @_spi(SendbirdInternal) public static let pref = LocalPreferences(suiteName: "com.sendbird.sdk.ios")
 
+    @available(*, deprecated, message: "Use isInitialized(appId:apiHostUrl:) instead")
     @_spi(SendbirdInternal) public static var isInitialized: Bool {
         guard let sdkInstance = getFirstInstance() else {
             return false
