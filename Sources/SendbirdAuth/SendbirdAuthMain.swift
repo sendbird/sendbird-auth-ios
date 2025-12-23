@@ -25,7 +25,7 @@ import Foundation
     }
 
     @_spi(SendbirdInternal) public var configTs: Int64? {
-        SendbirdAuth.pref.value(forKey: PreferenceKey.configApiTs)
+        instancePref.value(forKey: PreferenceKey.configApiTs)
     }
 
     @_spi(SendbirdInternal) public var sessionManager: SessionManager
@@ -45,6 +45,9 @@ import Foundation
 
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
+
+    /// Instance-specific preferences (isolated per appId + apiHostUrl)
+    @_spi(SendbirdInternal) public let instancePref: LocalPreferences
 
     /// Callback invoked when this instance is destroyed
     @_spi(SendbirdInternal) public var onDestroy: (() -> Void)?
@@ -106,15 +109,24 @@ import Foundation
 
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
-        let pref = SendbirdAuth.pref
+        // Create instance-specific preferences
+        let instanceKey: String = {
+            if let apiHost = params.customAPIHost, !apiHost.isEmpty {
+                return "\(params.applicationId)_\(apiHost)"
+            }
+            return params.applicationId
+        }()
+        let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)")
+        self.instancePref = instancePref
+
         if let customAPIHost = params.customAPIHost {
-            pref.set(value: customAPIHost, forKey: PreferenceKey.customAPIHost)
+            instancePref.set(value: customAPIHost, forKey: PreferenceKey.customAPIHost)
         }
         if let customWsHost = params.customWSHost {
-            pref.set(value: customWsHost, forKey: PreferenceKey.customWsHost)
+            instancePref.set(value: customWsHost, forKey: PreferenceKey.customWsHost)
         }
-        let apiHost = Configuration.apiHostURL(for: params.applicationId)
-        let wsHost = Configuration.wsHostURL(for: params.applicationId)
+        let apiHost = Configuration.apiHostURL(for: params.applicationId, using: instancePref)
+        let wsHost = Configuration.wsHostURL(for: params.applicationId, using: instancePref)
 
         // INFO: initialize 과정에서는 service 를 고객이 설정할 수 없음. init 후 setCompletionHandlerDelegateQueue 호출되야 queue 변경 가능
         let service = QueueService()
@@ -128,7 +140,7 @@ import Foundation
             applicationId: params.applicationId
         )
 
-        let useNativeSocket: Bool = SendbirdAuth.pref.value(forKey: PreferenceKey.useNativeWS) ?? true
+        let useNativeSocket: Bool = instancePref.value(forKey: PreferenceKey.useNativeWS) ?? true
         let routerConfig = customRouterConfig ?? CommandRouterConfiguration(
             useNativeSocket: useNativeSocket,
             cachePolicy: .useProtocolCachePolicy,
@@ -284,7 +296,7 @@ extension SendbirdAuthMain: EventDelegate {
         case let command as ConnectionStateEvent.Connected:
             let loginEvent = command.loginEvent
 
-            SendbirdAuth.pref.set(
+            instancePref.set(
                 value: loginEvent.appInfo?.useNativeWS ?? false,
                 forKey: PreferenceKey.useNativeWS
             )
@@ -332,7 +344,7 @@ extension SendbirdAuthMain: SessionManagerDelegate {
 
         deviceConnectionManager.logout()
 
-        SendbirdAuth.pref.removeAll()
+        instancePref.removeAll()
         localCachePreference.removeAll()
     }
 
@@ -396,16 +408,15 @@ extension SendbirdAuthMain {
         Logger.main.debug("applicationId: \(applicationId), userId: \(userId), useToken: \(accessToken != nil), apiHost: \(String(describing: apiHost)), wsHost: \(String(describing: wsHost))")
 
         // INFO: Custom hosts
-        let pref = SendbirdAuth.pref
         if let apiHost {
-            pref.set(value: apiHost, forKey: PreferenceKey.customAPIHost)
+            instancePref.set(value: apiHost, forKey: PreferenceKey.customAPIHost)
         } else {
-            pref.remove(forKey: PreferenceKey.customAPIHost)
+            instancePref.remove(forKey: PreferenceKey.customAPIHost)
         }
         if let wsHost {
-            pref.set(value: wsHost, forKey: PreferenceKey.customWsHost)
+            instancePref.set(value: wsHost, forKey: PreferenceKey.customWsHost)
         } else {
-            pref.remove(forKey: PreferenceKey.customWsHost)
+            instancePref.remove(forKey: PreferenceKey.customWsHost)
         }
 
         guard !userId.isEmpty else {
@@ -661,11 +672,10 @@ extension SendbirdAuthMain {
         completionHandler: AuthUserHandler?
     ) {
         // INFO: Custom hosts
-        let pref = SendbirdAuth.pref
         if let apiHost {
-            pref.set(value: apiHost, forKey: PreferenceKey.customAPIHost)
+            instancePref.set(value: apiHost, forKey: PreferenceKey.customAPIHost)
         } else {
-            pref.remove(forKey: PreferenceKey.customAPIHost)
+            instancePref.remove(forKey: PreferenceKey.customAPIHost)
         }
 
         routerConfig.updateHost(apiHost: apiHost, wsHost: nil)

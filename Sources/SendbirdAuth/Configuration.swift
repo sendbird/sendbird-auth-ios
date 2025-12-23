@@ -32,7 +32,10 @@ enum Configuration {
     }
 
     static func apiHostURL(for appId: String) -> String {
-        let pref = SendbirdAuth.pref
+        apiHostURL(for: appId, using: SendbirdAuth.pref)
+    }
+
+    static func apiHostURL(for appId: String, using pref: LocalPreferences) -> String {
         if let customAPIHost: String = pref.value(forKey: PreferenceKey.customAPIHost) {
             return customAPIHost
         }
@@ -42,7 +45,10 @@ enum Configuration {
     }
 
     static func wsHostURL(for appId: String) -> String {
-        let pref = SendbirdAuth.pref
+        wsHostURL(for: appId, using: SendbirdAuth.pref)
+    }
+
+    static func wsHostURL(for appId: String, using pref: LocalPreferences) -> String {
         if let customWsHost: String = pref.value(forKey: PreferenceKey.customWsHost) {
             return customWsHost
         }
@@ -102,14 +108,12 @@ enum Configuration {
     /// - Note: If you want to use release environment's host,
     ///        build configuration should be set to `Release` and clear custom host after setting it.
     func setCustomHost(_ environment: CustomHostEnvironment) {
-        let pref = SendbirdAuth.pref
-        pref.set(value: environment.apiHost, forKey: PreferenceKey.customAPIHost)
-        pref.set(value: environment.wsHost, forKey: PreferenceKey.customWsHost)
+        instancePref.set(value: environment.apiHost, forKey: PreferenceKey.customAPIHost)
+        instancePref.set(value: environment.wsHost, forKey: PreferenceKey.customWsHost)
     }
 
     func clearCustomHost() {
-        let pref = SendbirdAuth.pref
-        pref.remove(forKey: PreferenceKey.customAPIHost)
-        pref.remove(forKey: PreferenceKey.customWsHost)
+        instancePref.remove(forKey: PreferenceKey.customAPIHost)
+        instancePref.remove(forKey: PreferenceKey.customWsHost)
     }
 }
