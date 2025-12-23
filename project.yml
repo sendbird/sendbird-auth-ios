@@ -52,8 +52,6 @@ targets:
     sources:
       - path: Sources/SendbirdAuth
         name: SendbirdAuth
-      - path: Configurations/Config.xcconfig
-        optional: true
 
   SendbirdAuthSDKStatic:
     platform: iOS
@@ -71,5 +69,3 @@ targets:
         MACH_O_TYPE: staticlib
     sources:
       - path: Sources/SendbirdAuth
-      - path: Configurations/Config.xcconfig
-        optional: true
