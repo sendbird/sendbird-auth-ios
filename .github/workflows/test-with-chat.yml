@@ -4,9 +4,19 @@ run-name: Test Auth changes with Chat SDK
 on:
   issue_comment:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      auth_branch:
+        description: 'Auth SDK branch to test'
+        required: true
+        default: 'develop'
+      chat_branch:
+        description: 'Chat SDK branch to use'
+        required: true
+        default: 'develop'
 
 concurrency:
-  group: ${{ github.workflow }}-pr-${{ github.event.issue.number }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -220,3 +230,133 @@ jobs:
               \"description\": \"$DESC\",
               \"target_url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
             }"
+
+  # Manual trigger job (workflow_dispatch)
+  test-with-chat-manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, macOS, ARM64, M1]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Auth
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.auth_branch }}
+
+      - name: Get Auth commit SHA
+        id: auth-sha
+        run: |
+          AUTH_SHA=$(git rev-parse HEAD)
+          echo "sha=$AUTH_SHA" >> $GITHUB_OUTPUT
+          echo "Auth commit SHA: $AUTH_SHA"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Clone chat-ios
+        env:
+          CHAT_BRANCH: ${{ inputs.chat_branch }}
+        run: |
+          git clone git@github.com:sendbird/chat-ios.git chat-ios
+          cd chat-ios
+          git checkout "$CHAT_BRANCH"
+          echo "Checked out chat-ios branch: $CHAT_BRANCH"
+
+      - name: Update Auth dependency to current commit
+        env:
+          AUTH_SHA: ${{ steps.auth-sha.outputs.sha }}
+        run: |
+          cd chat-ios
+
+          # Update project.yml: change version to revision
+          sed -i '' "s|version: .*|revision: $AUTH_SHA|g" project.yml
+
+          echo "Updated project.yml:"
+          grep -A2 "SendbirdAuthSDK:" project.yml
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Install dependencies
+        run: |
+          cd chat-ios
+
+          export GEM_HOME="$(ruby -e 'puts Gem.user_dir')"
+          export PATH="$GEM_HOME/bin:$PATH"
+
+          gem install bundler:2.4.11 --user-install
+          bundle config set --local path 'vendor/bundle'
+          bundle install
+
+          brew list xcbeautify >/dev/null 2>&1 || brew install xcbeautify
+
+      - name: Create configuration
+        run: |
+          cd chat-ios
+          ./scripts/create_config.sh
+          echo "REMOTE_API_KEY = ${{ secrets.REMOTE_API_KEY }}" >> Configurations/Config.xcconfig
+          echo "SECRET_KEY = ${{ secrets.SECRET_KEY }}" >> Configurations/Config.xcconfig
+
+      - name: Generate Xcode project
+        run: |
+          cd chat-ios
+          xcodegen generate
+
+      - name: Resolve SPM dependencies
+        run: |
+          cd chat-ios
+          xcodebuild -resolvePackageDependencies \
+            -project SendbirdChat.xcodeproj \
+            -scheme SendbirdChatSDK
+
+      - name: Build
+        run: |
+          cd chat-ios
+          xcodebuild build \
+            -project SendbirdChat.xcodeproj \
+            -scheme SendbirdChatSDK \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,name=iPhone 16 Pro Max" \
+            | xcbeautify
+
+      - name: Run tests
+        id: run_tests
+        run: |
+          cd chat-ios
+
+          # Create simulator
+          DEVICE_NAME="ci-temp-auth-test-$(uuidgen | cut -c1-8)"
+          RUNTIME_ID=$(xcrun simctl list runtimes | grep "iOS" | grep -Eo 'com.apple.CoreSimulator.SimRuntime.iOS-[^)]+' | head -n1)
+          DEVICE_ID=$(xcrun simctl create "$DEVICE_NAME" "iPhone 16 Pro Max" "$RUNTIME_ID")
+
+          echo "Created simulator: $DEVICE_NAME ($DEVICE_ID)"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+
+          cleanup() {
+            echo "Cleaning up simulator..."
+            xcrun simctl shutdown "$DEVICE_ID" || true
+            xcrun simctl delete "$DEVICE_ID" || true
+          }
+          trap cleanup EXIT
+
+          # Run tests
+          set +e
+          xcodebuild test \
+            -project SendbirdChat.xcodeproj \
+            -scheme SendbirdChatSDK \
+            -configuration Debug \
+            -destination "id=$DEVICE_ID" \
+            -only-testing:SendbirdChatTests \
+            | xcbeautify
+
+          TEST_RESULT=$?
+          set -e
+
+          echo "test_result=$TEST_RESULT" >> $GITHUB_OUTPUT
+          exit $TEST_RESULT
