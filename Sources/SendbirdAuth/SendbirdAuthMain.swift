@@ -52,6 +52,10 @@ import Foundation
     /// Callback invoked when this instance is destroyed
     @_spi(SendbirdInternal) public var onDestroy: (() -> Void)?
 
+    deinit {
+        onDestroy?()
+    }
+
     #if DEBUG
         private var websocketEngine: (any ChatWebSocketEngine)? // For test
         @_spi(SendbirdInternal) public func injectEngineForTest(_ engine: any ChatWebSocketEngine) {
@@ -390,6 +394,19 @@ extension SendbirdAuthMain: SessionManagerDelegate {
         if router.webSocketManager.isReconnecting {
             deviceConnectionManager.broadcaster.failedReconnection()
             disconnect()
+        }
+    }
+}
+
+// MARK: - Lifecycle
+
+extension SendbirdAuthMain {
+    /// Explicitly destroys this instance and removes it from the instances map
+    @_spi(SendbirdInternal) public func destroy(completionHandler: VoidHandler? = nil) {
+        disconnect { [weak self] in
+            self?.reset()
+            self?.onDestroy?()
+            completionHandler?()
         }
     }
 }
