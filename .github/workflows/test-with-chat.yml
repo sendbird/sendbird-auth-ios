@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       auth_branch:
-        description: 'Auth SDK branch to test'
+        description: "Auth SDK branch to test"
         required: true
-        default: 'develop'
+        default: "develop"
       chat_branch:
-        description: 'Chat SDK branch to use'
+        description: "Chat SDK branch to use"
         required: true
-        default: 'develop'
+        default: "develop"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.issue.number || github.run_id }}
@@ -76,7 +76,7 @@ jobs:
               "target_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }'
 
-  # Issue comment trigger: trigger chat-ios-pure workflow
+  # Issue comment trigger: trigger chat-ios workflow
   trigger-chat-tests-comment:
     needs: check-comment
     if: needs.check-comment.outputs.should_run == 'true'
@@ -84,21 +84,23 @@ jobs:
     outputs:
       run_id: ${{ steps.trigger.outputs.run_id }}
     steps:
-      - name: Trigger chat-ios-pure workflow
+      - name: Trigger chat-ios workflow
         id: trigger
         env:
           GH_TOKEN: ${{ secrets.CHAT_REPO_TOKEN }}
           AUTH_BRANCH: ${{ needs.check-comment.outputs.branch_name }}
           CHAT_BRANCH: ${{ needs.check-comment.outputs.chat_branch }}
+          PR_NUMBER: ${{ github.event.issue.number }}
         run: |
-          echo "Triggering chat-ios-pure tests with auth_branch=$AUTH_BRANCH, chat_branch=$CHAT_BRANCH"
+          echo "Triggering chat-ios tests with auth_branch=$AUTH_BRANCH, chat_branch=$CHAT_BRANCH"
 
           # Trigger the workflow
           gh workflow run run-tests.yml \
             --repo sendbird/chat-ios \
             --ref "$CHAT_BRANCH" \
             -f test_type=all \
-            -f auth_branch="$AUTH_BRANCH"
+            -f auth_branch="$AUTH_BRANCH" \
+            -f triggered_by="auth-ios PR #$PR_NUMBER"
 
           # Wait a moment for the workflow to be created
           sleep 5
@@ -115,7 +117,7 @@ jobs:
           echo "Triggered workflow run ID: $RUN_ID"
           echo "View at: https://github.com/sendbird/chat-ios/actions/runs/$RUN_ID"
 
-  # Issue comment trigger: wait for chat-ios-pure workflow to complete
+  # Issue comment trigger: wait for chat-ios workflow to complete
   wait-for-chat-tests-comment:
     needs: [check-comment, trigger-chat-tests-comment]
     if: needs.check-comment.outputs.should_run == 'true'
@@ -123,31 +125,95 @@ jobs:
     outputs:
       conclusion: ${{ steps.wait.outputs.conclusion }}
     steps:
-      - name: Wait for chat-ios-pure workflow
+      - name: Wait for chat-ios workflow
         id: wait
         env:
           GH_TOKEN: ${{ secrets.CHAT_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ needs.trigger-chat-tests-comment.outputs.run_id }}
+          SHA: ${{ needs.check-comment.outputs.sha }}
+          AUTH_REPO: ${{ github.repository }}
         run: |
           echo "Waiting for workflow run $RUN_ID to complete..."
           echo "View progress at: https://github.com/sendbird/chat-ios/actions/runs/$RUN_ID"
 
+          # Function to update job status on auth-ios PR
+          update_job_status() {
+            local job_name="$1"
+            local status="$2"
+            local conclusion="$3"
+            local job_url="$4"
+
+            local state="pending"
+            local desc="In progress..."
+
+            if [ "$status" == "completed" ]; then
+              if [ "$conclusion" == "success" ]; then
+                state="success"
+                desc="Passed"
+              elif [ "$conclusion" == "skipped" ]; then
+                state="success"
+                desc="Skipped"
+              else
+                state="failure"
+                desc="Failed"
+              fi
+            elif [ "$status" == "in_progress" ]; then
+              state="pending"
+              desc="Running..."
+            elif [ "$status" == "queued" ]; then
+              state="pending"
+              desc="Queued"
+            fi
+
+            curl -s -X POST \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/$AUTH_REPO/statuses/$SHA" \
+              -d "{
+                \"state\": \"$state\",
+                \"context\": \"chat-test / $job_name\",
+                \"description\": \"$desc\",
+                \"target_url\": \"$job_url\"
+              }" > /dev/null
+          }
+
           # Wait for the workflow to complete (timeout: 60 minutes)
           TIMEOUT=3600
           ELAPSED=0
-          INTERVAL=30
+          INTERVAL=15
+
+          declare -A PREV_JOB_STATUS
 
           while [ $ELAPSED -lt $TIMEOUT ]; do
-            STATUS=$(gh run view "$RUN_ID" \
+            # Get workflow data with jobs
+            WORKFLOW_DATA=$(gh run view "$RUN_ID" \
               --repo sendbird/chat-ios \
-              --json status,conclusion \
-              --jq '.status')
+              --json status,conclusion,jobs)
+
+            STATUS=$(echo "$WORKFLOW_DATA" | jq -r '.status')
+
+            # Update each job's status
+            echo "$WORKFLOW_DATA" | jq -c '.jobs[]' | while read -r job; do
+              JOB_NAME=$(echo "$job" | jq -r '.name')
+              JOB_STATUS=$(echo "$job" | jq -r '.status')
+              JOB_CONCLUSION=$(echo "$job" | jq -r '.conclusion // empty')
+              JOB_URL=$(echo "$job" | jq -r '.url // empty')
+
+              if [ -z "$JOB_URL" ]; then
+                JOB_URL="https://github.com/sendbird/chat-ios/actions/runs/$RUN_ID"
+              fi
+
+              CURRENT="${JOB_STATUS}_${JOB_CONCLUSION}"
+              if [ "${PREV_JOB_STATUS[$JOB_NAME]}" != "$CURRENT" ]; then
+                echo "Updating: $JOB_NAME ($JOB_STATUS / $JOB_CONCLUSION)"
+                update_job_status "$JOB_NAME" "$JOB_STATUS" "$JOB_CONCLUSION" "$JOB_URL"
+                PREV_JOB_STATUS[$JOB_NAME]="$CURRENT"
+              fi
+            done
 
             if [ "$STATUS" == "completed" ]; then
-              CONCLUSION=$(gh run view "$RUN_ID" \
-                --repo sendbird/chat-ios \
-                --json conclusion \
-                --jq '.conclusion')
+              CONCLUSION=$(echo "$WORKFLOW_DATA" | jq -r '.conclusion')
               echo "Workflow completed with conclusion: $CONCLUSION"
               echo "conclusion=$CONCLUSION" >> $GITHUB_OUTPUT
               exit 0
@@ -164,18 +230,32 @@ jobs:
 
   # Issue comment trigger: update status
   update-status-comment:
-    needs: [check-comment, trigger-chat-tests-comment, wait-for-chat-tests-comment]
+    needs:
+      [check-comment, trigger-chat-tests-comment, wait-for-chat-tests-comment]
     if: always() && needs.check-comment.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
+      - name: Cancel chat-ios workflow if needed
+        if: cancelled() || needs.wait-for-chat-tests-comment.result == 'cancelled'
+        env:
+          GH_TOKEN: ${{ secrets.CHAT_REPO_TOKEN }}
+          RUN_ID: ${{ needs.trigger-chat-tests-comment.outputs.run_id }}
+        run: |
+          echo "Cancelling chat-ios workflow run $RUN_ID..."
+          gh run cancel "$RUN_ID" --repo sendbird/chat-ios || true
+
       - name: Update status
         env:
           SHA: ${{ needs.check-comment.outputs.sha }}
           CONCLUSION: ${{ needs.wait-for-chat-tests-comment.outputs.conclusion }}
+          WAIT_RESULT: ${{ needs.wait-for-chat-tests-comment.result }}
           RUN_ID: ${{ needs.trigger-chat-tests-comment.outputs.run_id }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "$CONCLUSION" == "success" ]; then
+          if [ "$WAIT_RESULT" == "cancelled" ]; then
+            STATE="failure"
+            DESC="Chat SDK tests cancelled"
+          elif [ "$CONCLUSION" == "success" ]; then
             STATE="success"
             DESC="Chat SDK tests passed"
           else
@@ -201,21 +281,22 @@ jobs:
     outputs:
       run_id: ${{ steps.trigger.outputs.run_id }}
     steps:
-      - name: Trigger chat-ios-pure workflow
+      - name: Trigger chat-ios workflow
         id: trigger
         env:
           GH_TOKEN: ${{ secrets.CHAT_REPO_TOKEN }}
           AUTH_BRANCH: ${{ inputs.auth_branch }}
           CHAT_BRANCH: ${{ inputs.chat_branch }}
         run: |
-          echo "Triggering chat-ios-pure tests with auth_branch=$AUTH_BRANCH, chat_branch=$CHAT_BRANCH"
+          echo "Triggering chat-ios tests with auth_branch=$AUTH_BRANCH, chat_branch=$CHAT_BRANCH"
 
           # Trigger the workflow
           gh workflow run run-tests.yml \
             --repo sendbird/chat-ios \
             --ref "$CHAT_BRANCH" \
             -f test_type=all \
-            -f auth_branch="$AUTH_BRANCH"
+            -f auth_branch="$AUTH_BRANCH" \
+            -f triggered_by="auth-ios (manual)"
 
           # Wait a moment for the workflow to be created
           sleep 5
@@ -232,7 +313,7 @@ jobs:
           echo "Triggered workflow run ID: $RUN_ID"
           echo "View at: https://github.com/sendbird/chat-ios/actions/runs/$RUN_ID"
 
-  # Manual trigger: wait for chat-ios-pure workflow to complete
+  # Manual trigger: wait for chat-ios workflow to complete
   wait-for-chat-tests-manual:
     needs: trigger-chat-tests-manual
     if: github.event_name == 'workflow_dispatch'
@@ -240,7 +321,7 @@ jobs:
     outputs:
       conclusion: ${{ steps.wait.outputs.conclusion }}
     steps:
-      - name: Wait for chat-ios-pure workflow
+      - name: Wait for chat-ios workflow
         id: wait
         env:
           GH_TOKEN: ${{ secrets.CHAT_REPO_TOKEN }}
