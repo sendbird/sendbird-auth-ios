@@ -90,7 +90,6 @@ jobs:
           GH_TOKEN: ${{ secrets.CHAT_REPO_TOKEN }}
           AUTH_BRANCH: ${{ needs.check-comment.outputs.branch_name }}
           CHAT_BRANCH: ${{ needs.check-comment.outputs.chat_branch }}
-          PR_NUMBER: ${{ github.event.issue.number }}
         run: |
           echo "Triggering chat-ios tests with auth_branch=$AUTH_BRANCH, chat_branch=$CHAT_BRANCH"
 
@@ -99,8 +98,7 @@ jobs:
             --repo sendbird/chat-ios \
             --ref "$CHAT_BRANCH" \
             -f test_type=all \
-            -f auth_branch="$AUTH_BRANCH" \
-            -f triggered_by="auth-ios PR #$PR_NUMBER"
+            -f auth_branch="$AUTH_BRANCH"
 
           # Wait a moment for the workflow to be created
           sleep 5
@@ -295,8 +293,7 @@ jobs:
             --repo sendbird/chat-ios \
             --ref "$CHAT_BRANCH" \
             -f test_type=all \
-            -f auth_branch="$AUTH_BRANCH" \
-            -f triggered_by="auth-ios (manual)"
+            -f auth_branch="$AUTH_BRANCH"
 
           # Wait a moment for the workflow to be created
           sleep 5
