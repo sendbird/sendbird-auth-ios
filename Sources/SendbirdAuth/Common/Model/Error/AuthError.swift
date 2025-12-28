@@ -77,7 +77,7 @@ import Foundation
 
     /// Original string error code from Desk API (e.g., "desk401100")
     @_spi(SendbirdInternal) public var stringCode: String? {
-        userInfo?["stringCode"] as? String
+        userInfo["stringCode"] as? String
     }
 }
 

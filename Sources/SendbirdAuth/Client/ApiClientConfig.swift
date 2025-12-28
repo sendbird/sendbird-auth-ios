@@ -57,7 +57,7 @@ struct DeskExceptionParser: ApiExceptionParser {
         let errorCode: Int
 
         if deskCode == ERR_CODE_DESK_AUTH {
-            errorCode = AuthClientError.nonAuthorized.rawValue
+            errorCode = AuthClientError.accessTokenNotValid.rawValue
         } else {
             errorCode = AuthClientError.requestFailed.rawValue
         }
