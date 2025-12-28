@@ -13,20 +13,20 @@ import Foundation
 
     @_spi(SendbirdInternal) public var apiHost: String
     @_spi(SendbirdInternal) public var wsHost: String
-    @_spi(SendbirdInternal) public var apiClientConfig: ApiClientConfig
+    @_spi(SendbirdInternal) public var exceptionParser: ApiExceptionParser
 
     @_spi(SendbirdInternal) public init(
         useNativeSocket: Bool? = nil,
         cachePolicy: NSURLRequest.CachePolicy,
         apiHost: String,
         wsHost: String,
-        apiClientConfig: ApiClientConfig = .chat
+        exceptionParser: ApiExceptionParser = DefaultExceptionParser()
     ) {
         self.cachePolicy = cachePolicy
         self.useNativeSocket = useNativeSocket
         self.apiHost = apiHost
         self.wsHost = wsHost
-        self.apiClientConfig = apiClientConfig
+        self.exceptionParser = exceptionParser
         Logger.main.info("API Host: \(apiHost)")
         Logger.main.info("WS Host: \(wsHost)")
     }
@@ -37,7 +37,7 @@ import Foundation
         cachePolicy: .useProtocolCachePolicy,
         apiHost: "",
         wsHost: "",
-        apiClientConfig: .chat
+        exceptionParser: DefaultExceptionParser()
     )
     
     @_spi(SendbirdInternal) public func updateHost(apiHost: String?, wsHost: String?) {

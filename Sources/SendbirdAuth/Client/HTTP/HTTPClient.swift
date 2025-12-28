@@ -172,7 +172,7 @@ import Foundation
                     completionHandler?(nil, error)
                 }
             case 400..<500:
-                let error = self.routerConfig.apiClientConfig.exceptionParser.parse(data: data)
+                let error = self.routerConfig.exceptionParser.parse(data: data)
                     ?? AuthError.error(from: data)
                 completionHandler?(nil, error)
             default:
@@ -209,7 +209,7 @@ import Foundation
             case 200..<300:
                 completionHandler?(result, nil)
             case 400..<500:
-                let error = self.routerConfig.apiClientConfig.exceptionParser.parse(data: data)
+                let error = self.routerConfig.exceptionParser.parse(data: data)
                     ?? AuthError.error(from: data)
                 completionHandler?(nil, error)
             default:

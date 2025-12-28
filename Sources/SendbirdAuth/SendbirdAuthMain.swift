@@ -142,7 +142,8 @@ import Foundation
             useNativeSocket: useNativeSocket,
             cachePolicy: .useProtocolCachePolicy,
             apiHost: apiHost, // only api/ws needs
-            wsHost: wsHost
+            wsHost: wsHost,
+            exceptionParser: params.exceptionParser
         )
 
         let placeHolderWebSocketManager = WebSocketManager(
