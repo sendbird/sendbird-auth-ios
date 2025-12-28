@@ -74,6 +74,11 @@ import Foundation
     var errorCode: AuthClientError? {
         return AuthClientError(rawValue: code)
     }
+
+    /// Original string error code from Desk API (e.g., "desk401100")
+    @_spi(SendbirdInternal) public var stringCode: String? {
+        userInfo?["stringCode"] as? String
+    }
 }
 
 extension Error {

@@ -13,27 +13,31 @@ import Foundation
 
     @_spi(SendbirdInternal) public var apiHost: String
     @_spi(SendbirdInternal) public var wsHost: String
-    
+    @_spi(SendbirdInternal) public var apiClientConfig: ApiClientConfig
+
     @_spi(SendbirdInternal) public init(
         useNativeSocket: Bool? = nil,
         cachePolicy: NSURLRequest.CachePolicy,
         apiHost: String,
-        wsHost: String
+        wsHost: String,
+        apiClientConfig: ApiClientConfig = .chat
     ) {
         self.cachePolicy = cachePolicy
         self.useNativeSocket = useNativeSocket
         self.apiHost = apiHost
         self.wsHost = wsHost
+        self.apiClientConfig = apiClientConfig
         Logger.main.info("API Host: \(apiHost)")
         Logger.main.info("WS Host: \(wsHost)")
     }
-    
+
     // Only used for before `SendbirdChat.initWithApplicationId` is called
     @_spi(SendbirdInternal) public static let `default` = CommandRouterConfiguration(
         useNativeSocket: nil,
         cachePolicy: .useProtocolCachePolicy,
         apiHost: "",
-        wsHost: ""
+        wsHost: "",
+        apiClientConfig: .chat
     )
     
     @_spi(SendbirdInternal) public func updateHost(apiHost: String?, wsHost: String?) {
