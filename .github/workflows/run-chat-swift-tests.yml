@@ -337,51 +337,6 @@ jobs:
 
           echo "Updated swift-test-$MATRIX_TEST_GROUP status to $STATE"
 
-      - name: Notify Slack of Exit 70 Detection in Test Group
-        if: always() && steps.run_tests.outputs.exit_70_detected == 'true'
-        env:
-          MATRIX_TEST_GROUP: ${{ matrix.test-group }}
-          MACHINE_NAME: ${{ steps.run_tests.outputs.machine_name }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          GITHUB_SERVER_URL: ${{ github.server_url }}
-          BRANCH_NAME: ${{ inputs.branch_name }}
-          SLACK_WEB_HOOK_URL: ${{ secrets.SLACK_WEB_HOOK_URL }}
-        run: |
-          echo "🚨 Sending immediate alert for Exit status 70 detected in Swift test group $MATRIX_TEST_GROUP on machine $MACHINE_NAME"
-
-          MENTION="<!channel>"
-          PAYLOAD=$(cat <<EOF
-          {
-            "attachments": [
-              {
-                "author_name": "[ALERT] Self-hosted Mac Runner Issue 🚨",
-                "title": "Abnormal runner behavior detected",
-                "text": "${MENTION} Exit status 70 detected in SendbirdChat test (from auth-ios)",
-                "color": "#FFFF00",
-                "fields": [
-                  { "title": "Project", "value": "${GITHUB_REPOSITORY}", "short": true },
-                  { "title": "Test Group", "value": "Swift test $MATRIX_TEST_GROUP", "short": true },
-                  { "title": "Machine Name", "value": "${MACHINE_NAME}", "short": true },
-                  { "title": "Branch", "value": "${BRANCH_NAME}", "short": false },
-                  { "title": "Reason", "value": "It may have failed to find the iOS Simulator used for testing.", "short": false }
-                ],
-                "actions": [
-                  {
-                    "type": "button",
-                    "text": "View Workflow Run",
-                    "url": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-                  }
-                ]
-              }
-            ]
-          }
-          EOF
-          )
-
-          curl -X POST -H 'Content-type: application/json' \
-            --data "$PAYLOAD" "$SLACK_WEB_HOOK_URL"
-
       - name: Upload test results as artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -414,61 +369,6 @@ jobs:
           else
             echo "status=failure" >> $GITHUB_OUTPUT
           fi
-
-      - name: Notify Slack of Swift Test Result
-        env:
-          STATUS: ${{ steps.result_check.outputs.status }}
-          GITHUB_EVENT_COMMENT_HTML_URL: ${{ github.event.comment.html_url }}
-          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-          GITHUB_EVENT_PULL_REQUEST_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          GITHUB_REF_NAME: ${{ github.ref_name }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_SERVER_URL: ${{ github.server_url }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          SLACK_WEB_HOOK_URL: ${{ secrets.SLACK_WEB_HOOK_URL }}
-        run: |
-          COMMENT_URL="${GITHUB_EVENT_COMMENT_HTML_URL:-${GITHUB_EVENT_HEAD_COMMIT_MESSAGE:-N/A}}"
-          BRANCH="${GITHUB_EVENT_PULL_REQUEST_HEAD_REF:-$GITHUB_REF_NAME}"
-          UPPER_STATUS=$(echo "$STATUS" | tr '[:lower:]' '[:upper:]')
-          TEXT="[Auth-iOS] Chat Swift Test $UPPER_STATUS"
-
-          COLOR="#3AA3E3"
-          if [ "$STATUS" != "success" ]; then
-            COLOR="#ed5c5c"
-          fi
-
-          PAYLOAD=$(cat <<EOF
-          {
-            "attachments": [
-              {
-                "author_name": "[Github Action] Sendbird Auth-iOS 🔐",
-                "text": "${TEXT}",
-                "fields": [
-                  { "title": "Project", "value": "${GITHUB_REPOSITORY}", "short": true },
-                  { "title": "Git Branch", "value": "${BRANCH}", "short": true },
-                  { "title": "Trigger", "value": "${COMMENT_URL}", "short": true },
-                  { "title": "Git Author", "value": "${GITHUB_ACTOR}", "short": true }
-                ],
-                "actions": [
-                  {
-                    "type": "button",
-                    "text": "View Workflow",
-                    "url": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-                  }
-                ],
-                "color": "${COLOR}"
-              }
-            ]
-          }
-          EOF
-          )
-
-          echo "Payload for Slack:"
-          echo "$PAYLOAD"
-
-          curl -X POST -H 'Content-type: application/json' \
-            --data "$PAYLOAD" $SLACK_WEB_HOOK_URL
 
       - name: Fail if any test failed
         env:
