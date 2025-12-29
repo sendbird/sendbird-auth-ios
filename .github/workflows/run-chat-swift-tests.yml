@@ -418,26 +418,6 @@ jobs:
             echo "status=failure" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update overall Swift test status
-        env:
-          STATUS: ${{ steps.result_check.outputs.status }}
-          SHA_NAME: ${{ inputs.sha_name }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          CONTEXT="swift-test-overall"
-          DESCRIPTION="All Swift tests $STATUS"
-          STATE="$STATUS"
-
-          curl -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$SHA_NAME" \
-            -d "{\"state\":\"$STATE\",\"context\":\"$CONTEXT\",\"description\":\"$DESCRIPTION\",\"target_url\":\"https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
-
-          echo "Updated status context '$CONTEXT' with state '$STATE'"
-
       - name: Notify Slack of Swift Test Result
         env:
           STATUS: ${{ steps.result_check.outputs.status }}
