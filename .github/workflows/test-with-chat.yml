@@ -118,7 +118,8 @@ jobs:
             }'
 
   # Run Auth's own tests
-  run-auth-tests:
+  run-auth-unit-tests:
+    name: Run Auth Unit Tests
     needs: check-comment
     if: needs.check-comment.outputs.should_run == 'true'
     runs-on: [self-hosted, macOS, ARM64, M1]
@@ -126,7 +127,7 @@ jobs:
       - name: Checkout Auth repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.check-comment.outputs.branch_name }}
+          ref: ${{ needs.check-comment.outputs.sha }}
 
       - name: Set pending status for auth-test
         env:
@@ -176,6 +177,7 @@ jobs:
 
   # Setup for Chat tests
   setup:
+    name: Run Chat Integration Tests
     needs: check-comment
     if: needs.check-comment.outputs.should_run == 'true'
     uses: ./.github/workflows/chat-test-setup.yml
@@ -207,14 +209,14 @@ jobs:
 
   # Update overall status
   update-status:
-    needs: [check-comment, run-auth-tests, setup, swift-tests, objc-tests]
+    needs: [check-comment, run-auth-unit-tests, setup, swift-tests, objc-tests]
     if: always() && needs.check-comment.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Determine overall result
         id: result
         env:
-          AUTH_RESULT: ${{ needs.run-auth-tests.result }}
+          AUTH_RESULT: ${{ needs.run-auth-unit-tests.result }}
           SETUP_RESULT: ${{ needs.setup.result }}
           SWIFT_RESULT: ${{ needs.swift-tests.result }}
           OBJC_RESULT: ${{ needs.objc-tests.result }}
