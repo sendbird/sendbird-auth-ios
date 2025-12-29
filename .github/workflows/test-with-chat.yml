@@ -177,7 +177,7 @@ jobs:
 
   # Setup for Chat tests
   setup:
-    name: Run Chat Integration Tests
+    name: Setup chat integration tests
     needs: check-comment
     if: needs.check-comment.outputs.should_run == 'true'
     uses: ./.github/workflows/chat-test-setup.yml
