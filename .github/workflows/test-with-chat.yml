@@ -121,7 +121,7 @@ jobs:
   run-auth-tests:
     needs: check-comment
     if: needs.check-comment.outputs.should_run == 'true'
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS, ARM64, M1]
     steps:
       - name: Checkout Auth repository
         uses: actions/checkout@v4

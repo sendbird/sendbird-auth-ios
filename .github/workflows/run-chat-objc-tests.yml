@@ -134,10 +134,6 @@ jobs:
           cd chat-ios
           bundle update fastlane
 
-      - name: Check Config.xcconfig file
-        run: |
-          echo "Skipping..."
-
       - name: Run test-${{ matrix.test-group }}
         id: run_tests
         env:

@@ -133,9 +133,6 @@ jobs:
           cd chat-ios
           bundle update fastlane
 
-      - name: Check Config.xcconfig file
-        run: |
-          echo "Skipping..."
 
       - name: Prepare test files content
         id: test-files
