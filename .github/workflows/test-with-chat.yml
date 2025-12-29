@@ -1,5 +1,5 @@
 name: Test with Chat SDK
-run-name: Test Auth changes with Chat SDK
+run-name: Test Auth with Chat
 
 on:
   issue_comment:
@@ -178,7 +178,7 @@ jobs:
   setup:
     needs: check-comment
     if: needs.check-comment.outputs.should_run == 'true'
-    uses: ./.github/workflows/auth-test-setup.yml
+    uses: ./.github/workflows/chat-test-setup.yml
     with:
       chat_branch: ${{ needs.check-comment.outputs.chat_branch }}
     secrets: inherit

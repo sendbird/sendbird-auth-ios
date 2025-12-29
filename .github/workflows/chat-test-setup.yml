@@ -1,4 +1,4 @@
-name: Auth Test Setup
+name: Chat Test Setup
 
 on:
   workflow_call:
@@ -26,13 +26,13 @@ on:
     outputs:
       branch_name:
         description: "The auth branch name"
-        value: ${{ jobs.auth-test-setup.outputs.branch_name }}
+        value: ${{ jobs.chat-test-setup.outputs.branch_name }}
       sha_name:
         description: "The SHA value of the auth branch"
-        value: ${{ jobs.auth-test-setup.outputs.sha_name }}
+        value: ${{ jobs.chat-test-setup.outputs.sha_name }}
 
 jobs:
-  auth-test-setup:
+  chat-test-setup:
     runs-on: [self-hosted, macOS, ARM64, M1]
     outputs:
       branch_name: ${{ steps.set-branch.outputs.branch }}
