@@ -1,0 +1,130 @@
+name: 'Restore Caches Before Running Tests'
+description: 'Restores build, Homebrew and Gems caches for iOS testing workflows'
+
+inputs:
+  cache-key:
+    description: 'Cache key for build cache'
+    required: true
+  branch-name:
+    description: 'Branch name for Gems cache'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    # Restore Build Cache
+    - name: Restore Build Cache
+      uses: actions/cache@v3
+      env:
+        CACHE_KEY: ${{ inputs.cache-key }}
+      with:
+        path: |
+          chat-ios/build
+          chat-ios/tests
+          chat-ios/vendor
+          chat-ios/SendbirdChat.xcodeproj
+          chat-ios/Configurations
+        key: build-cache-${{ env.CACHE_KEY }}
+
+    - name: Ensure /opt/homebrew exists
+      shell: bash
+      run: |
+        if [ ! -d "/opt/homebrew" ]; then
+          sudo mkdir -p /opt/homebrew
+          sudo chown -R $(whoami) /opt/homebrew
+        fi
+
+    # Restore Homebrew Dependencies from relative cache copy
+    - name: Restore Homebrew Dependencies Cache Copy
+      uses: actions/cache@v3
+      with:
+        path: ./homebrew-cache-copy
+        key: homebrew-specific-deps-${{ hashFiles('chat-ios/Brewfile') }}
+        restore-keys: |
+          homebrew-specific-deps-
+
+    - name: Check homebrew cache key
+      shell: bash
+      run: |
+        echo "homebrew cache key (Restoring)"
+        echo "homebrew-copy-${{ hashFiles('chat-ios/Brewfile') }}"
+
+    # Copy restored Homebrew Cellar into /opt/homebrew
+    - name: Copy Homebrew Cache into /opt/homebrew
+      shell: bash
+      run: |
+        if [ -d "./homebrew-cache-copy" ]; then
+          sudo mkdir -p /opt/homebrew/Cellar
+          sudo cp -R ./homebrew-cache-copy/* /opt/homebrew/Cellar/
+        fi
+
+        for package in xcbeautify xctesthtmlreport gpg xcodegen; do
+          if [ -d "/opt/homebrew/Cellar/$package" ]; then
+            brew link $package 2>/dev/null || echo "$package already linked"
+            if ! command -v "$package" > /dev/null; then
+              echo "⚠️ $package not found in PATH, trying to symlink..."
+              if [ -f "/opt/homebrew/Cellar/$package"/*/bin/$package ]; then
+                sudo ln -sf "/opt/homebrew/Cellar/$package"/*/bin/$package /opt/homebrew/bin/$package
+              fi
+            fi
+          else
+            echo "⬇️ Homebrew package $package not found in cache. Installing..."
+            brew install $package || echo "❌ Failed to install $package via Homebrew"
+          fi
+        done
+
+    - name: Debug xcbeautify availability
+      shell: bash
+      run: |
+        echo "PATH: $PATH"
+        which xcbeautify || echo "⚠️ xcbeautify not found in PATH"
+
+    # Show gem restore key before restoring cache
+    - name: Show gem restore key
+      shell: bash
+      env:
+        BRANCH_NAME: ${{ inputs.branch-name }}
+      run: |
+        echo "chat-gem-bundle-cache-$BRANCH_NAME-${{ hashFiles('chat-ios/Gemfile.lock') }}"
+
+    - name: Clean vendor/bundle if broken
+      shell: bash
+      run: |
+        if [ -d "chat-ios/vendor/bundle" ]; then
+          echo "Checking for broken gem cache..."
+          if ! [ -f "chat-ios/vendor/bundle/ruby/2.6.0/gems/bundler-2.4.11/CHANGELOG.md" ]; then
+            echo "⚠️ Bundler cache appears broken. Removing vendor/bundle."
+            rm -rf chat-ios/vendor/bundle
+          else
+            echo "✅ Bundler cache appears valid."
+          fi
+        fi
+
+    # Restore Gems Cache
+    - name: Restore Gems Cache
+      uses: actions/cache@v3
+      env:
+        BRANCH_NAME: ${{ inputs.branch-name }}
+      with:
+        path: chat-ios/vendor/bundle
+        key: chat-gem-bundle-cache-${{ env.BRANCH_NAME }}-${{ hashFiles('chat-ios/Gemfile.lock') }}
+        restore-keys: |
+          chat-gem-bundle-cache-${{ env.BRANCH_NAME }}-
+          chat-gem-bundle-cache-
+
+    - name: Ensure correct bundler version
+      shell: bash
+      run: |
+        export GEM_HOME="$(ruby -e 'puts Gem.user_dir')"
+        export PATH="$GEM_HOME/bin:$PATH"
+
+        if ! bundle _2.4.11_ -v > /dev/null 2>&1; then
+          gem install bundler:2.4.11 --user-install
+        fi
+
+    - name: Configure Bundler
+      shell: bash
+      run: |
+        cd chat-ios
+        bundle config path vendor/bundle
+        bundle check || bundle install --jobs 4 --retry 3

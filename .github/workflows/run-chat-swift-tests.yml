@@ -1,0 +1,475 @@
+name: Run Chat Swift Tests
+
+on:
+  workflow_call:
+    inputs:
+      iphone_device:
+        description: "iPhone model for testing"
+        required: false
+        type: string
+        default: "iPhone 16 Pro Max"
+      xcode_version:
+        description: "Xcode version for testing"
+        required: false
+        type: string
+        default: "16.4"
+      configuration:
+        description: "Configuration for building and testing (e.g., Debug, Release, etc.)"
+        required: false
+        type: string
+        default: "Debug"
+      branch_name:
+        description: "Auth branch name"
+        required: true
+        type: string
+      sha_name:
+        description: "SHA of auth branch"
+        required: true
+        type: string
+      chat_branch:
+        description: "Chat SDK branch to use"
+        required: false
+        type: string
+        default: "develop"
+
+jobs:
+  run-swift-tests:
+    runs-on: [self-hosted, macOS, ARM64, M1]
+    timeout-minutes: 45
+    outputs:
+      machine_name: ${{ steps.run_tests.outputs.machine_name }}
+    strategy:
+      matrix:
+        test-group: [1, 2, 3, 4, 5, "chat-local-caching"]
+      fail-fast: false
+
+    steps:
+      - name: Verify Architecture
+        run: |
+          arch
+          echo "Running on $(uname -m) architecture"
+
+      - name: Checkout Auth repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch_name }}
+
+      - name: Get Auth commit SHA
+        id: auth-sha
+        run: |
+          AUTH_SHA=$(git rev-parse HEAD)
+          echo "sha=$AUTH_SHA" >> $GITHUB_OUTPUT
+          echo "Auth commit SHA: $AUTH_SHA"
+
+      - name: Set up SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+      - name: Clone chat-ios
+        env:
+          CHAT_BRANCH: ${{ inputs.chat_branch }}
+        run: |
+          git clone git@github.com:sendbird/chat-ios.git chat-ios
+          cd chat-ios
+          git checkout "$CHAT_BRANCH"
+          echo "Checked out chat-ios branch: $CHAT_BRANCH"
+
+      - name: Update Auth dependency to current commit
+        env:
+          AUTH_SHA: ${{ steps.auth-sha.outputs.sha }}
+        run: |
+          cd chat-ios
+          sed -i '' "s|version: .*|revision: $AUTH_SHA|g" project.yml
+          echo "Updated project.yml:"
+          grep -A2 "SendbirdAuthSDK:" project.yml
+
+      - name: Select Xcode version
+        run: |
+          CURRENT_PATH=$(xcode-select -p)
+          if [ "$CURRENT_PATH" != "/Applications/Xcode.app/Contents/Developer" ]; then
+            echo "Switching Xcode path to /Applications/Xcode.app"
+            sudo xcode-select -s /Applications/Xcode.app
+          else
+            echo "Xcode path already set to /Applications/Xcode.app"
+          fi
+
+      - name: Restore caches
+        uses: ./.github/composite-actions/restore-caches
+        with:
+          cache-key: ${{ inputs.sha_name }}
+          branch-name: ${{ inputs.branch_name }}
+
+      - name: Update fastlane
+        run: |
+          cd chat-ios
+          bundle update fastlane
+
+      - name: Check Config.xcconfig file
+        run: |
+          echo "Skipping..."
+
+      - name: Prepare test files content
+        id: test-files
+        env:
+          MATRIX_TEST_GROUP: ${{ matrix.test-group }}
+        run: |
+          cd chat-ios
+          if [[ "$MATRIX_TEST_GROUP" == "chat-local-caching" ]]; then
+            echo "tests=" >> $GITHUB_OUTPUT
+            echo "test-scheme=SendbirdChatLocalCachingTests" >> $GITHUB_OUTPUT
+          else
+            echo "tests=$(cat ./tests/swift-test-$MATRIX_TEST_GROUP.tests)" >> $GITHUB_OUTPUT
+            echo "test-scheme=SendbirdChatTests" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Show ./tests folder
+        env:
+          MATRIX_TEST_GROUP: ${{ matrix.test-group }}
+        run: |
+          echo "Checking tests folder"
+          ls -la chat-ios/tests
+          echo "Checking tests folder content"
+
+          if [[ "$MATRIX_TEST_GROUP" == "chat-local-caching" ]]; then
+            echo "no test folder for chat-local-caching"
+          else
+            cat chat-ios/tests/swift-test-$MATRIX_TEST_GROUP.tests
+          fi
+
+      - name: Run test ${{ matrix.test-group }}
+        id: run_tests
+        env:
+          FASTLANE_TEST_OUTPUT: true
+          TESTS: ${{ steps.test-files.outputs.tests }}
+          TEST_SCHEME: ${{ steps.test-files.outputs.test-scheme }}
+          CONFIGURATION: ${{ inputs.configuration }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          BRANCH_NAME: ${{ inputs.branch_name }}
+          SHA_NAME: ${{ inputs.sha_name }}
+          MATRIX_TEST_GROUP: ${{ matrix.test-group }}
+        run: |
+          cd chat-ios
+          echo "Running tests from $TESTS"
+
+          # Log existing ci-temp simulators for debugging
+          echo "🔍 Verifying simctl and uuidgen availability..."
+
+          if ! command -v xcrun >/dev/null; then
+            echo "❌ xcrun command not found. Exiting."
+            exit 1
+          fi
+
+          if ! xcrun simctl list devices >/dev/null; then
+            echo "❌ Failed to list simulators using simctl. Exiting."
+            exit 1
+          fi
+
+          echo "✅ simctl is available. Listing existing ci-temp simulators:"
+          xcrun simctl list devices | grep "ci-temp" || echo "No existing ci-temp simulators"
+
+          if ! command -v uuidgen >/dev/null; then
+            echo "❌ uuidgen not found. Exiting."
+            exit 1
+          fi
+
+          echo "🤔 Guessing the machine name"
+          IP_ADDRESS=$(ifconfig | grep -A 1 "inet " | grep "netmask 0xffffff00" | awk '{print $2}' | head -1)
+          IP_ADDRESS_FORMATTED=$(echo "$IP_ADDRESS" | tr '.' '-')
+          MACHINE_NAME="ip-$IP_ADDRESS_FORMATTED"
+          echo "Machine Name: $MACHINE_NAME"
+          echo "machine_name=$MACHINE_NAME" >> $GITHUB_OUTPUT
+
+          SUFFIX="${GITHUB_RUN_ID}-$(uuidgen | cut -c1-8)"
+          START_CREATE=$(date +%s)
+          DEVICE_NAME="ci-temp-${SUFFIX}"
+          DEVICE_TYPE="iPhone 16 Pro Max"
+          RUNTIME_ID=$(xcrun simctl list runtimes | grep "iOS" | grep -Eo 'com.apple.CoreSimulator.SimRuntime.iOS-[^)]+' | head -n1)
+          DEVICE_ID=$(xcrun simctl create "$DEVICE_NAME" "$DEVICE_TYPE" "$RUNTIME_ID")
+
+          # Save to GITHUB_ENV for cleanup step (works even if this step fails)
+          echo "DEVICE_ID=$DEVICE_ID" >> $GITHUB_ENV
+          echo "DEVICE_NAME=$DEVICE_NAME" >> $GITHUB_ENV
+
+          echo "Created simulator $DEVICE_NAME with ID $DEVICE_ID and runtime $RUNTIME_ID"
+          xcrun simctl boot "$DEVICE_ID"
+
+          echo "Waiting for simulator $DEVICE_ID to finish booting..."
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+
+          # Wait for simulator to be actually usable by Xcode
+          MAX_ATTEMPTS=60
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              if xcrun xcodebuild -destination "id=$DEVICE_ID" -list >/dev/null 2>&1; then
+                  echo "✅ Simulator $DEVICE_ID is ready for Xcode operations"
+                  break
+              fi
+              echo "Waiting for simulator to be Xcode-ready... (attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS)"
+              sleep 2
+              ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+              echo "❌ Simulator failed to become ready within expected time"
+              xcrun simctl list devices
+              exit 1
+          fi
+
+          END_CREATE=$(date +%s)
+
+          START_TEST=$(date +%s)
+
+          export SIMULATOR_ID=$DEVICE_ID
+
+          # Temporarily disable "errexit" (-e) so the script does not stop immediately if fastlane fails.
+          set +e
+          # Enable "pipefail" so that the exit status of the entire pipeline reflects the first failing command
+          set -o pipefail
+
+          bundle exec fastlane ios test_with_retry \
+            test_cases:"$TESTS" \
+            device:"$DEVICE_NAME" \
+            config:"$CONFIGURATION" \
+            scheme:"$TEST_SCHEME" 2>&1 | tee test_output.log
+
+          CODE=${PIPESTATUS[0]}
+
+          set -e
+
+          echo "fastlane_exit_code=$CODE" >> $GITHUB_OUTPUT
+          echo "🚫 EXIT CODE = ${CODE}"
+
+          END_TEST=$(date +%s)
+
+          # Check for Exit status: 70 error
+          if [ "$CODE" -ne 0 ]; then
+            if grep -E -q "Exit status: 70" test_output.log; then
+              echo "🚨 ALERT: Exit status: 70 detected - Runner abnormal behavior detected!"
+              echo "exit_70_detected=true" >> $GITHUB_OUTPUT
+            else
+              echo "✅ Runner is working properly."
+              echo "exit_70_detected=false" >> $GITHUB_OUTPUT
+            fi
+
+            exit "$CODE"
+          else
+            echo "exit_70_detected=false" >> $GITHUB_OUTPUT
+          fi
+
+          CREATE_TIME=$((END_CREATE - START_CREATE))
+          TEST_TIME=$((END_TEST - START_TEST))
+
+          echo "⏱️ Simulator creation time: ${CREATE_TIME}s"
+          echo "🧪 Test execution time: ${TEST_TIME}s"
+
+      # Cleanup simulator - runs even if tests fail/timeout/cancel
+      - name: Cleanup simulator
+        if: always()
+        run: |
+          if [ -n "${{ env.DEVICE_ID }}" ]; then
+            echo "🔻 Cleaning up simulator ${{ env.DEVICE_ID }} (${{ env.DEVICE_NAME }})"
+            xcrun simctl list devices | grep "${{ env.DEVICE_ID }}" || echo "Simulator ${{ env.DEVICE_ID }} not found in device list"
+            xcrun simctl shutdown "${{ env.DEVICE_ID }}" 2>/dev/null || echo "⚠️ Failed to shutdown simulator ${{ env.DEVICE_ID }}"
+            xcrun simctl delete "${{ env.DEVICE_ID }}" 2>/dev/null || echo "⚠️ Failed to delete simulator ${{ env.DEVICE_ID }}"
+            echo "✅ Simulator cleanup completed"
+          else
+            echo "⚠️ No DEVICE_ID found, skipping cleanup"
+          fi
+
+      # Update check status for each swift test group
+      - name: Update Swift test group ${{ matrix.test-group }} status
+        if: always()
+        env:
+          MATRIX_TEST_GROUP: ${{ matrix.test-group }}
+          STEP_RUN_TESTS_OUTCOME: ${{ steps.run_tests.outcome }}
+          EXIT_70_DETECTED: ${{ steps.run_tests.outputs.exit_70_detected }}
+          MACHINE_NAME: ${{ steps.run_tests.outputs.machine_name }}
+          SHA_NAME: ${{ inputs.sha_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Determine status based on test outcome and Exit status: 70 detection
+          if [ "$EXIT_70_DETECTED" == "true" ]; then
+            STATE="failure"
+            DESCRIPTION="Swift test $MATRIX_TEST_GROUP failed - Runner issue on $MACHINE_NAME"
+            echo "🚨 Exit status: 70 detected in Swift test group $MATRIX_TEST_GROUP on machine $MACHINE_NAME - Runner abnormal behavior!"
+          elif [ "$STEP_RUN_TESTS_OUTCOME" == "success" ]; then
+            STATE="success"
+            DESCRIPTION="Swift test $MATRIX_TEST_GROUP passed"
+          else
+            STATE="failure"
+            DESCRIPTION="Swift test $MATRIX_TEST_GROUP failed"
+          fi
+
+          # Update status via curl
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$SHA_NAME" \
+            -d "{\"state\":\"$STATE\",\"context\":\"swift-test-$MATRIX_TEST_GROUP\",\"description\":\"$DESCRIPTION\",\"target_url\":\"https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
+
+          echo "Updated swift-test-$MATRIX_TEST_GROUP status to $STATE"
+
+      - name: Notify Slack of Exit 70 Detection in Test Group
+        if: always() && steps.run_tests.outputs.exit_70_detected == 'true'
+        env:
+          MATRIX_TEST_GROUP: ${{ matrix.test-group }}
+          MACHINE_NAME: ${{ steps.run_tests.outputs.machine_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          BRANCH_NAME: ${{ inputs.branch_name }}
+          SLACK_WEB_HOOK_URL: ${{ secrets.SLACK_WEB_HOOK_URL }}
+        run: |
+          echo "🚨 Sending immediate alert for Exit status 70 detected in Swift test group $MATRIX_TEST_GROUP on machine $MACHINE_NAME"
+
+          MENTION="<!channel>"
+          PAYLOAD=$(cat <<EOF
+          {
+            "attachments": [
+              {
+                "author_name": "[ALERT] Self-hosted Mac Runner Issue 🚨",
+                "title": "Abnormal runner behavior detected",
+                "text": "${MENTION} Exit status 70 detected in SendbirdChat test (from auth-ios)",
+                "color": "#FFFF00",
+                "fields": [
+                  { "title": "Project", "value": "${GITHUB_REPOSITORY}", "short": true },
+                  { "title": "Test Group", "value": "Swift test $MATRIX_TEST_GROUP", "short": true },
+                  { "title": "Machine Name", "value": "${MACHINE_NAME}", "short": true },
+                  { "title": "Branch", "value": "${BRANCH_NAME}", "short": false },
+                  { "title": "Reason", "value": "It may have failed to find the iOS Simulator used for testing.", "short": false }
+                ],
+                "actions": [
+                  {
+                    "type": "button",
+                    "text": "View Workflow Run",
+                    "url": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          )
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data "$PAYLOAD" "$SLACK_WEB_HOOK_URL"
+
+      - name: Upload test results as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-test-results-artifact-${{ matrix.test-group }}
+          path: |
+            ~/Library/Logs/scan
+            chat-ios/test_output
+            chat-ios/fastlane/test_output
+
+      - name: Check test results
+        env:
+          RUN_TESTS_OUTCOME: ${{ steps.run_tests.outcome }}
+        if: env.RUN_TESTS_OUTCOME != 'success'
+        run: exit 1
+
+  notify-swift-result:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [run-swift-tests]
+    steps:
+      - name: Determine overall result
+        id: result_check
+        env:
+          NEEDS_RUN_SWIFT_TESTS_RESULT: ${{ needs.run-swift-tests.result }}
+        run: |
+          echo "🔍 needs.run-swift-tests.result = '$NEEDS_RUN_SWIFT_TESTS_RESULT'"
+          if echo "$NEEDS_RUN_SWIFT_TESTS_RESULT" | grep -q "success"; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update overall Swift test status
+        env:
+          STATUS: ${{ steps.result_check.outputs.status }}
+          SHA_NAME: ${{ inputs.sha_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CONTEXT="swift-test-overall"
+          DESCRIPTION="All Swift tests $STATUS"
+          STATE="$STATUS"
+
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$SHA_NAME" \
+            -d "{\"state\":\"$STATE\",\"context\":\"$CONTEXT\",\"description\":\"$DESCRIPTION\",\"target_url\":\"https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
+
+          echo "Updated status context '$CONTEXT' with state '$STATE'"
+
+      - name: Notify Slack of Swift Test Result
+        env:
+          STATUS: ${{ steps.result_check.outputs.status }}
+          GITHUB_EVENT_COMMENT_HTML_URL: ${{ github.event.comment.html_url }}
+          GITHUB_EVENT_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          GITHUB_EVENT_PULL_REQUEST_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          SLACK_WEB_HOOK_URL: ${{ secrets.SLACK_WEB_HOOK_URL }}
+        run: |
+          COMMENT_URL="${GITHUB_EVENT_COMMENT_HTML_URL:-${GITHUB_EVENT_HEAD_COMMIT_MESSAGE:-N/A}}"
+          BRANCH="${GITHUB_EVENT_PULL_REQUEST_HEAD_REF:-$GITHUB_REF_NAME}"
+          UPPER_STATUS=$(echo "$STATUS" | tr '[:lower:]' '[:upper:]')
+          TEXT="[Auth-iOS] Chat Swift Test $UPPER_STATUS"
+
+          COLOR="#3AA3E3"
+          if [ "$STATUS" != "success" ]; then
+            COLOR="#ed5c5c"
+          fi
+
+          PAYLOAD=$(cat <<EOF
+          {
+            "attachments": [
+              {
+                "author_name": "[Github Action] Sendbird Auth-iOS 🔐",
+                "text": "${TEXT}",
+                "fields": [
+                  { "title": "Project", "value": "${GITHUB_REPOSITORY}", "short": true },
+                  { "title": "Git Branch", "value": "${BRANCH}", "short": true },
+                  { "title": "Trigger", "value": "${COMMENT_URL}", "short": true },
+                  { "title": "Git Author", "value": "${GITHUB_ACTOR}", "short": true }
+                ],
+                "actions": [
+                  {
+                    "type": "button",
+                    "text": "View Workflow",
+                    "url": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+                  }
+                ],
+                "color": "${COLOR}"
+              }
+            ]
+          }
+          EOF
+          )
+
+          echo "Payload for Slack:"
+          echo "$PAYLOAD"
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data "$PAYLOAD" $SLACK_WEB_HOOK_URL
+
+      - name: Fail if any test failed
+        env:
+          RESULT_STATUS: ${{ steps.result_check.outputs.status }}
+        if: env.RESULT_STATUS != 'success'
+        run: exit 1
