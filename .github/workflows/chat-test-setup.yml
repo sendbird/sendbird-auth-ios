@@ -43,26 +43,29 @@ jobs:
       pull-requests: read
       statuses: write
     steps:
-      - name: Shutdown and Delete Existing Simulators
+      - name: Cleanup Old CI Simulators
         run: |
-          echo "🔻 Shutting down ci-temp and iPhone_Test_Device simulators..."
-          xcrun simctl list devices | grep -E "(ci-temp|iPhone_Test_Device)" | grep "(Booted)" | while read -r line; do
-            DEVICE_ID=$(echo "$line" | grep -Eo '[A-Fa-f0-9-]{36}')
-            if [ -n "$DEVICE_ID" ]; then
-              echo "Shutting down $DEVICE_ID..."
-              xcrun simctl shutdown "$DEVICE_ID" 2>/dev/null || true
-            fi
-          done
-
           echo "🧹 Deleting unavailable simulators..."
           xcrun simctl delete unavailable 2>/dev/null || true
 
-          echo "🗑️ Deleting ci-temp and iPhone_Test_Device simulators..."
+          # Delete ci-temp and iPhone_Test_Device simulators older than 1 hour (3600 seconds)
+          # Includes Booted simulators - if it's been running for 1 hour, it's likely stuck (test timeout is 45 mins)
+          echo "🗑️ Deleting old CI simulators (older than 1 hour)..."
+          CUTOFF_TIME=$(($(date +%s) - 3600))
           xcrun simctl list devices | grep -E "(ci-temp|iPhone_Test_Device)" | while read -r line; do
             DEVICE_ID=$(echo "$line" | grep -Eo '[A-Fa-f0-9-]{36}')
             if [ -n "$DEVICE_ID" ]; then
-              echo "Deleting $DEVICE_ID..."
-              xcrun simctl delete "$DEVICE_ID" 2>/dev/null || true
+              DEVICE_PATH="$HOME/Library/Developer/CoreSimulator/Devices/$DEVICE_ID"
+              if [ -d "$DEVICE_PATH" ]; then
+                DEVICE_CREATED=$(stat -f %B "$DEVICE_PATH" 2>/dev/null || echo "0")
+                if [ "$DEVICE_CREATED" -lt "$CUTOFF_TIME" ]; then
+                  echo "Deleting old simulator $DEVICE_ID (created $(date -r $DEVICE_CREATED))..."
+                  xcrun simctl shutdown "$DEVICE_ID" 2>/dev/null || true
+                  xcrun simctl delete "$DEVICE_ID" 2>/dev/null || true
+                else
+                  echo "Keeping recent simulator $DEVICE_ID (created $(date -r $DEVICE_CREATED))"
+                fi
+              fi
             fi
           done
 
