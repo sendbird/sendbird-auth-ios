@@ -77,6 +77,16 @@ import Foundation
     }
 
     // MARK: - Legacy Support (Backward Compatibility)
+
+    @available(*, deprecated, message: "DO NOT USE IT. Use SendbirdAuthMain.instancePref instead")
+    @_spi(SendbirdInternal) public static var pref: LocalPreferences {
+        if let sdkInstance = getFirstInstance() {
+            return sdkInstance.instancePref
+        } else {
+            return LocalPreferences(suiteName: "com.sendbird.sdk.ios")
+        }
+    }
+
     @_spi(SendbirdInternal) public static func updateSharedSDKInstance(to newMain: SendbirdAuthMain) {
         let key = createInstanceKey(appId: newMain.applicationId, apiHostUrl: newMain.routerConfig.apiHost) as NSString
         instancesLock.withLock {

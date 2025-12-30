@@ -57,7 +57,7 @@ import AppKit
         broadcaster: ConnectionEventBroadcaster,
         networkBroadcaster: NetworkEventBroadcaster,
         internalBroadcaster: InternalConnectionEventBroadcaster,
-        instancePref: LocalPreferences
+        instancePref: LocalPreferences = SendbirdAuth.pref
     ) {
         self.broadcaster = broadcaster
         self.networkBroadcaster = networkBroadcaster
