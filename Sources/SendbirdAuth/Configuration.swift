@@ -31,8 +31,8 @@ enum Configuration {
         return defaultHost
     }
 
-    static func apiHostURL(for appId: String, using pref: LocalPreferences) -> String {
-        if let customAPIHost: String = pref.value(forKey: PreferenceKey.customAPIHost) {
+    static func apiHostURL(for appId: String, using pref: LocalPreferences? = nil) -> String {
+        if let customAPIHost: String = pref?.value(forKey: PreferenceKey.customAPIHost) {
             return customAPIHost
         }
 
@@ -40,8 +40,8 @@ enum Configuration {
         return template.replacingOccurrences(of: "@@", with: appId)
     }
 
-    static func wsHostURL(for appId: String, using pref: LocalPreferences) -> String {
-        if let customWsHost: String = pref.value(forKey: PreferenceKey.customWsHost) {
+    static func wsHostURL(for appId: String, using pref: LocalPreferences? = nil) -> String {
+        if let customWsHost: String = pref?.value(forKey: PreferenceKey.customWsHost) {
             return customWsHost
         }
 
