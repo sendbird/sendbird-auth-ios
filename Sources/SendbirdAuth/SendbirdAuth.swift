@@ -77,16 +77,12 @@ import Foundation
     }
 
     // MARK: - Legacy Support (Backward Compatibility)
-
-    @available(*, deprecated, message: "Use getOrCreate(params:) instead")
     @_spi(SendbirdInternal) public static func updateSharedSDKInstance(to newMain: SendbirdAuthMain) {
         let key = createInstanceKey(appId: newMain.applicationId, apiHostUrl: newMain.routerConfig.apiHost) as NSString
         instancesLock.withLock {
             instances.setObject(newMain, forKey: key)
         }
     }
-
-    @_spi(SendbirdInternal) public static let pref = LocalPreferences(suiteName: "com.sendbird.sdk.ios")
 
     @available(*, deprecated, message: "Use isInitialized(appId:apiHostUrl:) instead")
     @_spi(SendbirdInternal) public static var isInitialized: Bool {

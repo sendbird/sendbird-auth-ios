@@ -31,10 +31,6 @@ enum Configuration {
         return defaultHost
     }
 
-    static func apiHostURL(for appId: String) -> String {
-        apiHostURL(for: appId, using: SendbirdAuth.pref)
-    }
-
     static func apiHostURL(for appId: String, using pref: LocalPreferences) -> String {
         if let customAPIHost: String = pref.value(forKey: PreferenceKey.customAPIHost) {
             return customAPIHost
@@ -42,10 +38,6 @@ enum Configuration {
 
         let template = hostURL(for: "API_HOST_URL", default: defaultAPIHost)
         return template.replacingOccurrences(of: "@@", with: appId)
-    }
-
-    static func wsHostURL(for appId: String) -> String {
-        wsHostURL(for: appId, using: SendbirdAuth.pref)
     }
 
     static func wsHostURL(for appId: String, using pref: LocalPreferences) -> String {

@@ -182,7 +182,8 @@ import Foundation
             eventDispatcher: dispatcher,
             broadcaster: ConnectionEventBroadcaster(service, mapTableValueOption: .strongMemory),
             networkBroadcaster: NetworkEventBroadcaster(service),
-            internalBroadcaster: InternalConnectionEventBroadcaster(service)
+            internalBroadcaster: InternalConnectionEventBroadcaster(service),
+            instancePref: instancePref
         )
 
         let requestQueue = RequestQueue(
