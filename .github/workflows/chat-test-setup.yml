@@ -1,0 +1,345 @@
+name: Chat Test Setup
+
+on:
+  workflow_call:
+    inputs:
+      iphone_device:
+        description: "iPhone model for testing"
+        required: false
+        type: string
+        default: "iPhone 16 Pro Max"
+      xcode_version:
+        description: "Xcode version for testing"
+        required: false
+        type: string
+        default: "16.4"
+      configuration:
+        description: "Configuration for building and testing (e.g., Debug, Release, etc.)"
+        required: false
+        type: string
+        default: "Debug"
+      chat_branch:
+        description: "Chat SDK branch to use"
+        required: false
+        type: string
+        default: "develop"
+    outputs:
+      branch_name:
+        description: "The auth branch name"
+        value: ${{ jobs.chat-test-setup.outputs.branch_name }}
+      sha_name:
+        description: "The SHA value of the auth branch"
+        value: ${{ jobs.chat-test-setup.outputs.sha_name }}
+
+jobs:
+  chat-test-setup:
+    runs-on: [self-hosted, macOS, ARM64, M1]
+    outputs:
+      branch_name: ${{ steps.set-branch.outputs.branch }}
+      sha_name: ${{ steps.set-branch.outputs.sha }}
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Cleanup Old CI Simulators
+        run: |
+          echo "🧹 Deleting unavailable simulators..."
+          xcrun simctl delete unavailable 2>/dev/null || true
+
+          # Delete ci-temp and iPhone_Test_Device simulators older than 1 hour (3600 seconds)
+          # Includes Booted simulators - if it's been running for 1 hour, it's likely stuck (test timeout is 45 mins)
+          echo "🗑️ Deleting old CI simulators (older than 1 hour)..."
+          CUTOFF_TIME=$(($(date +%s) - 3600))
+          xcrun simctl list devices | grep -E "(ci-temp|iPhone_Test_Device)" | while read -r line; do
+            DEVICE_ID=$(echo "$line" | grep -Eo '[A-Fa-f0-9-]{36}')
+            if [ -n "$DEVICE_ID" ]; then
+              DEVICE_PATH="$HOME/Library/Developer/CoreSimulator/Devices/$DEVICE_ID"
+              if [ -d "$DEVICE_PATH" ]; then
+                DEVICE_CREATED=$(stat -f %B "$DEVICE_PATH" 2>/dev/null || echo "0")
+                if [ "$DEVICE_CREATED" -lt "$CUTOFF_TIME" ]; then
+                  echo "Deleting old simulator $DEVICE_ID (created $(date -r $DEVICE_CREATED))..."
+                  xcrun simctl shutdown "$DEVICE_ID" 2>/dev/null || true
+                  xcrun simctl delete "$DEVICE_ID" 2>/dev/null || true
+                else
+                  echo "Keeping recent simulator $DEVICE_ID (created $(date -r $DEVICE_CREATED))"
+                fi
+              fi
+            fi
+          done
+
+          echo "✅ Simulator cleanup complete."
+
+      # For issue_comment events: Get PR branch
+      - name: Get PR branch (issue_comment only)
+        if: github.event_name == 'issue_comment'
+        uses: xt0rted/pull-request-comment-branch@v3
+        id: comment-branch
+
+      # Set branch name variable based on trigger
+      - name: Determine branch
+        id: set-branch
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "branch=${{ github.ref }}" >> $GITHUB_OUTPUT
+            echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "branch=${{ steps.comment-branch.outputs.head_ref }}" >> $GITHUB_OUTPUT
+            echo "sha=${{ steps.comment-branch.outputs.head_sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Show branch name
+        run: |
+          echo "Checking extracted branch name: ${{ steps.set-branch.outputs.branch }}"
+
+      - name: Set Test Setup status to pending
+        uses: myrotvorets/set-commit-status-action@master
+        with:
+          sha: ${{ steps.set-branch.outputs.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          context: "test-setup"
+          status: pending
+          description: "Test setup is queued"
+
+      - name: Set each test swift status to pending
+        run: |
+          # Loop through Swift test groups
+          for i in 1 2 3 4 5 "chat-local-caching"
+          do
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/statuses/${{ steps.set-branch.outputs.sha }}" \
+              -d "{\"state\":\"pending\",\"context\":\"swift-test-$i\",\"description\":\"Swift test $i is queued\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+
+            echo "Set swift-test-$i status to pending"
+          done
+
+      - name: Set each test objc job status to pending
+        run: |
+          # Loop through ObjC test groups
+          for i in 1 2 3 4
+          do
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/statuses/${{ steps.set-branch.outputs.sha }}" \
+              -d "{\"state\":\"pending\",\"context\":\"objc-test-$i\",\"description\":\"ObjC test $i is queued\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+
+            echo "Set objc-test-$i status to pending"
+          done
+
+      - name: Checkout Auth repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.set-branch.outputs.branch }}
+
+      - name: Get Auth commit SHA
+        id: auth-sha
+        run: |
+          AUTH_SHA=$(git rev-parse HEAD)
+          echo "sha=$AUTH_SHA" >> $GITHUB_OUTPUT
+          echo "Auth commit SHA: $AUTH_SHA"
+
+      - name: Set up SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Configure git for private SPM dependencies
+        run: |
+          # Configure git to use SSH instead of HTTPS for GitHub
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+          # Verify SSH connection
+          ssh -T git@github.com || echo "SSH configured for git operations"
+
+      - name: Clone chat-ios
+        env:
+          CHAT_BRANCH: ${{ inputs.chat_branch }}
+        run: |
+          git clone git@github.com:sendbird/chat-ios.git chat-ios
+          cd chat-ios
+          git checkout "$CHAT_BRANCH"
+          echo "Checked out chat-ios branch: $CHAT_BRANCH"
+
+      - name: Update Auth dependency to current commit
+        env:
+          AUTH_SHA: ${{ steps.auth-sha.outputs.sha }}
+        run: |
+          cd chat-ios
+
+          # Update project.yml: change version to revision
+          sed -i '' "s|version: .*|revision: $AUTH_SHA|g" project.yml
+
+          echo "Updated project.yml:"
+          grep -A2 "SendbirdAuthSDK:" project.yml
+
+      - name: Select Xcode version
+        env:
+          XCODE_VERSION: ${{ inputs.xcode_version }}
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Print selected Xcode
+        run: |
+          echo "Active developer directory: $(xcode-select -p)"
+          xcodebuild -version
+
+      - name: Install dependencies and update resources
+        run: |
+          cd chat-ios
+
+          export GEM_HOME="$(ruby -e 'puts Gem.user_dir')"
+          export PATH="$GEM_HOME/bin:$PATH"
+
+          gem install rake --user-install
+          gem install bundler:2.4.11 --user-install
+          bundle --version
+
+          bundle config set --local path 'vendor/bundle'
+          bundle config set --local build.unf_ext "--with-cppflags=-I$(xcrun --show-sdk-path)/usr/include"
+
+          bundle add rake --skip-install || echo "rake already present"
+
+          bundle install
+          brew update
+          brew bundle --no-upgrade
+
+          # Copy restored Homebrew Cellar into /opt/homebrew
+          if [ -d "./homebrew-cache-copy" ]; then
+            sudo mkdir -p /opt/homebrew/Cellar
+            sudo cp -R ./homebrew-cache-copy/* /opt/homebrew/Cellar/
+          fi
+
+          brew list xcbeautify >/dev/null 2>&1 || brew install xcbeautify
+          for package in xcbeautify xctesthtmlreport gpg xcodegen; do
+            if [ -d "/opt/homebrew/Cellar/$package" ]; then
+              brew link $package 2>/dev/null || echo "$package already linked"
+            fi
+          done
+
+          bundle update fastlane
+          bundle exec fastlane update_plugins
+
+      - name: Create configuration
+        run: |
+          cd chat-ios
+          ./scripts/create_config.sh
+          echo "REMOTE_API_KEY = ${{ secrets.REMOTE_API_KEY }}" >> Configurations/Config.xcconfig
+          echo "SECRET_KEY = ${{ secrets.SECRET_KEY }}" >> Configurations/Config.xcconfig
+          cat Configurations/Config.xcconfig
+
+      - name: Generate Xcode Project
+        run: |
+          cd chat-ios
+          xcodegen generate
+
+      - name: Prepare Parallel Testing for ObjC tests
+        run: |
+          cd chat-ios
+          ./scripts/prepare_fastlane.sh
+
+      - name: Prepare Parallel Testing for Swift tests
+        run: |
+          cd chat-ios
+          ./scripts/prepare_fastlane_swift.sh
+
+      - name: Show current branch
+        run: |
+          echo "git branch"
+          git branch
+          echo "git branch --show-current"
+          git branch --show-current
+
+      - name: Pre-warm Simulator Service
+        run: xcrun simctl list > /dev/null
+
+      - name: Build the project
+        env:
+          CONFIGURATION: ${{ inputs.configuration }}
+          IPHONE_DEVICE: ${{ inputs.iphone_device }}
+        run: |
+          cd chat-ios
+          bundle exec fastlane build \
+            config:$CONFIGURATION \
+            device:"$IPHONE_DEVICE"
+
+      - name: Show ./tests folder
+        run: |
+          echo "Checking tests folder"
+          ls -la chat-ios/tests
+          echo "Checking tests folder content"
+          cat chat-ios/tests/swift-test-5.tests
+
+      - name: Disk I/O Benchmark
+        run: |
+          echo "Measuring disk write speed..."
+          dd if=/dev/zero of=./testfile bs=1m count=512 conv=fsync
+          rm ./testfile
+
+      # Cache Build Artifacts
+      - name: Save Build Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            chat-ios/build
+            chat-ios/tests
+            chat-ios/vendor
+            chat-ios/SendbirdChat.xcodeproj
+            chat-ios/Configurations
+          key: build-cache-${{ steps.set-branch.outputs.sha }}
+
+      - name: Check homebrew cache key
+        run: |
+          echo "homebrew cache key (Caching)"
+          echo "homebrew-specific-deps-${{ hashFiles('chat-ios/Brewfile') }}"
+
+      # Ensure homebrew-cache directory exists before caching
+      - name: Ensure homebrew-cache directory exists
+        run: mkdir -p homebrew-cache
+
+      # Cache Homebrew Dependencies
+      - name: Cache Homebrew Dependencies
+        uses: actions/cache@v3
+        with:
+          path: homebrew-cache
+          key: homebrew-specific-deps-${{ hashFiles('chat-ios/Brewfile') }}
+          restore-keys: |
+            homebrew-specific-deps-
+
+      # Show gem cache key before caching
+      - name: Show gem cache key
+        run: |
+          echo "chat-gem-bundle-cache-${{ steps.set-branch.outputs.branch }}-${{ hashFiles('chat-ios/Gemfile.lock') }}"
+
+      - name: Check vendor/bundle exists
+        run: |
+          echo "Contents of chat-ios/vendor/bundle:"
+          ls -la chat-ios/vendor/bundle || echo "vendor/bundle not found"
+
+      # Cache Gem Bundle
+      - name: Cache Gems
+        uses: actions/cache@v3
+        with:
+          path: chat-ios/vendor/bundle
+          key: chat-gem-bundle-cache-${{ steps.set-branch.outputs.branch }}-${{ hashFiles('chat-ios/Gemfile.lock') }}
+
+      - name: Check if xctesthtmlreport is installed
+        run: |
+          which xctesthtmlreport || echo "xctesthtmlreport not found"
+          ls -la /usr/local/bin/
+          ls -la /opt/homebrew/bin/
+          brew list | grep html
+
+      - name: Update Test Setup status
+        if: always()
+        uses: myrotvorets/set-commit-status-action@master
+        with:
+          sha: ${{ steps.set-branch.outputs.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          context: "test-setup"
+          status: ${{ job.status }}
+          description: ${{ job.status == 'success' && 'Test setup completed successfully' || 'Test setup failed' }}
