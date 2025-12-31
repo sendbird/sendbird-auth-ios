@@ -1,5 +1,5 @@
 //
-//  ApiExceptionParserTests.swift
+//  ExceptionParserTests.swift
 //  SendbirdAuthTests
 //
 //  Created by Kai Lee on 12/31/25.
@@ -10,6 +10,22 @@ import XCTest
 
 final class DefaultExceptionParserTests: XCTestCase {
     // MARK: - DefaultExceptionParser Tests
+
+    func testInternalInitParams_exceptionParser_isPassedToRouterConfig() {
+        // Given
+        let customParser = DefaultExceptionParser()
+        let params = InternalInitParams(
+            applicationId: "test-app-id",
+            isLocalCachingEnabled: false,
+            exceptionParser: customParser
+        )
+
+        // When
+        let authMain = SendbirdAuthMain(params: params)
+
+        // Then
+        XCTAssertTrue(authMain.router.apiClient.routerConfig.exceptionParser is DefaultExceptionParser)
+    }
 
     func testDefaultExceptionParser_validErrorResponse_returnsAuthError() {
         // Given
