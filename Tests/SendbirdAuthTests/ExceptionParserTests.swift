@@ -43,7 +43,7 @@ final class DefaultExceptionParserTests: XCTestCase {
 
         // Then
         XCTAssertNotNil(error)
-        XCTAssertEqual(error?.code, 400_108)
+        XCTAssertEqual(error?.code, 400108)
         XCTAssertEqual(error?.localizedDescription, "User not found")
     }
 
@@ -139,7 +139,7 @@ final class HTTPClientExceptionParserTests: XCTestCase {
 
         mockParser.mockResult = AuthError(
             domain: "test",
-            code: 400_999,
+            code: 400999,
             userInfo: [NSLocalizedDescriptionKey: "Custom error from parser"]
         )
 
@@ -159,7 +159,7 @@ final class HTTPClientExceptionParserTests: XCTestCase {
             // Then
             XCTAssertNil(result)
             XCTAssertNotNil(error)
-            XCTAssertEqual(error?.code, 400_999)
+            XCTAssertEqual(error?.code, 400999)
             XCTAssertEqual(self.mockParser.parseCallCount, 1)
             XCTAssertEqual(self.mockParser.lastParsedData, errorData)
             expectation.fulfill()
@@ -197,7 +197,7 @@ final class HTTPClientExceptionParserTests: XCTestCase {
             // Then
             XCTAssertNil(result)
             XCTAssertNotNil(error)
-            XCTAssertEqual(error?.code, 400_108) // Fallback AuthError.error(from:)
+            XCTAssertEqual(error?.code, 400108) // Fallback AuthError.error(from:)
             XCTAssertEqual(self.mockParser.parseCallCount, 1)
             expectation.fulfill()
         }
@@ -230,7 +230,6 @@ final class HTTPClientExceptionParserTests: XCTestCase {
 
         wait(for: [expectation], timeout: 5.0)
     }
-}
 
     // MARK: - SendbirdAuthMain E2E Tests
 
@@ -297,6 +296,7 @@ final class HTTPClientExceptionParserTests: XCTestCase {
 
         wait(for: [expectation], timeout: 5.0)
     }
+}
 
 // MARK: - Test Helpers
 
