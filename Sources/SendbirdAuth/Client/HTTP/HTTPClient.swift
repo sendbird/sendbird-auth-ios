@@ -710,9 +710,17 @@ extension URLSession {
 #if DEBUG
 extension HTTPClient {
     @_spi(SendbirdInternal) public var dependencyForTest: Dependency? { dependency }
-    
+
     @_spi(SendbirdInternal) public func createUrlRequestForTest(request: any APIRequestable) -> URLRequest? {
         return createURLRequest(request: request)
+    }
+
+    @_spi(SendbirdInternal) public func setURLSessionForTest(_ session: URLSession) {
+        self.urlSession = session
+    }
+
+    @_spi(SendbirdInternal) public func markDependencyResolvedForTest() {
+        _dependency.isResolved = true
     }
 }
 #endif
