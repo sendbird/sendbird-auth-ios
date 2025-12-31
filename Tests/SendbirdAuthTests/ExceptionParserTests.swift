@@ -232,6 +232,72 @@ final class HTTPClientExceptionParserTests: XCTestCase {
     }
 }
 
+    // MARK: - SendbirdAuthMain E2E Tests
+
+    func testSendbirdAuthMain_authenticate_on400Error_usesCustomExceptionParser() {
+        // Given
+        let expectation = expectation(description: "Authenticate completed")
+        let customMockParser = MockExceptionParser()
+
+        let params = InternalInitParams(
+            applicationId: "test-app-id",
+            isLocalCachingEnabled: false,
+            exceptionParser: customMockParser
+        )
+        let authMain = SendbirdAuthMain(params: params)
+
+        // Inject mock URLSession to HTTPClient
+        if let client = authMain.router.apiClient as? HTTPClient {
+            client.markDependencyResolvedForTest()
+
+            let sessionConfig = URLSessionConfiguration.ephemeral
+            sessionConfig.protocolClasses = [MockURLProtocol.self]
+            let mockSession = URLSession(configuration: sessionConfig)
+            client.setURLSessionForTest(mockSession)
+        }
+
+        // Custom error format (e.g., Desk API format)
+        let errorData = """
+        {
+            "error": true,
+            "code": 500100,
+            "message": "Desk specific error"
+        }
+        """.data(using: .utf8)!
+
+        customMockParser.mockResult = AuthError(
+            domain: "DeskError",
+            code: 500100,
+            userInfo: [NSLocalizedDescriptionKey: "Desk specific error"]
+        )
+
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 400,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, errorData)
+        }
+
+        // When
+        authMain.authenticate(
+            userId: "test-user",
+            completionHandler: { user, error in
+                // Then
+                XCTAssertNil(user)
+                XCTAssertNotNil(error)
+                XCTAssertEqual(error?.code, 500100)
+                XCTAssertEqual(error?.localizedDescription, "Desk specific error")
+                XCTAssertGreaterThan(customMockParser.parseCallCount, 0, "Custom parser should be called")
+                expectation.fulfill()
+            }
+        )
+
+        wait(for: [expectation], timeout: 5.0)
+    }
+
 // MARK: - Test Helpers
 
 private class MockExceptionParser: ApiExceptionParser {
