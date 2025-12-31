@@ -32,7 +32,14 @@ import Foundation
 
     /// Gets or creates a SendbirdAuthMain instance.
     /// You should hold a strong reference to the returned instance to prevent it from being deallocated.
-    @_spi(SendbirdInternal) public static func getOrCreate(params: InternalInitParams) -> SendbirdAuthMain {
+    @_spi(SendbirdInternal) public static func getOrCreate(
+        params: InternalInitParams,
+        statAPIClient: StatAPIClientable? = nil,
+        webSocketEngine: (any ChatWebSocketEngine)? = nil,
+        httpClient: HTTPClientInterface? = nil,
+        customRouterConfig: CommandRouterConfiguration? = nil,
+        customSendbirdConfig: SendbirdConfiguration? = nil
+    ) -> SendbirdAuthMain {
         let key = createInstanceKey(appId: params.applicationId, apiHostUrl: params.customAPIHost) as NSString
 
         return instancesLock.withLock {
@@ -40,7 +47,14 @@ import Foundation
                 return existing
             }
 
-            let newInstance = SendbirdAuthMain(params: params)
+            let newInstance = SendbirdAuthMain(
+                params: params,
+                statAPIClient: statAPIClient,
+                webSocketEngine: webSocketEngine,
+                httpClient: httpClient,
+                customRouterConfig: customRouterConfig,
+                customSendbirdConfig: customSendbirdConfig
+            )
             instances.setObject(newInstance, forKey: key)
             return newInstance
         }
