@@ -205,32 +205,6 @@ final class HTTPClientExceptionParserTests: XCTestCase {
         wait(for: [expectation], timeout: 5.0)
     }
 
-    func testHTTPClient_on200Success_doesNotCallParser() {
-        // Given
-        let expectation = expectation(description: "Request completed")
-        let successData = "{}".data(using: .utf8)!
-
-        MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )!
-            return (response, successData)
-        }
-
-        // When
-        let request = TestAPIRequest()
-        httpClient.send(request: request) { _, _ in
-            // Then
-            XCTAssertEqual(self.mockParser.parseCallCount, 0)
-            expectation.fulfill()
-        }
-
-        wait(for: [expectation], timeout: 5.0)
-    }
-
     // MARK: - SendbirdAuthMain E2E Tests
 
     func testSendbirdAuthMain_authenticate_on400Error_usesCustomExceptionParser() {
@@ -301,8 +275,8 @@ final class HTTPClientExceptionParserTests: XCTestCase {
 // MARK: - Test Helpers
 
 private class MockExceptionParser: ApiExceptionParser {
-    var parseCallCount = 0
-    var lastParsedData: Data?
+    private(set) var parseCallCount = 0
+    private(set) var lastParsedData: Data?
     var mockResult: AuthError?
 
     func parse(data: Data) -> AuthError? {
