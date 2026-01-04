@@ -8,60 +8,105 @@
 import Foundation
 
 @_spi(SendbirdInternal) public class AuthUser: NSObject, Codable, Identifiable {
+
+    // MARK: - Mutable State (Thread-safe)
+
+    private struct MutableState {
+        var nickname: String
+        var plainProfileImageURL: String?
+        var connectionStatus: AuthUserConnectionStatus
+        var lastSeenAt: Int64
+        var preferredLanguages: [String]?
+        var requireAuth: Bool
+        var localUpdatedAt: Int64
+    }
+
+    private let lock = NSLock()
+    private var state: MutableState
+
+    // MARK: - Immutable Properties
+
     /// Identifier for the user conforming to `Identifiable`
     @_spi(SendbirdInternal) public var id: String { self.userId }
-    
+
     /// User ID. This has to be unique.
     @_spi(SendbirdInternal) public let userId: String
-    
-    /// User nickname.
-    @_spi(SendbirdInternal) public var nickname: String
-    
-    /// The profile image URL without the `ekey`.
-    /// - Since: 3.0.194
-    @_spi(SendbirdInternal) public var plainProfileImageURL: String?
-    
-    /// User connection status. This is defined in `AuthUserConnectionStatus`.
-    @_spi(SendbirdInternal) public var connectionStatus: AuthUserConnectionStatus
-    
-    /// The lastest time when the user became offline.
-    @_spi(SendbirdInternal) public var lastSeenAt: Int64
-    
+
     /// Represents the user is activated. This property is changed by the [Platform API](https://docs.sendbird.com/platform#user_3_update_a_user)
     @_spi(SendbirdInternal) public let isActive: Bool
-    
+
     /// Discovery key for friend
     @_spi(SendbirdInternal) public let friendDiscoveryKey: String?
-    
+
     /// User name for friend
     @_spi(SendbirdInternal) public let friendName: String?
-    
+
     /// Shows if the user is a bot or not.
     /// - Since: 4.9.4
     @_spi(SendbirdInternal) public let isBot: Bool
-    
-    /// User's preferred language. Used for translating messages.
-    /// - Since: 3.0.159
-    @_spi(SendbirdInternal) public var preferredLanguages: [String]?
-    
+
     /// Meta data.
     @_spi(SendbirdInternal) public var metaData: [String: String] { self.metaDataMap.toDictionary() }
-    
+
     @_spi(SendbirdInternal) public var metaDataMap: SafeDictionary<String, String>
-    
-    @_spi(SendbirdInternal) public var requireAuth: Bool
-    
+
+    // MARK: - Thread-safe Accessors
+
+    /// User nickname.
+    @_spi(SendbirdInternal) public var nickname: String {
+        get { lock.withLock { state.nickname } }
+        set { lock.withLock { state.nickname = newValue } }
+    }
+
+    /// The profile image URL without the `ekey`.
+    /// - Since: 3.0.194
+    @_spi(SendbirdInternal) public var plainProfileImageURL: String? {
+        get { lock.withLock { state.plainProfileImageURL } }
+        set { lock.withLock { state.plainProfileImageURL = newValue } }
+    }
+
+    /// User connection status. This is defined in `AuthUserConnectionStatus`.
+    @_spi(SendbirdInternal) public var connectionStatus: AuthUserConnectionStatus {
+        get { lock.withLock { state.connectionStatus } }
+        set { lock.withLock { state.connectionStatus = newValue } }
+    }
+
+    /// The lastest time when the user became offline.
+    @_spi(SendbirdInternal) public var lastSeenAt: Int64 {
+        get { lock.withLock { state.lastSeenAt } }
+        set { lock.withLock { state.lastSeenAt = newValue } }
+    }
+
+    /// User's preferred language. Used for translating messages.
+    /// - Since: 3.0.159
+    @_spi(SendbirdInternal) public var preferredLanguages: [String]? {
+        get { lock.withLock { state.preferredLanguages } }
+        set { lock.withLock { state.preferredLanguages = newValue } }
+    }
+
+    @_spi(SendbirdInternal) public var requireAuth: Bool {
+        get { lock.withLock { state.requireAuth } }
+        set { lock.withLock { state.requireAuth = newValue } }
+    }
+
     /// The timestamp indicating the last update time of the user.
     /// - Note: Defaults to `-1`, representing that the user has not been updated.
     /// - Since: 4.24.1
-    @_spi(SendbirdInternal) public private(set) var localUpdatedAt: Int64
-    
+    @_spi(SendbirdInternal) public private(set) var localUpdatedAt: Int64 {
+        get { lock.withLock { state.localUpdatedAt } }
+        set { lock.withLock { state.localUpdatedAt = newValue } }
+    }
+
+    // MARK: - Dependencies
+
     @DependencyWrapper @_spi(SendbirdInternal) public var dependency: Dependency?
     @_spi(SendbirdInternal) public var requestQueue: RequestQueue? { dependency?.requestQueue }
     private var stateData: ConnectionStateData? { dependency?.stateData }
     @_spi(SendbirdInternal) public var service: QueueService? { dependency?.service }
     private var eKey: String? { dependency?.commonSharedData.eKey }
-    
+
+    // MARK: - Initializers
+
     @_spi(SendbirdInternal) public init(
         dependency: Dependency?,
         userId: String = "",
@@ -79,24 +124,27 @@ import Foundation
         localUpdatedAt: Int64 = -1
     ) {
         self.userId = userId
-        self.nickname = nickname
-        self.plainProfileImageURL = profileURL
-        self.connectionStatus = connectionStatus
-        self.lastSeenAt = lastSeenAt
-        self.metaDataMap = .init(metaData)
         self.isActive = isActive
         self.friendDiscoveryKey = discoveryKey
         self.friendName = friendName
-        self.preferredLanguages = prefLangauges
-        self.requireAuth = requireAuth
         self.isBot = isBot
-        self.localUpdatedAt = localUpdatedAt
-        
+        self.metaDataMap = .init(metaData)
+
+        self.state = MutableState(
+            nickname: nickname,
+            plainProfileImageURL: profileURL,
+            connectionStatus: connectionStatus,
+            lastSeenAt: lastSeenAt,
+            preferredLanguages: prefLangauges,
+            requireAuth: requireAuth,
+            localUpdatedAt: localUpdatedAt
+        )
+
         super.init()
-        
+
         self.dependency = dependency
     }
-    
+
     /// Default constructor.
     ///
     /// - Parameter decoder: `Decoder` instance
@@ -106,32 +154,44 @@ import Foundation
         self.userId =
             (try? container.decode(String.self, forKey: .userId)) ??
             (try? container.decode(String.self, forKey: .guestId)) ?? ""
-        
-        self.nickname =
-            (try? container.decode(String.self, forKey: .nickname)) ??
-            (try? container.decode(String.self, forKey: .name)) ?? ""
-        
-        self.plainProfileImageURL =
-            (try? container.decode(String.self, forKey: .profileURL)) ??
-            (try? container.decode(String.self, forKey: .image)) ?? nil
-        
-        self.connectionStatus = (try? container.decode(AuthUserConnectionStatus.self, forKey: .isOnline)) ?? .nonAvailable
-        self.lastSeenAt = (try? container.decode(Int64.self, forKey: .lastSeenAt)) ?? 0
-        let metaData = try? container.decode([String: String].self, forKey: .metadata)
-        self.metaDataMap = .init(metaData ?? [:])
+
         self.isActive = (try? container.decode(Bool.self, forKey: .isActive)) ?? true
         self.friendDiscoveryKey = try? container.decode(String.self, forKey: .friendDiscoveryKey)
         self.friendName = try? container.decode(String.self, forKey: .friendName)
-        self.preferredLanguages = try? container.decode([String].self, forKey: .preferredLanguages)
-        self.requireAuth = (try? container.decode(Bool.self, forKey: .requireAuthForProfileImage)) ?? false
         self.isBot = (try? container.decode(Bool.self, forKey: .isBot)) ?? false
-        self.localUpdatedAt = (try? container.decode(Int64.self, forKey: .localUpdatedAt)) ?? -1
-        
+
+        let metaData = try? container.decode([String: String].self, forKey: .metadata)
+        self.metaDataMap = .init(metaData ?? [:])
+
+        let nickname =
+            (try? container.decode(String.self, forKey: .nickname)) ??
+            (try? container.decode(String.self, forKey: .name)) ?? ""
+
+        let plainProfileImageURL =
+            (try? container.decode(String.self, forKey: .profileURL)) ??
+            (try? container.decode(String.self, forKey: .image)) ?? nil
+
+        let connectionStatus = (try? container.decode(AuthUserConnectionStatus.self, forKey: .isOnline)) ?? .nonAvailable
+        let lastSeenAt = (try? container.decode(Int64.self, forKey: .lastSeenAt)) ?? 0
+        let preferredLanguages = try? container.decode([String].self, forKey: .preferredLanguages)
+        let requireAuth = (try? container.decode(Bool.self, forKey: .requireAuthForProfileImage)) ?? false
+        let localUpdatedAt = (try? container.decode(Int64.self, forKey: .localUpdatedAt)) ?? -1
+
+        self.state = MutableState(
+            nickname: nickname,
+            plainProfileImageURL: plainProfileImageURL,
+            connectionStatus: connectionStatus,
+            lastSeenAt: lastSeenAt,
+            preferredLanguages: preferredLanguages,
+            requireAuth: requireAuth,
+            localUpdatedAt: localUpdatedAt
+        )
+
         super.init()
-        
+
         self.dependency = decoder.extractDependency()
     }
-    
+
     /// Encodes this object.
     ///
     /// - Parameter encoder: `Encoder` instance
@@ -151,43 +211,57 @@ import Foundation
         try container.encode(self.isBot, forKey: .isBot)
         try container.encode(self.localUpdatedAt, forKey: .localUpdatedAt)
     }
-    
+
+    // MARK: - Update Methods
+
     @_spi(SendbirdInternal) public func update(with user: AuthUser) {
-        self.plainProfileImageURL = user.plainProfileImageURL
-        self.nickname = user.nickname
-        
+        lock.withLock {
+            state.plainProfileImageURL = user.plainProfileImageURL
+            state.nickname = user.nickname
+            state.preferredLanguages = user.preferredLanguages
+            state.requireAuth = user.requireAuth
+        }
+
         // Intentionally called `replaceAll(with: [Key: Value])`
         // instead of `replaceAll(with: SafeDictionary)`
         // since `replaceAll(with: SafeDictionary)` can cause deadlock
         // due to nested sync.
         let dictionary = user.metaDataMap.toDictionary()
         self.metaDataMap.replaceAll(with: dictionary)
-        
-        self.preferredLanguages = user.preferredLanguages
-        self.requireAuth = user.requireAuth
     }
-    
+
     @_spi(SendbirdInternal) public func updateIfUserIsNewer(with newUser: AuthUser) {
-        if newUser.localUpdatedAt > self.localUpdatedAt {
-            self.update(with: newUser)
+        lock.withLock {
+            if newUser.localUpdatedAt > state.localUpdatedAt {
+                state.plainProfileImageURL = newUser.plainProfileImageURL
+                state.nickname = newUser.nickname
+                state.preferredLanguages = newUser.preferredLanguages
+                state.requireAuth = newUser.requireAuth
+            }
         }
+
+        let dictionary = newUser.metaDataMap.toDictionary()
+        self.metaDataMap.replaceAll(with: dictionary)
     }
-    
+
     @_spi(SendbirdInternal) public func updateUserInfo(with dictionary: [String: Any]?) {
         guard let info = dictionary else { return }
-        if let auth = info["require_auth_for_profile_image"] as? Bool {
-            self.requireAuth = auth
-        }
-        
-        if let nickname = info["nickname"] as? String {
-            self.nickname = nickname
-        }
-        
-        if let profileURL = info["profile_url"] as? String {
-            self.plainProfileImageURL = profileURL
+
+        lock.withLock {
+            if let auth = info["require_auth_for_profile_image"] as? Bool {
+                state.requireAuth = auth
+            }
+
+            if let nickname = info["nickname"] as? String {
+                state.nickname = nickname
+            }
+
+            if let profileURL = info["profile_url"] as? String {
+                state.plainProfileImageURL = profileURL
+            }
         }
     }
-    
+
     /// Updates the database update timestamp (`localUpdatedAt`) for the user object.
     ///
     /// - Note: This ensures that the `localUpdatedAt` value reflects the most recent state,
@@ -195,12 +269,16 @@ import Foundation
     ///     It is recommended to call this method whenever the `User` object is initialized or updated.
     @discardableResult
     @_spi(SendbirdInternal) public func setLocalUpdateTimestamp(to timestamp: Int64) -> Self {
-        self.localUpdatedAt = timestamp
+        lock.withLock {
+            state.localUpdatedAt = timestamp
+        }
         return self
     }
-    
+
     @_spi(SendbirdInternal) public var isCurrentUser: Bool { stateData?.currentUserId == userId }
 }
+
+// MARK: - NSCopying
 
 extension AuthUser: NSCopying {
     /// Compares this object with given other object.
@@ -209,7 +287,7 @@ extension AuthUser: NSCopying {
     /// - Returns: `true` if same otherwise `false`
     @_spi(SendbirdInternal) public override func isEqual(_ object: Any?) -> Bool {
         guard let other = object as? AuthUser else { return false }
-        
+
         return userId == other.userId &&
             nickname == other.nickname &&
             plainProfileImageURL == other.plainProfileImageURL &&
@@ -223,7 +301,7 @@ extension AuthUser: NSCopying {
             requireAuth == other.requireAuth &&
             isBot == other.isBot
     }
-    
+
     /// Copies this object
     ///
     /// - Parameter zone: optional `NSZone`
@@ -235,6 +313,7 @@ extension AuthUser: NSCopying {
 }
 
 // MARK: - Hash logic
+
 extension AuthUser {
     @_spi(SendbirdInternal) public override var hash: Int {
         var hasher = Hasher()
