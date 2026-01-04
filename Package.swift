@@ -36,7 +36,6 @@ let package = Package(
 )
 
 var swiftSettings: [SwiftSetting] = [
-    .swiftLanguageMode(.v5),
     .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release)),
     .define("RELEASE", .when(configuration: .release)),
 ]
