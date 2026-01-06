@@ -17,34 +17,13 @@ import Foundation
     case secretApplicationNotificationChannels(applicationId: String)
     case applicationsSettingsGlobal
 
-    /// User Auth Related (Auth-specific)
+    /// User Auth Related
     case usersToken(userId: String)
     case usersLogin(userId: String)
     case usersSessionKey(userId: String)
     case usersPush(userId: String)
 
-    /// Group Channels (Auth-specific)
-    case groupChannelsTyping(channelURL: String)
-    case groupChannelsMessagesInReviewTransitions(channelURL: String, messageId: Int64)
-    case groupChannelsDistinctMessage
-
-    /// Channel Operations (Auth-specific)
-    case channelMessagesSortedMetaArray(channelType: AuthChannelType, channelURL: String, messageId: Int64)
-
-    /// Notifications (Auth-specific)
-    case notificationsChannels(channelKey: String)
-    case notificationsChannelsCategories(channelKey: String, categoryId: String)
-
-    /// Bots (Auth-specific)
-    case botsSend(botUserId: String)
-
-    /// Custom Responses
-    case customResponses
-
-    /// Polls (Auth-specific)
-    case pollsVote(pollId: Int64)
-
-    /// SDK API endpoints (Auth-specific)
+    /// SDK API endpoints
     case sdkStatistics
     case notificationStatistics
     case authenticate(userId: String)
@@ -72,36 +51,6 @@ import Foundation
             return ["users", userId, "session_key"]
         case .usersPush(let userId):
             return ["users", userId, "push"]
-
-            /// Group Channels
-        case .groupChannelsTyping(let channelURL):
-            return ["group_channels", channelURL, "typing"]
-        case .groupChannelsMessagesInReviewTransitions(let channelURL, let messageId):
-            return ["group_channels", channelURL, "messages_in_review", messageId, "transitions"]
-        case .groupChannelsDistinctMessage:
-            return ["group_channels", "distinct_message"]
-
-            /// Channel Operations
-        case .channelMessagesSortedMetaArray(let channelType, let channelURL, let messageId):
-            return [channelType.urlString, channelURL, "messages", messageId, "sorted_metaarray"]
-
-            /// Notifications
-        case .notificationsChannels(let channelKey):
-            return ["notifications", "channels", channelKey]
-        case .notificationsChannelsCategories(let channelKey, let categoryId):
-            return ["notifications", "channels", "\(channelKey.urlEncoded)", "categories", "\(categoryId.urlEncoded)"]
-
-            /// Bots
-        case .botsSend(let botUserId):
-            return ["bots", "\(botUserId.urlEncoded)", "send"]
-
-            /// Custom Responses
-        case .customResponses:
-            return ["custom_responses"]
-
-            /// Polls
-        case .pollsVote(let pollId):
-            return ["polls", "\(pollId)", "vote"]
 
             /// SDK API Endpoints
         case .sdkStatistics:
