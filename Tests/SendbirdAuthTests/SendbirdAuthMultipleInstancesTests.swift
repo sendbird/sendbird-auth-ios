@@ -111,6 +111,19 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         // Then
         XCTAssertNil(SendbirdAuth.getInstance(appId: appId))
     }
+    
+    func testRemoveInstance_withSelfInstance() {
+        // Given
+        let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
+        let instance = SendbirdAuth.getOrCreate(params: params)
+        XCTAssertNotNil(SendbirdAuth.getInstance(appId: appId))
+        
+        // When
+        SendbirdAuth.removeInstance(instance)
+        
+        // Then
+        XCTAssertNil(SendbirdAuth.getInstance(appId: appId))
+    }        
 
     // MARK: - clearAllInstances Tests
 

@@ -24,10 +24,13 @@ import Foundation
 
     /// Creates the key for identifying a SendbirdAuthMain instance
     private static func createInstanceKey(appId: String, apiHostUrl: String?) -> String {
-        if let apiHostUrl, !apiHostUrl.isEmpty {
-            return "\(appId)_\(apiHostUrl)"
+        let hostUrl = if let apiHostUrl {
+            apiHostUrl
+        } else {
+            Configuration.apiHostURL(for: appId)
         }
-        return appId
+
+        return "\(appId)_\(hostUrl)"
     }
 
     /// Gets or creates a SendbirdAuthMain instance.
@@ -70,6 +73,16 @@ import Foundation
 
     /// Removes an instance from the map
     @_spi(SendbirdInternal) public static func removeInstance(appId: String, apiHostUrl: String? = nil) {
+        let key = createInstanceKey(appId: appId, apiHostUrl: apiHostUrl) as NSString
+        instancesLock.withLock {
+            instances.removeObject(forKey: key)
+        }
+    }
+
+    @_spi(SendbirdInternal) public static func removeInstance(_ instance: SendbirdAuthMain) {
+        let appId = instance.applicationId
+        let apiHostUrl = instance.routerConfig.apiHost
+        
         let key = createInstanceKey(appId: appId, apiHostUrl: apiHostUrl) as NSString
         instancesLock.withLock {
             instances.removeObject(forKey: key)
