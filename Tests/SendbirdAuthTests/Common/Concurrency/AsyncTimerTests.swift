@@ -3,8 +3,7 @@
 //
 
 import XCTest
-@testable import SendbirdAuth
-@testable import SendbirdChatTestHelper
+@_spi(SendbirdInternal) @testable import SendbirdAuthSDK
 
 final class AsyncTimerTests: XCTestCase {
     private actor TickCounter {
@@ -23,7 +22,7 @@ final class AsyncTimerTests: XCTestCase {
 
     func test_run() async throws {
         let timer = AsyncTimer(timeInterval: 0.05)
-        let expectation = createExpectation()
+        let expectation = XCTestExpectation()
 
         timer.run(repeats: false) {
             expectation.fulfill()
@@ -32,7 +31,7 @@ final class AsyncTimerTests: XCTestCase {
         var stateAfterStart = await timer.state
         if stateAfterStart == .pending {
             for _ in 0..<3 {
-                try? await Task.sleep(seconds: 0.005)
+                try? await Task.sleep(nanoseconds: 5_000_000)
                 stateAfterStart = await timer.state
                 if stateAfterStart != .pending { break }
             }
@@ -40,7 +39,7 @@ final class AsyncTimerTests: XCTestCase {
 
         XCTAssertNotEqual(stateAfterStart, .pending)
 
-        expectation.wait(timeout: .short)
+        await fulfillment(of: [expectation], timeout: 1.0)
         let stateAfterRun = await timer.state
         XCTAssertEqual(stateAfterRun, .expired)
     }
@@ -48,7 +47,8 @@ final class AsyncTimerTests: XCTestCase {
     func test_repeatingRun() async {
         let timer = AsyncTimer(timeInterval: 0.05)
         let expectedTickCount = 3
-        let expectation = createExpectation(expectedTickCount)
+        let expectation = XCTestExpectation()
+        expectation.expectedFulfillmentCount = expectedTickCount
 
         let ticks = TickCounter()
         timer.run(repeats: true) {
@@ -61,7 +61,7 @@ final class AsyncTimerTests: XCTestCase {
             }
         }
 
-        expectation.wait(timeout: .default)
+        await fulfillment(of: [expectation], timeout: 10)
         let stateAfterAbort = await timer.state
         XCTAssertEqual(stateAfterAbort, .stopped)
     }
@@ -86,7 +86,7 @@ final class AsyncTimerTests: XCTestCase {
         for _ in 0..<10 {
             currentState = await timer.state
             if currentState == .running { break }
-            try await Task.sleep(seconds: 0.01)
+            try await Task.sleep(nanoseconds: 10_000_000)
         }
 
         XCTAssertEqual(currentState, .running)
@@ -117,14 +117,14 @@ final class AsyncTimerTests: XCTestCase {
         for _ in 0..<10 {
             state = await timer.state
             if state == .running { break }
-            try await Task.sleep(seconds: 0.01)
+            try await Task.sleep(nanoseconds: 10_000_000)
         }
 
         XCTAssertEqual(state, .running)
 
         await timer.abort()
 
-        try await Task.sleep(seconds: 0.2)
+        try await Task.sleep(nanoseconds: 200_000_000)
 
         let tickCount = await counter.current()
         XCTAssertEqual(tickCount, 0)
