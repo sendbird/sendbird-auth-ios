@@ -12,8 +12,8 @@ protocol CommandRouterInterface {
     
     func connect(key: LoginKey, sessionKey: String?, completionHandler: AuthUserHandler?)
     
-    func disconnect(completion: @escaping VoidHandler)
-    func reset(completion: @escaping VoidHandler)
+    func disconnect() async
+    func reset() async
     func cancelTask(with requestId: String, completionHandler: BoolHandler?)
     
     func send<R: APIRequestable>(
@@ -23,14 +23,14 @@ protocol CommandRouterInterface {
         progressHandler: MultiProgressHandler?,
         completion: R.CommandHandler?
     )
-    func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?)
-    func send<R: WSRequestable>(request: R)
+    func send<R: ResultableWSRequest>(request: R, ackTimeoutHandler: R.CommandHandler?) async throws
+    func send<R: WSRequestable>(request: R) async throws
     
     func startPingTimer(pingInterval: TimeInterval, watchdogInterval: TimeInterval, completion: @escaping VoidHandler)
     func setUploadFileSizeLimit(_ limit: Int64)
 }
 
-@_spi(SendbirdInternal) public class CommandRouter: CommandRouterInterface, WebSocketManagerDelegate, Injectable {
+@_spi(SendbirdInternal) public class CommandRouter: CommandRouterInterface, Injectable {
     // MARK: Injectable
     @DependencyWrapper private var dependency: Dependency?
     private var config: SendbirdConfiguration? { dependency?.config }
@@ -46,13 +46,17 @@ protocol CommandRouterInterface {
 
     @InternalAtomic @_spi(SendbirdInternal) public var webSocketManager: WebSocketManager {
         willSet {
+            websocketManagerEventTask?.cancel()
             Task { await webSocketManager.webSocketClient.forceDisconnect() }
+        }
+        didSet {
+            startListeningWebSocketManagerEvents()
         }
     }
     
     @_spi(SendbirdInternal) public var apiClient: HTTPClientInterface
     
-    @_spi(SendbirdInternal) public var ackTimerManager = AckTimerManager()
+    private var ackTimerManager = AckTimerManager()
     
     @_spi(SendbirdInternal) public var eventDispatcher: EventDispatcher
     
@@ -62,14 +66,6 @@ protocol CommandRouterInterface {
     @_spi(SendbirdInternal) public var parsingStrategy: ((String) -> (Command?))?
     
     @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
-    
-    // socket event (내꺼 말고) 수신 전용
-    private let socketReceiveOperationQueue: OperationQueue
-    private let socketReceiveQueue: DispatchQueue = DispatchQueue(label: "com.sendbird.core.command_router_socket_receive_\(UUID().uuidString)")
-    
-    // socket send || 내꺼 ack 수신 (maxConcurrent: 1)
-    private let socketSendOperationQueue: OperationQueue
-    private let socketSendQueue: DispatchQueue = DispatchQueue(label: "com.sendbird.core.command_router_socket_send_\(UUID().uuidString)")
     
     // api send (maxConcurrent: 1)
     private let apiOperationQueue: OperationQueue
@@ -85,38 +81,6 @@ protocol CommandRouterInterface {
         }
     }()
     
-    @_spi(SendbirdInternal) public var onMessageReceived: ((Command) -> Void)?
-    @_spi(SendbirdInternal) public func didReceiveMessage(_ message: String) {
-        Logger.socket.debug("[WS Recv] \(message)")
-        
-        guard let command = self.parsingStrategy?(message) else {
-            return
-        }
-        
-        let queue = if ((command as? SBCommand)?.isAckFromCurrentDeviceRequest ?? false) == true {
-            socketSendOperationQueue
-        } else {
-            socketReceiveOperationQueue
-        }
-        queue.addOperation { [weak self] in
-            guard let self = self else {
-                return
-            }
-                     
-            if let bucket = markAsReadBucket, bucket.shouldFlush(command) {
-                Task { [weak self] in
-                    guard let self else { return }
-                    
-                    await bucket.flushPendingRequests(with: command) { cmd in
-                        self.handleReceived(command: cmd)
-                    }
-                }
-            } else {
-                self.handleReceived(command: command)
-            }
-        }
-    }
-    
     @_spi(SendbirdInternal) public init(
         routerConfig: CommandRouterConfiguration,
         webSocketManager: WebSocketManager,
@@ -128,52 +92,89 @@ protocol CommandRouterInterface {
         
         self.webSocketManager = webSocketManager
         self.apiClient = httpClient
-        
-        self.socketReceiveOperationQueue = OperationQueue()
-        self.socketReceiveOperationQueue.maxConcurrentOperationCount = 1
-        self.socketReceiveOperationQueue.underlyingQueue = self.socketReceiveQueue
-        
-        self.socketSendOperationQueue = OperationQueue()
-        self.socketSendOperationQueue.maxConcurrentOperationCount = 1
-        self.socketSendOperationQueue.underlyingQueue = self.socketSendQueue
-        
+
         self.apiOperationQueue = OperationQueue()
         self.apiOperationQueue.maxConcurrentOperationCount = 1
         self.apiOperationQueue.underlyingQueue = self.apiQueue
 
         _ = self.markAsReadBucket
+        startListeningWebSocketManagerEvents()
+    }
+    
+    private func processCommand(_ command: Command) async {
+        if let bucket = self.markAsReadBucket, await bucket.shouldFlush(command) {
+            await bucket.flushPendingRequests(with: command) { cmd in
+                self.handleReceived(command: cmd)
+            }
+        } else {
+            self.handleReceived(command: command)
+        }
+    }
+    
+    private var websocketManagerEventTask: Task<Void, Never>?
+    private func startListeningWebSocketManagerEvents() {
+        websocketManagerEventTask?.cancel()
+
+        websocketManagerEventTask = Task { [weak self] in
+            guard let self else { return }
+
+            let stream = await self.webSocketManager.makeStream()
+            for await event in stream {
+                guard !Task.isCancelled else { break }
+
+                switch event {
+                case .didReceiveMessage(let message):
+                    self.didReceiveMessage(message)
+                }
+            }
+        }
+    }
+
+    deinit {
+        websocketManagerEventTask?.cancel()
+    }
+    
+    package func didReceiveMessage(_ message: String) {
+        Logger.socket.debug("[WS Recv] \(message)")
+        guard let command = self.parsingStrategy?(message) else {
+            return
+        }
+
+        let isAckFromCurrentDevice = (command as? SBCommand)?.isAckFromCurrentDeviceRequest ?? false
+
+        if isAckFromCurrentDevice {
+            // ACK responses should be handled in SocketSendActor context
+            Task { @SocketSendActor [weak self] in
+                guard let self = self else { return }
+                await self.processCommand(command)
+            }
+        } else {
+            // Regular events use SocketReceiveActor
+            Task { @SocketReceiveActor [weak self] in
+                guard let self else { return }
+                await self.processCommand(command)
+            }
+        }
     }
     
     func connect(key loginKey: LoginKey, sessionKey: String?, completionHandler: AuthUserHandler?) {
-        socketSendOperationQueue.addOperation { [weak self] in
-            guard let self = self else { return }
-            
+        Task { @SocketSendActor in
             self.webSocketManager.connect(loginKey: loginKey, sessionKey: sessionKey, completionHandler: completionHandler)
         }
     }
     
-    func disconnect(completion: @escaping VoidHandler) {
-        socketSendOperationQueue.addOperation { [weak self] in
-            Task { 
-                await self?.webSocketManager.webSocketClient.disconnect() 
-                completion()
-            }
-        }
+    @SocketSendActor
+    func disconnect() async {
+        await webSocketManager.webSocketClient.disconnect()
     }
     
-    func reset(completion: @escaping VoidHandler) {
-        socketReceiveOperationQueue.cancelAllOperations()
-        socketSendOperationQueue.cancelAllOperations()
+    @SocketSendActor
+    func reset() async {
         apiOperationQueue.cancelAllOperations()
-
-        socketSendOperationQueue.addOperation {
-            self.apiClient.clear()
-            self.ackTimerManager.clear {
-                self.disconnect {
-                    completion()
-                }
-            }
-        }
+        
+        apiClient.clear()
+        await ackTimerManager.clear()
+        await disconnect()
     }
     
     @_spi(SendbirdInternal) public func createAPIHeaders<R: APIRequestable>(for request: R) -> [String: String] {
@@ -239,51 +240,37 @@ protocol CommandRouterInterface {
         }
     }
     
-    func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?) {
-        socketSendOperationQueue.addOperation { [weak self] in
-            guard let self = self else { return }
-            guard let socketResponseTimeout = self.config?.socketResponseTimeout else {
-                Logger.main.error(errorMessage: .notResolved)
-                return
-            }
-            
-            Logger.socket.info("About to send request \(String(describing: type(of: request)))")
-            
-            if request.commandType.isAckRequired {
-                self.ackTimerManager.register(
-                    request: request,
-                    completionHandler: completion,
-                    timeout: socketResponseTimeout
-                )
-            }
-            
-            Logger.socket.info("WebSocket client send via manager")
-            Logger.client.verbose("Sending WS Request: \(request.commandType.rawValue)(\(String(describing: type(of: request))))")
-            
-            if let bucket = markAsReadBucket, bucket.shouldHold(request) {
-                Task { await bucket.hold(request) }
-            } else {
-                Task { [weak self] in
-                    guard let self else { return }
-                    
-                    do {
-                        try await self.webSocketManager.sendWS(request)
-                    } catch {
-                        if let authError = error as? AuthError { completion?(nil, authError) }
-                    }
-                }
-            }
+    @SocketSendActor
+    func send<R: ResultableWSRequest>(request: R, ackTimeoutHandler: R.CommandHandler? = nil) async throws {
+        guard let socketResponseTimeout = self.config?.socketResponseTimeout else {
+            Logger.main.error(errorMessage: .notResolved)
+            return
+        }
+        
+        Logger.socket.info("About to send request \(String(describing: type(of: request)))")
+        
+        if request.commandType.isAckRequired {
+            await ackTimerManager.register(
+                request: request,
+                completionHandler: ackTimeoutHandler,
+                timeout: socketResponseTimeout
+            )
+        }
+        
+        Logger.socket.info("WebSocket client send via manager")
+        Logger.client.verbose("Sending WS Request: \(request.commandType.rawValue)(\(String(describing: type(of: request))))")
+        
+        if let bucket = markAsReadBucket, bucket.shouldHold(request) {
+            await bucket.hold(request)
+        } else {
+            try await webSocketManager.sendWS(request)
         }
     }
-    
-    func send<R: WSRequestable>(request: R) {
-        socketSendOperationQueue.addOperation { [weak self] in
-            guard let self else { return }
-            Logger.client.verbose("Sending WS Request: \(request.commandType.rawValue)(\(String(describing: type(of: request))))")
-            Task {
-                try await self.webSocketManager.sendWS(request)
-            }
-        }
+
+    @SocketSendActor
+    func send<R: WSRequestable>(request: R) async throws {
+        Logger.client.verbose("Sending WS Request: \(request.commandType.rawValue)(\(String(describing: type(of: request))))")
+        try await self.webSocketManager.sendWS(request)
     }
     
     func cancelTask(with requestId: String, completionHandler: BoolHandler?) {
@@ -301,15 +288,12 @@ protocol CommandRouterInterface {
 // MARK: - WebSocket
 extension CommandRouter {
     func startPingTimer(pingInterval: TimeInterval, watchdogInterval: TimeInterval, completion: @escaping VoidHandler) {
-        socketSendOperationQueue.addOperation { [weak self] in
-            guard let self else { return }
-            Task {
-                await self.webSocketManager.configurePing(
-                    pingInterval: pingInterval,
-                    watchdogInterval: watchdogInterval
-                )
-                completion()
-            }
+        Task { @SocketSendActor in
+            await self.webSocketManager.configurePing(
+                pingInterval: pingInterval,
+                watchdogInterval: watchdogInterval
+            )
+            completion()
         }
     }
 }
@@ -325,14 +309,20 @@ extension CommandRouter {
 
 extension CommandRouter {
     @_spi(SendbirdInternal) public func handleReceived(command: Command) {
-        self.eventDispatcher.dispatch(command: command) {
-            if let command = command as? SBCommand,
-               self.ackTimerManager.contains(command.requestId) || command.isAckFromCurrentDeviceRequest {
-                self.ackTimerManager.handleResponse(with: command)
+        self.eventDispatcher.dispatch(command: command) { [weak self] in
+            guard let self else {
+                return
             }
             
-            if let logiEvent = command as? LoginEvent {
-                self.statManager?.append(logiEvent: logiEvent)
+            Task {
+                if let command = command as? SBCommand,
+                   await self.ackTimerManager.contains(command.requestId) || command.isAckFromCurrentDeviceRequest {
+                    await self.ackTimerManager.handleResponse(with: command)
+                }
+                
+                if let logiEvent = command as? LoginEvent {
+                    self.statManager?.append(logiEvent: logiEvent)
+                }
             }
         }
     }
@@ -354,3 +344,12 @@ extension CommandRouter {
     }
 }
 #endif
+
+// ???: Where to place this?
+@globalActor actor SocketSendActor {
+    static let shared = SocketSendActor()
+}
+
+@globalActor actor SocketReceiveActor {
+    static let shared = SocketReceiveActor()
+}

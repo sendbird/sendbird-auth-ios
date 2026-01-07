@@ -22,7 +22,7 @@ import Foundation
         progressHandler: MultiProgressHandler?,
         completion: R.CommandHandler?
     )
-    func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?)
+    func send<R: ResultableWSRequest>(request: R, ackTimeoutHandler: R.CommandHandler?)
     func send<R: WSRequestable>(request: R)
 }
 
@@ -581,15 +581,15 @@ import Foundation
         requestId: String?,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
+        ackTimeoutHandler: ((Result<R, AuthError>) -> Void)?
     ) {
         #if DEBUG
-        callSendWSInterceptionIfNeeded(commandType, requestId, body, additionalBody, completionHandler: completionHandler)
+        callSendWSInterceptionIfNeeded(commandType, requestId, body, additionalBody, completionHandler: ackTimeoutHandler)
         #endif
         
         let request = BaseWSRequest<R>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBody)
         self.send(request: request) { command, error in
-            completionHandler?(.init(command, error))
+            ackTimeoutHandler?(.init(command, error))
         }
     }
     
@@ -603,7 +603,7 @@ import Foundation
         self.send(request: request)
     }
         
-    @_spi(SendbirdInternal) public func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?) {
+    @_spi(SendbirdInternal) public func send<R: ResultableWSRequest>(request: R, ackTimeoutHandler: R.CommandHandler?) {
         let timeout = requestTimeout
         
         service.async { [weak self] in
@@ -613,7 +613,7 @@ import Foundation
                 timeInterval: timeout,
                 userInfo: nil,
                 onBoard: nil) {
-                    completion?(nil, AuthClientError.connectionRequired.asAuthError)
+                    ackTimeoutHandler?(nil, AuthClientError.connectionRequired.asAuthError)
                 }
             
             let queueItem: QueuedRequestHandler = {
@@ -626,12 +626,14 @@ import Foundation
                 case .error(let error):
                     timer.abort()
                     
-                    completion?(nil, error)
+                    ackTimeoutHandler?(nil, error)
                     return processResult
                 case .process:
                     timer.abort()
                     
-                    self.router.send(request: request, completion: completion)
+                    Task {
+                        try await self.router.send(request: request, ackTimeoutHandler: ackTimeoutHandler)
+                    }
                     return .process
                 }
             }
@@ -650,7 +652,9 @@ import Foundation
                 case .onHold, .error:
                     return processResult
                 case .process:
-                    self.router.send(request: request)
+                    Task {
+                        try await self.router.send(request: request)
+                    }
                     return processResult
                 }
             }
