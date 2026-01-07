@@ -73,7 +73,7 @@ actor AckTimerManager {
     }
     
     func clear() async {
-        Logger.external.info("Configure ACK Timers.")
+        Logger.external.info("Clearing ACK Timers.")
 
         let contextsToClear = contexts.values.flatMap { $0 }
         guard !contextsToClear.isEmpty else {

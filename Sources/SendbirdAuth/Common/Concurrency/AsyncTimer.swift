@@ -1,6 +1,6 @@
 //
 //  AsyncTimer.swift
-//  SendbirdChat
+//  SendbirdAuth
 //
 //  Created by Kai Lee on 10/1/25.
 //
@@ -23,7 +23,7 @@ actor AsyncTimer {
         state == .running
     }
     
-    private let tickingStreamContinuation: AsyncStream<Void>.Continuation?
+    private let tickingStreamContinuation: AsyncStream<Void>.Continuation
     private let tickingStream: AsyncStream<Void>
     
     private var timerTask: Task<Void, Never>?
@@ -103,8 +103,6 @@ actor AsyncTimer {
     }
 
     private func runTimerLoop(repeats: Bool) async {
-        guard let tickingStreamContinuation else { return }
-        
         defer {
             tickingStreamContinuation.finish()
             self.timerTask = nil
