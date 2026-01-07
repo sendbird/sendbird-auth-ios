@@ -345,7 +345,6 @@ extension CommandRouter {
 }
 #endif
 
-// ???: Where to place this?
 @globalActor actor SocketSendActor {
     static let shared = SocketSendActor()
 }
