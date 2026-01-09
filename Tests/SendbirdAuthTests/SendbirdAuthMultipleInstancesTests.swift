@@ -175,8 +175,8 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         let instance2 = SendbirdAuth.getOrCreate(params: params2)
 
         // Then
-        let host1: String? = instance1.instancePref.value(forKey: PreferenceKey.customAPIHost)
-        let host2: String? = instance2.instancePref.value(forKey: PreferenceKey.customAPIHost)
+        let host1: String? = instance1.preference.value(forKey: PreferenceKey.customAPIHost)
+        let host2: String? = instance2.preference.value(forKey: PreferenceKey.customAPIHost)
 
         XCTAssertEqual(host1, apiHost)
         XCTAssertEqual(host2, anotherApiHost)

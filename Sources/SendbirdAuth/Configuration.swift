@@ -100,12 +100,12 @@ enum Configuration {
     /// - Note: If you want to use release environment's host,
     ///        build configuration should be set to `Release` and clear custom host after setting it.
     func setCustomHost(_ environment: CustomHostEnvironment) {
-        instancePref.set(value: environment.apiHost, forKey: PreferenceKey.customAPIHost)
-        instancePref.set(value: environment.wsHost, forKey: PreferenceKey.customWsHost)
+        preference.set(value: environment.apiHost, forKey: PreferenceKey.customAPIHost)
+        preference.set(value: environment.wsHost, forKey: PreferenceKey.customWsHost)
     }
 
     func clearCustomHost() {
-        instancePref.remove(forKey: PreferenceKey.customAPIHost)
-        instancePref.remove(forKey: PreferenceKey.customWsHost)
+        preference.remove(forKey: PreferenceKey.customAPIHost)
+        preference.remove(forKey: PreferenceKey.customWsHost)
     }
 }

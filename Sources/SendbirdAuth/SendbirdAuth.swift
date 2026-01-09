@@ -103,7 +103,7 @@ import Foundation
     @available(*, deprecated, message: "DO NOT USE IT. Use SendbirdAuthMain.instancePref instead")
     @_spi(SendbirdInternal) public static var pref: LocalPreferences {
         if let sdkInstance = getFirstInstance() {
-            return sdkInstance.instancePref
+            return sdkInstance.preference
         } else {
             return LocalPreferences(suiteName: "com.sendbird.sdk.ios")
         }
