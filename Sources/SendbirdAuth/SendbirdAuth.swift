@@ -24,12 +24,7 @@ import Foundation
 
     /// Creates the key for identifying a SendbirdAuthMain instance
     private static func createInstanceKey(appId: String, apiHostUrl: String?) -> String {
-        let hostUrl = if let apiHostUrl {
-            apiHostUrl
-        } else {
-            Configuration.apiHostURL(for: appId)
-        }
-
+        let hostUrl = apiHostUrl ?? Configuration.apiHostURL(for: appId)
         return "\(appId)_\(hostUrl)"
     }
 
