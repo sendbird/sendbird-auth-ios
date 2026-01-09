@@ -56,7 +56,7 @@ import Foundation
         if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
             return errorResponse.asAuthError
         } else {
-            return AuthError(domain: "core", code: 800000, userInfo: nil)
+            return AuthError(domain: "core", code: AuthClientError.unknownError.code, userInfo: nil)
         }
     }
     
