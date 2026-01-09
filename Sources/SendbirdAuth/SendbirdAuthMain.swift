@@ -107,12 +107,7 @@ import Foundation
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
         // Create instance-specific preferences
-        let instanceKey: String = {
-            if let apiHost = params.customAPIHost, !apiHost.isEmpty {
-                return "\(params.applicationId)_\(apiHost)"
-            }
-            return params.applicationId
-        }()
+        let instanceKey = InstanceRegistry.createKey(appId: params.applicationId, apiHostUrl: params.customAPIHost)
         let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)")
         self.preference = instancePref
 
