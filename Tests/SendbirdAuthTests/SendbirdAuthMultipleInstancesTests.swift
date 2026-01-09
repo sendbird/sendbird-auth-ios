@@ -15,44 +15,47 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         SendbirdAuth.clearAllInstances()
     }
 
-    // MARK: - create Tests
+    // MARK: - getOrCreate Tests
 
-    func testCreate_alwaysCreatesNewInstance() {
+    func testGetOrCreate_sameParams_returnsSameInstance() {
         // Given
         let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
 
         // When
-        let instance1 = SendbirdAuth.create(params: params)
-        let instance2 = SendbirdAuth.create(params: params)
+        let instance1 = SendbirdAuth.getOrCreate(params: params)
+        let instance2 = SendbirdAuth.getOrCreate(params: params)
 
         // Then
-        XCTAssertFalse(instance1 === instance2, "create should always return new instance")
+        XCTAssertTrue(instance1 === instance2, "Same params should return same instance")
     }
 
-    func testCreate_registersInstanceToMap() {
+    func testGetOrCreate_differentAppId_returnsDifferentInstance() {
         // Given
-        let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
+        let params1 = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
+        let params2 = InternalInitParams(applicationId: anotherAppId, isLocalCachingEnabled: false)
 
         // When
-        let created = SendbirdAuth.create(params: params)
-        let retrieved = SendbirdAuth.getInstance(appId: appId)
+        let instance1 = SendbirdAuth.getOrCreate(params: params1)
+        let instance2 = SendbirdAuth.getOrCreate(params: params2)
 
         // Then
-        XCTAssertTrue(created === retrieved, "Created instance should be registered to map")
+        XCTAssertFalse(instance1 === instance2, "Different appId should return different instances")
     }
 
-    func testCreate_replacesExistingInstance() {
+    func testGetOrCreate_sameAppIdDifferentApiHost_returnsDifferentInstance() {
         // Given
-        let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
-        let instance1 = SendbirdAuth.create(params: params)
+        let params1 = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
+        params1.customAPIHost = apiHost
+
+        let params2 = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
+        params2.customAPIHost = anotherApiHost
 
         // When
-        let instance2 = SendbirdAuth.create(params: params)
-        let retrieved = SendbirdAuth.getInstance(appId: appId)
+        let instance1 = SendbirdAuth.getOrCreate(params: params1)
+        let instance2 = SendbirdAuth.getOrCreate(params: params2)
 
         // Then
-        XCTAssertFalse(instance1 === instance2)
-        XCTAssertTrue(instance2 === retrieved, "New instance should replace old one in map")
+        XCTAssertFalse(instance1 === instance2, "Same appId with different apiHost should return different instances")
     }
 
     // MARK: - getInstance Tests
@@ -60,7 +63,7 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
     func testGetInstance_existingInstance_returnsInstance() {
         // Given
         let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
-        let created = SendbirdAuth.create(params: params)
+        let created = SendbirdAuth.getOrCreate(params: params)
 
         // When
         let retrieved = SendbirdAuth.getInstance(appId: appId)
@@ -82,7 +85,7 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         // Given
         let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
         params.customAPIHost = apiHost
-        let created = SendbirdAuth.create(params: params)
+        let created = SendbirdAuth.getOrCreate(params: params)
 
         // When
         let withHost = SendbirdAuth.getInstance(appId: appId, apiHostUrl: apiHost)
@@ -99,7 +102,7 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
     func testRemoveInstance_removesFromMap() {
         // Given
         let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
-        _ = SendbirdAuth.create(params: params)
+        _ = SendbirdAuth.getOrCreate(params: params)
         XCTAssertNotNil(SendbirdAuth.getInstance(appId: appId))
 
         // When
@@ -108,6 +111,19 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         // Then
         XCTAssertNil(SendbirdAuth.getInstance(appId: appId))
     }
+    
+    func testRemoveInstance_withSelfInstance() {
+        // Given
+        let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
+        let instance = SendbirdAuth.getOrCreate(params: params)
+        XCTAssertNotNil(SendbirdAuth.getInstance(appId: appId))
+        
+        // When
+        SendbirdAuth.removeInstance(instance)
+        
+        // Then
+        XCTAssertNil(SendbirdAuth.getInstance(appId: appId))
+    }        
 
     // MARK: - clearAllInstances Tests
 
@@ -115,8 +131,8 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         // Given
         let params1 = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
         let params2 = InternalInitParams(applicationId: anotherAppId, isLocalCachingEnabled: false)
-        _ = SendbirdAuth.create(params: params1)
-        _ = SendbirdAuth.create(params: params2)
+        _ = SendbirdAuth.getOrCreate(params: params1)
+        _ = SendbirdAuth.getOrCreate(params: params2)
 
         // When
         SendbirdAuth.clearAllInstances()
@@ -131,7 +147,7 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
     func testIsInitialized_withInstance_returnsTrue() {
         // Given
         let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
-        _ = SendbirdAuth.create(params: params)
+        _ = SendbirdAuth.getOrCreate(params: params)
 
         // Then
         XCTAssertTrue(SendbirdAuth.isInitialized)
@@ -155,12 +171,12 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         params2.customAPIHost = anotherApiHost
 
         // When
-        let instance1 = SendbirdAuth.create(params: params1)
-        let instance2 = SendbirdAuth.create(params: params2)
+        let instance1 = SendbirdAuth.getOrCreate(params: params1)
+        let instance2 = SendbirdAuth.getOrCreate(params: params2)
 
         // Then
-        let host1: String? = instance1.instancePref.value(forKey: PreferenceKey.customAPIHost)
-        let host2: String? = instance2.instancePref.value(forKey: PreferenceKey.customAPIHost)
+        let host1: String? = instance1.preference.value(forKey: PreferenceKey.customAPIHost)
+        let host2: String? = instance2.preference.value(forKey: PreferenceKey.customAPIHost)
 
         XCTAssertEqual(host1, apiHost)
         XCTAssertEqual(host2, anotherApiHost)

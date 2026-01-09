@@ -14,25 +14,11 @@ import Foundation
 
     // MARK: - Multi-instance Support
 
-    /// Map for storing multiple SendbirdAuthMain instances
-    /// Uses NSMapTable with weak values to allow automatic cleanup when instances are deallocated
-    private static let instances = NSMapTable<NSString, SendbirdAuthMain>(
-        keyOptions: .strongMemory,
-        valueOptions: .weakMemory
-    )
-    private static let instancesLock = NSLock()
+    private static let registry = InstanceRegistry()
 
-    /// Creates the key for identifying a SendbirdAuthMain instance
-    private static func createInstanceKey(appId: String, apiHostUrl: String?) -> String {
-        if let apiHostUrl, !apiHostUrl.isEmpty {
-            return "\(appId)_\(apiHostUrl)"
-        }
-        return appId
-    }
-
-    /// Creates and registers a SendbirdAuthMain instance.
+    /// Gets or creates a SendbirdAuthMain instance.
     /// You should hold a strong reference to the returned instance to prevent it from being deallocated.
-    @_spi(SendbirdInternal) public static func create(
+    @_spi(SendbirdInternal) public static func getOrCreate(
         params: InternalInitParams,
         statAPIClient: StatAPIClientable? = nil,
         webSocketEngine: (any ChatWebSocketEngine)? = nil,
@@ -40,73 +26,61 @@ import Foundation
         customRouterConfig: CommandRouterConfiguration? = nil,
         customSendbirdConfig: SendbirdConfiguration? = nil
     ) -> SendbirdAuthMain {
-        let key = createInstanceKey(appId: params.applicationId, apiHostUrl: params.customAPIHost) as NSString
-
-        return instancesLock.withLock {
-            let newInstance = SendbirdAuthMain(
-                params: params,
-                statAPIClient: statAPIClient,
-                webSocketEngine: webSocketEngine,
-                httpClient: httpClient,
-                customRouterConfig: customRouterConfig,
-                customSendbirdConfig: customSendbirdConfig
-            )
-            instances.setObject(newInstance, forKey: key)
-            return newInstance
-        }
+        registry.getOrCreate(
+            params: params,
+            statAPIClient: statAPIClient,
+            webSocketEngine: webSocketEngine,
+            httpClient: httpClient,
+            customRouterConfig: customRouterConfig,
+            customSendbirdConfig: customSendbirdConfig
+        )
     }
 
     /// Gets an existing instance by appId and apiHostUrl
     @_spi(SendbirdInternal) public static func getInstance(appId: String, apiHostUrl: String? = nil) -> SendbirdAuthMain? {
-        let key = createInstanceKey(appId: appId, apiHostUrl: apiHostUrl) as NSString
-        return instancesLock.withLock {
-            instances.object(forKey: key)
-        }
+        registry.get(appId: appId, apiHostUrl: apiHostUrl)
     }
 
     /// Removes an instance from the map
     @_spi(SendbirdInternal) public static func removeInstance(appId: String, apiHostUrl: String? = nil) {
-        let key = createInstanceKey(appId: appId, apiHostUrl: apiHostUrl) as NSString
-        instancesLock.withLock {
-            instances.removeObject(forKey: key)
-        }
+        registry.remove(appId: appId, apiHostUrl: apiHostUrl)
+    }
+
+    @_spi(SendbirdInternal) public static func removeInstance(_ instance: SendbirdAuthMain) {
+        registry.remove(instance)
     }
 
     /// Clears all instances
     @_spi(SendbirdInternal) public static func clearAllInstances() {
-        instancesLock.withLock {
-            instances.removeAllObjects()
-        }
-    }
-
-    /// Returns the first available instance (thread-safe)
-    private static func getFirstInstance() -> SendbirdAuthMain? {
-        instancesLock.withLock {
-            instances.objectEnumerator()?.nextObject() as? SendbirdAuthMain
-        }
+        registry.clear()
     }
 
     // MARK: - Legacy Support (Backward Compatibility)
 
-    @available(*, deprecated, message: "DO NOT USE IT. Use SendbirdAuthMain.instancePref instead")
+    @available(*, deprecated, message: "DO NOT USE IT. Use `SendbirdAuthMain.preference` instead")
     @_spi(SendbirdInternal) public static var pref: LocalPreferences {
-        if let sdkInstance = getFirstInstance() {
-            return sdkInstance.instancePref
+        if let sdkInstance = registry.first() {
+            return sdkInstance.preference
         } else {
             return LocalPreferences(suiteName: "com.sendbird.sdk.ios")
         }
     }
 
     @_spi(SendbirdInternal) public static func updateSharedSDKInstance(to newMain: SendbirdAuthMain) {
-        let key = createInstanceKey(appId: newMain.applicationId, apiHostUrl: newMain.routerConfig.apiHost) as NSString
-        instancesLock.withLock {
-            instances.setObject(newMain, forKey: key)
-        }
+        registry.update(newMain)
     }
 
-    @available(*, deprecated, message: "Use isInitialized(appId:apiHostUrl:) instead")
+    /// Check if a specific instance is initialized
+    @_spi(SendbirdInternal) public static func isInitialized(appId: String, apiHostUrl: String? = nil) -> Bool {
+        guard let instance = getInstance(appId: appId, apiHostUrl: apiHostUrl) else {
+            return false
+        }
+        return !instance.applicationId.isEmpty
+    }
+
+    @available(*, deprecated, message: "DO NOT USE IT. Use isInitialized(appId:apiHostUrl:) instead")
     @_spi(SendbirdInternal) public static var isInitialized: Bool {
-        guard let sdkInstance = getFirstInstance() else {
+        guard let sdkInstance = registry.first() else {
             return false
         }
 
@@ -118,16 +92,9 @@ import Foundation
         return !emptyAppId
     }
 
-    /// Check if a specific instance is initialized
-    @_spi(SendbirdInternal) public static func isInitialized(appId: String, apiHostUrl: String? = nil) -> Bool {
-        guard let instance = getInstance(appId: appId, apiHostUrl: apiHostUrl) else {
-            return false
-        }
-        return !instance.applicationId.isEmpty
-    }
-
+    @available(*, deprecated, message: "DO NOT USE IT. Use isInitialized(appId:apiHostUrl:) instead")
     @_spi(SendbirdInternal) public static var isInitializedWithoutWarning: Bool {
-        guard let sdkInstance = getFirstInstance() else {
+        guard let sdkInstance = registry.first() else {
             return false
         }
         return !sdkInstance.applicationId.isEmpty
