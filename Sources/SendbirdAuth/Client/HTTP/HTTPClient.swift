@@ -172,7 +172,9 @@ import Foundation
                     completionHandler?(nil, error)
                 }
             case 400..<500:
-                completionHandler?(nil, .error(from: data))
+                let error = self.routerConfig.exceptionParser.parse(data: data)
+                    ?? AuthError.error(from: data)
+                completionHandler?(nil, error)
             default:
                 completionHandler?(nil, AuthClientError.internalServerError.asAuthError)
             }
@@ -207,14 +209,16 @@ import Foundation
             case 200..<300:
                 completionHandler?(result, nil)
             case 400..<500:
-                completionHandler?(nil, .error(from: data))
+                let error = self.routerConfig.exceptionParser.parse(data: data)
+                    ?? AuthError.error(from: data)
+                completionHandler?(nil, error)
             default:
                 completionHandler?(nil, AuthCoreError.internalServerError.asAuthError)
             }
         }
         dataTask.resume()
     }
-    
+
     @_spi(SendbirdInternal) public func send<R: APIRequestable>(
         multipartRequest request: R,
         headers: [String: String] = [:],
@@ -706,9 +710,17 @@ extension URLSession {
 #if DEBUG
 extension HTTPClient {
     @_spi(SendbirdInternal) public var dependencyForTest: Dependency? { dependency }
-    
+
     @_spi(SendbirdInternal) public func createUrlRequestForTest(request: any APIRequestable) -> URLRequest? {
         return createURLRequest(request: request)
+    }
+
+    @_spi(SendbirdInternal) public func setURLSessionForTest(_ session: URLSession) {
+        self.urlSession = session
+    }
+
+    @_spi(SendbirdInternal) public func markDependencyResolvedForTest() {
+        _dependency.isResolved = true
     }
 }
 #endif

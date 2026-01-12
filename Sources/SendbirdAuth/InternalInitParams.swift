@@ -25,18 +25,24 @@ import Foundation
 
     @_spi(SendbirdInternal) public var mainSDKInfo: SendbirdSDKInfo?
 
+    /// Custom exception parser for API error responses.
+    /// Default is `DefaultExceptionParser` which parses Chat API format.
+    @_spi(SendbirdInternal) public var exceptionParser: ApiExceptionParser = DefaultExceptionParser()
+
     @_spi(SendbirdInternal) public init(
         applicationId: String,
         isLocalCachingEnabled: Bool,
         logLevel: AuthLogLevel = .none,
         appVersion: String? = nil,
-        mainSDKInfo: SendbirdSDKInfo? = nil
+        mainSDKInfo: SendbirdSDKInfo? = nil,
+        exceptionParser: ApiExceptionParser = DefaultExceptionParser()
     ) {
         self.applicationId = applicationId
         self.isLocalCachingEnabled = isLocalCachingEnabled
         self.logLevel = logLevel
         self.appVersion = appVersion
         self.mainSDKInfo = mainSDKInfo
+        self.exceptionParser = exceptionParser
     }
     
     @_spi(SendbirdInternal) public override func isEqual(_ object: Any?) -> Bool {
