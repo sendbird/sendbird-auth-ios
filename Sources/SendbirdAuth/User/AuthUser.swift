@@ -11,7 +11,7 @@ import Foundation
 
     // MARK: - Mutable State (Thread-safe)
 
-    private struct MutableState {
+    private struct MutableState: Equatable {
         var nickname: String
         var plainProfileImageURL: String?
         var connectionStatus: AuthUserConnectionStatus
@@ -23,6 +23,10 @@ import Foundation
 
     private let lock = NSLock()
     private var state: MutableState
+
+    private func stateSnapshot() -> MutableState {
+        lock.withLock { state }
+    }
 
     // MARK: - Immutable Properties
 
@@ -196,30 +200,36 @@ import Foundation
     ///
     /// - Parameter encoder: `Encoder` instance
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
+        // Take snapshot for consistent encoding
+        let snapshot = stateSnapshot()
+
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
         try container.encode(self.userId, forKey: .userId)
-        try? container.encodeIfPresent(self.nickname, forKey: .nickname)
-        try? container.encodeIfPresent(self.plainProfileImageURL, forKey: .profileURL)
-        try? container.encodeIfPresent(self.connectionStatus, forKey: .isOnline)
+        try? container.encodeIfPresent(snapshot.nickname, forKey: .nickname)
+        try? container.encodeIfPresent(snapshot.plainProfileImageURL, forKey: .profileURL)
+        try? container.encodeIfPresent(snapshot.connectionStatus, forKey: .isOnline)
         try container.encode(self.isActive, forKey: .isActive)
-        try container.encode(self.lastSeenAt, forKey: .lastSeenAt)
+        try container.encode(snapshot.lastSeenAt, forKey: .lastSeenAt)
         try? container.encodeIfPresent(self.metaDataMap.toDictionary(), forKey: .metadata)
         try? container.encodeIfPresent(self.friendDiscoveryKey, forKey: .friendDiscoveryKey)
         try? container.encodeIfPresent(self.friendName, forKey: .friendName)
-        try? container.encodeIfPresent(self.preferredLanguages, forKey: .preferredLanguages)
-        try container.encode(self.requireAuth, forKey: .requireAuthForProfileImage)
+        try? container.encodeIfPresent(snapshot.preferredLanguages, forKey: .preferredLanguages)
+        try container.encode(snapshot.requireAuth, forKey: .requireAuthForProfileImage)
         try container.encode(self.isBot, forKey: .isBot)
-        try container.encode(self.localUpdatedAt, forKey: .localUpdatedAt)
+        try container.encode(snapshot.localUpdatedAt, forKey: .localUpdatedAt)
     }
 
     // MARK: - Update Methods
 
     @_spi(SendbirdInternal) public func update(with user: AuthUser) {
+        // Take snapshot first to avoid deadlock
+        let userState = user.stateSnapshot()
+
         lock.withLock {
-            state.plainProfileImageURL = user.plainProfileImageURL
-            state.nickname = user.nickname
-            state.preferredLanguages = user.preferredLanguages
-            state.requireAuth = user.requireAuth
+            state.plainProfileImageURL = userState.plainProfileImageURL
+            state.nickname = userState.nickname
+            state.preferredLanguages = userState.preferredLanguages
+            state.requireAuth = userState.requireAuth
         }
 
         // Intentionally called `replaceAll(with: [Key: Value])`
@@ -231,17 +241,16 @@ import Foundation
     }
 
     @_spi(SendbirdInternal) public func updateIfUserIsNewer(with newUser: AuthUser) {
-        lock.withLock {
-            if newUser.localUpdatedAt > state.localUpdatedAt {
-                state.plainProfileImageURL = newUser.plainProfileImageURL
-                state.nickname = newUser.nickname
-                state.preferredLanguages = newUser.preferredLanguages
-                state.requireAuth = newUser.requireAuth
-            }
+        // Take snapshot first to avoid deadlock
+        let newUserLocalUpdatedAt = newUser.localUpdatedAt
+
+        let shouldUpdate = lock.withLock {
+            newUserLocalUpdatedAt > state.localUpdatedAt
         }
 
-        let dictionary = newUser.metaDataMap.toDictionary()
-        self.metaDataMap.replaceAll(with: dictionary)
+        if shouldUpdate {
+            self.update(with: newUser)
+        }
     }
 
     @_spi(SendbirdInternal) public func updateUserInfo(with dictionary: [String: Any]?) {
@@ -286,20 +295,24 @@ extension AuthUser: NSCopying {
     /// - Parameter object: `Any` instance
     /// - Returns: `true` if same otherwise `false`
     @_spi(SendbirdInternal) public override func isEqual(_ object: Any?) -> Bool {
-        guard let other = object as? AuthUser else { return false }
+        guard let otherUser = object as? AuthUser else { return false }
 
-        return userId == other.userId &&
-            nickname == other.nickname &&
-            plainProfileImageURL == other.plainProfileImageURL &&
-            connectionStatus == other.connectionStatus &&
-            isActive == other.isActive &&
-            friendDiscoveryKey == other.friendDiscoveryKey &&
-            friendName == other.friendName &&
-            metaData == other.metaData &&
-            preferredLanguages == other.preferredLanguages &&
-            lastSeenAt == other.lastSeenAt &&
-            requireAuth == other.requireAuth &&
-            isBot == other.isBot
+        // Take snapshots first to avoid deadlock when comparing two AuthUser objects
+        let state = self.stateSnapshot()
+        let otherState = otherUser.stateSnapshot()
+
+        return userId == otherUser.userId &&
+        state.nickname == otherState.nickname &&
+        state.plainProfileImageURL == otherState.plainProfileImageURL &&
+        state.connectionStatus == otherState.connectionStatus &&
+        isActive == otherUser.isActive &&
+        friendDiscoveryKey == otherUser.friendDiscoveryKey &&
+        friendName == otherUser.friendName &&
+        metaData == otherUser.metaData &&
+        state.preferredLanguages == otherState.preferredLanguages &&
+        state.lastSeenAt == otherState.lastSeenAt &&
+        state.requireAuth == otherState.requireAuth &&
+        isBot == otherUser.isBot
     }
 
     /// Copies this object
@@ -316,15 +329,17 @@ extension AuthUser: NSCopying {
 
 extension AuthUser {
     @_spi(SendbirdInternal) public override var hash: Int {
+        let snapshot = stateSnapshot()
+
         var hasher = Hasher()
         hasher.combine(userId)
-        hasher.combine(nickname)
-        hasher.combine(plainProfileImageURL)
+        hasher.combine(snapshot.nickname)
+        hasher.combine(snapshot.plainProfileImageURL)
         hasher.combine(friendDiscoveryKey)
         hasher.combine(friendName)
         hasher.combine(metaData)
-        hasher.combine(preferredLanguages)
-        hasher.combine(requireAuth)
+        hasher.combine(snapshot.preferredLanguages)
+        hasher.combine(snapshot.requireAuth)
         return hasher.finalize()
     }
 }
