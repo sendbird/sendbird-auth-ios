@@ -1,0 +1,409 @@
+default_platform(:ios)
+
+BUILD_PATH='./build'
+
+SLACK = ENV['SLACK_WEB_HOOK_URL']
+
+TEST_OUTPUT_PATH = "/tmp/scan/output"
+
+PROJECT_NAME='SendbirdChat.xcodeproj'
+SCHEME='SendbirdChatSDK'
+
+FLAKY_TESTS=["SendbirdChatTests/SendScheduledMessageNowTests/test_sendSchedueldFileMessageNow",
+        "SendbirdChatTests/ConnectionStateTransitionTests/test_12_DisconnectSocketExplicitlyInConnectingStateWhenSDKHasNoCachedData",
+        "SendbirdChatTests/GroupChannelPinnedMessagesTest/test_channelCollectionUpdatedChannelsIsCalled_viaChangeLogs_whenOtherUserPins",
+        "SendbirdChatTests/MultipleFilesMessageCopyScenarioTests/test_mfm_copy3_orderOfMultipleFilesMessage",
+        "SendbirdChatTests/MultipleFilesMessageTest/test_case22_multipleFilesMessage_serializeDeserialize_pendingMessage",
+        "SendbirdChatTests/NotificationCenterTests/test_10_getGroupChannelUsingMock",
+        "SendbirdChatTests/DBDeletionLogicTests/test_DBDeletionLogicCase9",
+        "SendbirdChatTests/OfflineMessagingTests/test_offlineMessagingResendFailedFileMessage",
+        "SendbirdChatTests/CreateScheduledUserMessageTests/test_createScheduledMessage_scheduledAfter1Min_verifySent",
+        "SendbirdChatTests/MCDisposeTestsLocalCacheOffNetworkOn/test_MC_dispose_2_1_4",
+        "SendbirdChatTests/MCDisposeTestsLocalCacheOffNetworkOn/test_MC_dispose_1_1_4",
+        "SendbirdChatTests/MCDisposeTestsLocalCacheOffNetworkOn/test_MC_resend_auto_1_5_2",
+        "SendbirdChatTests/MessageCollectionReconnectIssueTests/test_unfetchedMessageAfterReconnect"]
+
+platform :ios do
+  before_all do
+    # Clean scan logs at the start of every fastlane run
+    clean_scan_logs!
+    # Create temporary folder and change access permissions
+    require "fileutils"
+    FileUtils.mkdir_p(TEST_OUTPUT_PATH)
+    FileUtils.chmod "u=wrx,go=rx", TEST_OUTPUT_PATH
+  end
+
+  # This lane runs all tests, then retries only failed ones using xcresulttool + jq.
+  lane :test_with_retry do |options|
+    UI.message("Starting initial test run...")
+    # Run All Tests
+    test_cases = options[:test_cases]&.split(',')&.reject(&:empty?)
+    xcresult_path = nil
+
+    if test_cases != nil && test_cases.length > 0
+      xcresult_path = run_test_only(scheme: options[:scheme], device: options[:device], config: options[:config] || "Debug", test_cases: options[:test_cases], retry_count: 1)
+    else
+      xcresult_path = run_test(scheme: options[:scheme], device: options[:device], config: options[:config] || "Debug", retry_count: 1)
+    end
+
+    if !xcresult_path.to_s.empty?
+      UI.message("Manual retry.")
+
+      current_result_path = xcresult_path
+      run_index = 1
+      # Initial run log
+      1.upto(2) do |attempt|
+        puts "📁 xcresult path from previous test: #{current_result_path}"
+        failed_tests = parse_failed_tests_from_xcresult(current_result_path)
+        remove_xcresult(xcresult_path: current_result_path)
+
+        puts "🧪 Extracted failed tests: #{failed_tests}"
+        # Remove previous path after extracting failed tests
+
+        next_result_path = retry_failed_tests(attempt, scheme: options[:scheme], device: options[:device], config: options[:config] || "Debug", failed_tests: failed_tests, retry_count: run_index+1)
+        break if next_result_path.to_s.strip.empty?
+
+        run_index += 1
+        current_result_path = next_result_path
+      end
+
+      if !current_result_path.to_s.empty?
+        failed_tests_from_last_retry = parse_failed_tests_from_xcresult(current_result_path)
+
+        if !failed_tests_from_last_retry.empty?
+          UI.error("Test retries over. Some tests still failed: #{failed_tests_from_last_retry.join(', ')}.")
+          UI.user_error!("Test retries over. Some tests still failed: #{failed_tests_from_last_retry.join(', ')}.")
+        end
+      end
+    end
+
+    UI.message("All retry attempts completed.")
+  end
+
+  desc "Run tests"
+  lane :test do |options|
+    # Run All Tests
+    test_cases = options[:test_cases] ? options[:test_cases].split(',') : nil
+
+    if test_cases != nil && test_cases.length > 0
+      UI.message("Run on simulator device: #{options[:device]}")
+      run_test_only_circleci(scheme: options[:scheme], device: options[:device], config: options[:config] || "Debug", test_cases: options[:test_cases])
+    else
+      UI.message("Run on simulator device: #{options[:device]}")
+      run_test_circleci(scheme: options[:scheme], device: options[:device], config: options[:config] || "Debug")
+    end
+  end
+
+  # Test build
+  lane :build do | options |
+    ENV["SCAN_DEVICE"] = boot_test_simulator
+    puts 'Building core sdk framework'
+    run_tests(
+      project: File.absolute_path("../#{PROJECT_NAME}"),
+      scheme: SCHEME,
+      build_for_testing: true,
+      configuration: options[:config] || "Debug",
+      derived_data_path: BUILD_PATH,
+      device: options[:device],
+      clean: true,
+      code_coverage: true,
+      xcodebuild_formatter: "xcpretty"
+    )
+    sh("xcrun simctl shutdown #{ENV['SCAN_DEVICE']}")
+    sh("xcrun simctl delete #{ENV['SCAN_DEVICE']}")
+  end
+end
+
+# Cleans out all files in ~/Library/Logs/scan before running fastlane
+def clean_scan_logs!
+  scan_dir = File.expand_path('~/Library/Logs/scan')
+  if Dir.exist?(scan_dir)
+    UI.message("🧹 Cleaning scan logs at: #{scan_dir}")
+    FileUtils.rm_rf(Dir.glob("#{scan_dir}/*"))
+  else
+    UI.message("📂 Scan log directory does not exist: #{scan_dir}")
+  end
+end
+
+def prepare_output_directory
+  # Generate random name folder
+  ran = (0...8).map { (65 + rand(26)).chr }.join
+  output_dir = "#{TEST_OUTPUT_PATH}/#{ran}"
+  FileUtils.mkdir_p(output_dir)
+  return output_dir
+end
+
+def run_test_circleci(scheme:, device:, config:)
+  # Refer to https://sendbird.atlassian.net/wiki/spaces/IOS/pages/293241139/CircleCI+Fastlane
+
+  output_dir = prepare_output_directory
+
+  xcresult_path = "#{output_dir}/SendbirdChatSDK.xcresult"
+
+  ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+
+  scan_result = scan(
+    scheme: scheme,
+    configuration: config,
+    project: File.absolute_path("../#{PROJECT_NAME}"),
+    derived_data_path: BUILD_PATH,
+    test_without_building: true,
+    device: device,
+    code_coverage: true,
+    number_of_retries: 2,
+    output_remove_retry_attempts: true,
+    disable_concurrent_testing: true,
+    skip_package_dependencies_resolution: true,
+    skip_detect_devices: true,
+    xcodebuild_formatter: "xcbeautify",
+    result_bundle: true,
+    fail_build: true
+  )
+
+  # export_html_report(output_dir: output_dir)
+  remove_xcresult(xcresult_path: xcresult_path)
+
+  unless scan_result
+    UI.error("scan failed. Aborting the job.")
+    error("scan failed. Aborting the job.")
+  end
+end
+
+def run_test_only_circleci(scheme:, device:, config:, test_cases:)
+  output_dir = prepare_output_directory
+
+  xcresult_path = "#{output_dir}/SendbirdChatSDK.xcresult"
+
+  ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+
+  # Run All Tests
+  scan_result = scan(
+    scheme: scheme,
+    configuration: config,
+    project: File.absolute_path("../#{PROJECT_NAME}"),
+    derived_data_path: BUILD_PATH,
+    test_without_building: true,
+    device: device,
+    only_testing: test_cases,
+    code_coverage: true,
+    number_of_retries: 2,
+    disable_concurrent_testing: true,
+    output_remove_retry_attempts: true,
+    skip_package_dependencies_resolution: true,
+    skip_detect_devices: true,
+    xcodebuild_formatter: "xcbeautify",
+    result_bundle: true,
+    fail_build: true
+  )
+
+  # export_html_report(output_dir: output_dir)
+  remove_xcresult(xcresult_path: xcresult_path)
+
+  unless scan_result
+    UI.error("scan failed. Aborting the job.")
+    error("scan failed. Aborting the job.")
+  end
+end
+
+def run_test(scheme:, device:, config:, retry_count: 1)
+  # Refer to https://sendbird.atlassian.net/wiki/spaces/IOS/pages/293241139/CircleCI+Fastlane
+
+  output_dir = prepare_output_directory
+  UI.message("🔍 Confirming test output directory prepared at: #{output_dir}")
+
+  ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+
+  # Generate a unique log directory for scan logs
+  timestamp = Time.now.strftime("%Y%m%d_%H%M%S")
+  unique_log_dir = File.expand_path("~/Library/Logs/scan/#{scheme}_run#{retry_count}_#{timestamp}")
+  FileUtils.mkdir_p(unique_log_dir)
+
+  begin
+    scan_result = scan(
+      scheme: scheme,
+      configuration: config,
+      project: File.absolute_path("../#{PROJECT_NAME}"),
+      output_directory: output_dir,
+      derived_data_path: BUILD_PATH,
+      test_without_building: true,
+      destination: "platform=iOS Simulator,id=#{ENV['SIMULATOR_ID']}",
+      code_coverage: true,
+      number_of_retries: 1,
+      disable_concurrent_testing: true,
+      output_remove_retry_attempts: true,
+      skip_package_dependencies_resolution: true,
+      skip_detect_devices: true,
+      xcodebuild_formatter: "xcbeautify",
+      result_bundle: true,
+      fail_build: true,
+      buildlog_path: unique_log_dir
+    )
+  rescue => e
+    UI.error("Scan threw an exception: #{e}")
+    UI.error("Exception class: #{e.class}")
+    UI.error("Raw message: #{e.message.inspect}")
+    UI.error("Include: #{e.message.downcase.include?("Tests have failed")}")
+    UI.error("Include2: #{e.message.to_s.include?("Tests have failed")}")
+
+    if e.message.to_s.include?("Tests have failed")
+      UI.error("Tests failed, but continuing...")
+    else
+      UI.user_error!("Scan failed. Stopping.")
+    end
+  end
+
+  unless scan_result
+    UI.error("scan failed, but will retry failed tests via xcresult.")
+  end
+
+  xcresult_path = find_xcresult_path(output_dir)
+  UI.message("xcresult after test. result path exists? #{File.exist?(xcresult_path)}")
+
+  # export_html_report(output_dir: output_dir)
+
+  return xcresult_path
+end
+
+def run_test_only(scheme:, device:, config:, test_cases:, retry_count: 1)
+    output_dir = prepare_output_directory
+    UI.message("🔍 Confirming test output directory prepared at: #{output_dir}. test cases: #{test_cases}")
+
+    ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "120"
+
+    # Generate a unique log directory for scan logs
+    timestamp = Time.now.strftime("%Y%m%d_%H%M%S")
+    unique_log_dir = File.expand_path("~/Library/Logs/scan/#{scheme}_run#{retry_count}_#{timestamp}")
+    FileUtils.mkdir_p(unique_log_dir)
+
+    begin
+      scan_result = scan(
+        scheme: scheme,
+        configuration: config,
+        project: File.absolute_path("../#{PROJECT_NAME}"),
+        output_directory: output_dir,
+        derived_data_path: BUILD_PATH,
+        test_without_building: true,
+        destination: "platform=iOS Simulator,id=#{ENV['SIMULATOR_ID']}",
+        only_testing: test_cases,
+        code_coverage: true,
+        number_of_retries: 1,
+        disable_concurrent_testing: true,
+        output_remove_retry_attempts: true,
+        skip_package_dependencies_resolution: true,
+        skip_detect_devices: true,
+        xcodebuild_formatter: "xcbeautify",
+        result_bundle: true,
+        fail_build: true,
+        buildlog_path: unique_log_dir
+      )
+    rescue => e
+      UI.error("Scan threw an exception: #{e}")
+      UI.error("Exception class: #{e.class}")
+      UI.error("Raw message: #{e.message.inspect}")
+      UI.error("Include: #{e.message.downcase.include?("Tests have failed")}")
+      UI.error("Include2: #{e.message.to_s.include?("Tests have failed")}")
+
+      if e.message.to_s.include?("Tests have failed")
+        UI.error("Tests failed, but continuing...")
+      else
+        UI.user_error!("Scan failed. Stopping.")
+      end
+    end
+
+    unless scan_result
+      UI.error("scan failed, but will retry failed tests via xcresult.")
+    end
+    xcresult_path = find_xcresult_path(output_dir)
+    UI.message("xcresult after test only. result path exists? #{File.exist?(xcresult_path)}")
+    return xcresult_path
+end
+
+def retry_failed_tests(attempt, scheme:, device:, config:, failed_tests:, retry_count:)
+  UI.message("Attempting retry ##{attempt} with failed tests: #{failed_tests}...")
+  if failed_tests.empty?
+    UI.message("All tests passed on previous retry ##{attempt - 1}")
+    return ""
+  else
+    UI.message("Running retry ##{attempt} for failed test cases: #{failed_tests.join(', ')}")
+    new_result_path = run_test_only(
+      scheme: scheme,
+      device: device,
+      config: config,
+      test_cases: failed_tests.join(','),
+      retry_count: retry_count
+    )
+    UI.message("Finished retry ##{attempt}")
+    return new_result_path
+  end
+end
+
+def find_xcresult_path(output_dir)
+  results = Dir.glob("#{output_dir}/*.xcresult")
+  if results.empty?
+    UI.error("No .xcresult file found in #{output_dir}")
+    return nil
+  end
+  UI.message("Found xcresult at: #{results.first}")
+  return results.first
+end
+
+def remove_xcresult(xcresult_path:)
+  UI.message("removing #{xcresult_path}")
+  FileUtils.remove_dir(xcresult_path) if File.exist?(xcresult_path) && File.directory?(xcresult_path)
+end
+
+def parse_failed_tests_from_xcresult(xcresult_path)
+  if xcresult_path.to_s.strip.empty?
+    UI.error("Empty xcresult_path provided; skipping parsing.")
+    return []
+  end
+
+  UI.message("Checking xcresult path: #{xcresult_path}")
+  puts "result path exists? #{File.exist?(xcresult_path)}"
+
+  unless File.exist?(xcresult_path)
+    UI.error("xcresult path not found: #{xcresult_path}")
+    return []
+  end
+
+  raw_json = IO.popen("xcrun xcresulttool get --legacy --format json --path '#{xcresult_path}'", &:read)
+  require 'json'
+  parsed = JSON.parse(raw_json)
+  failed_tests =
+    parsed.dig("actions", "_values")
+      &.select { |a| a.dig("actionResult", "status", "_value") != "succeeded" }
+      &.map { |a| a.dig("actionResult", "issues", "testFailureSummaries", "_values") }
+      &.flatten
+      &.compact
+      &.map { |summary| summary.dig("testCaseName", "_value") }
+      &.compact
+      &.uniq
+      &.map do |full_name|
+        if full_name.start_with?("-[") # Objective-C format
+          match = full_name.match(/-\[(\w+)\s+(\w+)\]/)
+          class_name = match[1]
+          method_name = match[2]
+          "SendbirdChatObjcTests/#{class_name}/#{method_name}"
+        else # Swift format
+          class_name, method_name_with_parens = full_name.split(".")
+          method_name = method_name_with_parens.gsub(/\(\)/, "")
+          # Extract target name from xcresult path
+          target_name = File.basename(xcresult_path, ".xcresult")
+          "#{target_name}/#{class_name}/#{method_name}"
+        end
+      end
+
+  UI.error("** Failed tests (#{failed_tests.count}) ** : #{failed_tests.inspect}")
+  return failed_tests
+end
+
+def boot_test_simulator
+  device_type = "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
+  runtime_version = "com.apple.CoreSimulator.SimRuntime.iOS-18-1"
+  device_name = "iPhone_Test_Device"
+
+  UI.message("Creating simulator with device type: #{device_type}, runtime: #{runtime_version}")
+  device_udid = sh("xcrun simctl create '#{device_name}' '#{device_type}' '#{runtime_version}'", log: true).strip
+  sh("xcrun simctl boot #{device_udid}")
+  device_udid
+end
