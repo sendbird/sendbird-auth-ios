@@ -134,7 +134,7 @@ protocol CommandRouterInterface {
         websocketManagerEventTask?.cancel()
     }
     
-    package func didReceiveMessage(_ message: String) {
+    private func didReceiveMessage(_ message: String) {
         Logger.socket.debug("[WS Recv] \(message)")
         guard let command = self.parsingStrategy?(message) else {
             return
