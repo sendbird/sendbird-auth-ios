@@ -21,13 +21,13 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "SendbirdAuthSDK",
-            url: "https://github.com/sendbird/sendbird-auth-ios/releases/download/0.0.7/SendbirdAuthSDK.xcframework.zip",
-            checksum: "0340c48426f3be819bf2d42ccf362f114dda7a0cf58f121458e2744399d0264c"
+            url: "https://github.com/sendbird/sendbird-auth-ios/releases/download/0.0.8/SendbirdAuthSDK.xcframework.zip",
+            checksum: "c018d2e1cb313d4f3f26eca8941e0410740484a3ace5c48346dba8cc8ef8ceb8"
         ),
         .binaryTarget(
             name: "SendbirdAuthSDKStatic",
-            url: "https://github.com/sendbird/sendbird-auth-ios/releases/download/0.0.7/SendbirdAuthSDKStatic.xcframework.zip",
-            checksum: "ab9a3a3a6eb719b17bc00703f11a9572aef6830e86d23bde84ec0316bc38be7f"
+            url: "https://github.com/sendbird/sendbird-auth-ios/releases/download/0.0.8/SendbirdAuthSDKStatic.xcframework.zip",
+            checksum: "214821e14b9a5b605a91edfb1e97362d9cd5e2404e7ed37e80f437de8a40a3e3"
         ),
     ]
 )
