@@ -150,7 +150,6 @@ import Foundation
             httpClient: httpClientForRouter,
             eventDispatcher: dispatcher
         )
-        placeHolderWebSocketManager.delegate = router
 
         let sessionHandler = SessionEventBroadcaster(service, mapTableValueOption: .strongMemory)
         let placeHolderSessionManager = SessionManager(
@@ -273,7 +272,10 @@ extension SendbirdAuthMain: EventDelegate {
         switch command {
         case is ConnectionStateEvent.Logout:
             reset()
-            router.reset {}
+            Task {
+                // Originally, it doesn't wait for the reset to complete
+                await router.reset()
+            }
 
         case is ConnectionStateEvent.ExternalDisconnected:
             deviceConnectionManager.logout()
@@ -523,7 +525,7 @@ extension SendbirdAuthMain {
             sendbirdConfig: config,
             webSocketEngine: engine
         )
-        webSocketManager.delegate = router
+
         webSocketManager.resolve(with: self)
         router.webSocketManager = webSocketManager
         deviceConnectionManager.webSocketManager = router.webSocketManager

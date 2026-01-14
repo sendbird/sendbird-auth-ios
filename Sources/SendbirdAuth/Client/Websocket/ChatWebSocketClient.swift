@@ -29,9 +29,8 @@ actor ChatWebSocketClient: ChatWebSocketClientInterface {
     
     private var recvBuffer: String
     
-    private let timerBoard: SBTimerBoard
-    private var watchdogTimer: SBTimer?
-    private var pingTimer: SBTimer?
+    private var watchdogTimer: AsyncTimer?
+    private var pingTimer: AsyncTimer?
     
     private var lastActiveSeconds: TimeInterval = 0
     private var pingInterval: TimeInterval
@@ -53,7 +52,6 @@ actor ChatWebSocketClient: ChatWebSocketClientInterface {
         
         self.pingInterval = Constant.pingSendInterval
         self.watchdogInterval = Constant.watchdogTimeout
-        self.timerBoard = SBTimerBoard(capacity: Constant.timerCapacity)
         
         self.eventBroadcaster = AsyncEventBroadcaster<WebSocketClientEvent>()
         self.engine = webSocketEngine ?? SessionWebSocketEngine()
@@ -148,18 +146,19 @@ actor ChatWebSocketClient: ChatWebSocketClientInterface {
         watchdogInterval = interval
     }
     
-    func startPingTimer() {
-        pingTimer?.abort()
+    func startPingTimer() async {
+        await pingTimer?.abort()
         Logger.socket.info("Start Pinger.")
-        pingTimer = SBTimer(
+
+        let timer = AsyncTimer(
             timeInterval: Constant.pingCheckInterval,
-            userInfo: nil,
-            onBoard: timerBoard,
-            identifier: "ping",
-            repeats: true,
-            expirationHandler: { [weak self] in
-                Task { await self?.triggerPingIfDue() }
-            })
+            identifier: "ping"
+        )
+        timer.run(repeats: true) { [weak self] in
+            guard let self else { return }
+            await self.triggerPingIfDue()
+        }
+        pingTimer = timer
     }
     
     // MARK: - Private methods
@@ -193,13 +192,13 @@ actor ChatWebSocketClient: ChatWebSocketClientInterface {
             
         case .connectionFailed(let error):
             Logger.socket.debug("WS connection fail with error \(error.localizedDescription)")
-            stopPingTimer()
+            await stopPingTimer()
             
             await eventBroadcaster.yield(.connectionFailed(error))
             
         case .closed(let code, let reason):
             Logger.socket.debug("WS connection closed with code \(code), reason: \(reason ?? "")")
-            stopPingTimer()
+            await stopPingTimer()
             
             await eventBroadcaster.yield(
                 .closed(
@@ -210,7 +209,7 @@ actor ChatWebSocketClient: ChatWebSocketClientInterface {
             
         case .received(let wsMessage):
             lastActiveSeconds = Date().timeIntervalSince1970
-            stopWatchdogTimer()
+            await stopWatchdogTimer()
             
             guard let message = wsMessage.unzippedString else {
                 return
@@ -236,7 +235,7 @@ actor ChatWebSocketClient: ChatWebSocketClientInterface {
         lastActiveSeconds = now
         
         await eventBroadcaster.yield(.timerExpired(type: .ping))
-        startWatchdogTimer()
+        await startWatchdogTimer()
     }
     
     private func needsToSendPing(at current: TimeInterval) async -> Bool {
@@ -245,41 +244,42 @@ actor ChatWebSocketClient: ChatWebSocketClientInterface {
         current - lastActiveSeconds >= pingInterval
     }
     
-    private func stopPingTimer() {
+    private func stopPingTimer() async {
         Logger.socket.info("Stop Pinger.")
         
-        pingTimer?.abort()
-        stopWatchdogTimer()
+        await pingTimer?.abort()
+        pingTimer = nil
+        await stopWatchdogTimer()
     }
     
-    private func startWatchdogTimer() {
+    private func startWatchdogTimer() async {
         Logger.socket.info("Start Watchdog.")
         
-        watchdogTimer?.abort()
-        watchdogTimer = SBTimer(
+        await watchdogTimer?.abort()
+
+        let timer = AsyncTimer(
             timeInterval: watchdogInterval,
-            userInfo: nil,
-            onBoard: timerBoard,
-            identifier: "watchdog",
-            repeats: false,
-            expirationHandler: { [weak self] in
-                Task {
-                    guard let self else { return }
-                    
-                    await self.stopPingTimer()
-                    await self.engine.stop(statusCode: .noStatusReceived)
-                }
-            }
+            identifier: "watchdog"
         )
+
+        timer.run { [weak self] in
+            guard let self else { return }
+
+            await self.stopPingTimer()
+            await self.engine.stop(statusCode: .noStatusReceived)
+        }
+
+        watchdogTimer = timer
     }
     
-    private func stopWatchdogTimer() {
+    private func stopWatchdogTimer() async {
         Logger.socket.info("Stop Watchdog.")
-        watchdogTimer?.abort()
+        await watchdogTimer?.abort()
+        watchdogTimer = nil
     }
     
     private func cleanupAndStop(isForced: Bool = false) async {
-        stopPingTimer()
+        await stopPingTimer()
 
         if isForced {
             await engine.forceStop()
