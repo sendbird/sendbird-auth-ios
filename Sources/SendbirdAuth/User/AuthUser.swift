@@ -200,22 +200,24 @@ import Foundation
     ///
     /// - Parameter encoder: `Encoder` instance
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
-        // Take snapshot for consistent encoding
         let snapshot = stateSnapshot()
-
         var container = encoder.container(keyedBy: CodeCodingKeys.self)
+
+        // Immutable properties
         try container.encode(self.userId, forKey: .userId)
+        try container.encode(self.isActive, forKey: .isActive)
+        try? container.encodeIfPresent(self.friendDiscoveryKey, forKey: .friendDiscoveryKey)
+        try? container.encodeIfPresent(self.friendName, forKey: .friendName)
+        try container.encode(self.isBot, forKey: .isBot)
+        try? container.encodeIfPresent(self.metaDataMap.toDictionary(), forKey: .metadata)
+
+        // Mutable properties (from snapshot)
         try? container.encodeIfPresent(snapshot.nickname, forKey: .nickname)
         try? container.encodeIfPresent(snapshot.plainProfileImageURL, forKey: .profileURL)
         try? container.encodeIfPresent(snapshot.connectionStatus, forKey: .isOnline)
-        try container.encode(self.isActive, forKey: .isActive)
         try container.encode(snapshot.lastSeenAt, forKey: .lastSeenAt)
-        try? container.encodeIfPresent(self.metaDataMap.toDictionary(), forKey: .metadata)
-        try? container.encodeIfPresent(self.friendDiscoveryKey, forKey: .friendDiscoveryKey)
-        try? container.encodeIfPresent(self.friendName, forKey: .friendName)
         try? container.encodeIfPresent(snapshot.preferredLanguages, forKey: .preferredLanguages)
         try container.encode(snapshot.requireAuth, forKey: .requireAuthForProfileImage)
-        try container.encode(self.isBot, forKey: .isBot)
         try container.encode(snapshot.localUpdatedAt, forKey: .localUpdatedAt)
     }
 
@@ -298,21 +300,25 @@ extension AuthUser: NSCopying {
         guard let otherUser = object as? AuthUser else { return false }
 
         // Take snapshots first to avoid deadlock when comparing two AuthUser objects
-        let state = self.stateSnapshot()
+        let selfState = self.stateSnapshot()
         let otherState = otherUser.stateSnapshot()
 
-        return userId == otherUser.userId &&
-        state.nickname == otherState.nickname &&
-        state.plainProfileImageURL == otherState.plainProfileImageURL &&
-        state.connectionStatus == otherState.connectionStatus &&
-        isActive == otherUser.isActive &&
-        friendDiscoveryKey == otherUser.friendDiscoveryKey &&
-        friendName == otherUser.friendName &&
-        metaData == otherUser.metaData &&
-        state.preferredLanguages == otherState.preferredLanguages &&
-        state.lastSeenAt == otherState.lastSeenAt &&
-        state.requireAuth == otherState.requireAuth &&
-        isBot == otherUser.isBot
+        // Immutable properties
+        guard userId == otherUser.userId &&
+              isActive == otherUser.isActive &&
+              friendDiscoveryKey == otherUser.friendDiscoveryKey &&
+              friendName == otherUser.friendName &&
+              isBot == otherUser.isBot &&
+              metaData == otherUser.metaData
+        else { return false }
+
+        // Mutable properties (from snapshot)
+        return selfState.nickname == otherState.nickname &&
+            selfState.plainProfileImageURL == otherState.plainProfileImageURL &&
+            selfState.connectionStatus == otherState.connectionStatus &&
+            selfState.lastSeenAt == otherState.lastSeenAt &&
+            selfState.preferredLanguages == otherState.preferredLanguages &&
+            selfState.requireAuth == otherState.requireAuth
     }
 
     /// Copies this object
@@ -330,16 +336,20 @@ extension AuthUser: NSCopying {
 extension AuthUser {
     @_spi(SendbirdInternal) public override var hash: Int {
         let snapshot = stateSnapshot()
-
         var hasher = Hasher()
+
+        // Immutable properties
         hasher.combine(userId)
-        hasher.combine(snapshot.nickname)
-        hasher.combine(snapshot.plainProfileImageURL)
         hasher.combine(friendDiscoveryKey)
         hasher.combine(friendName)
         hasher.combine(metaData)
+
+        // Mutable properties (from snapshot)
+        hasher.combine(snapshot.nickname)
+        hasher.combine(snapshot.plainProfileImageURL)
         hasher.combine(snapshot.preferredLanguages)
         hasher.combine(snapshot.requireAuth)
+
         return hasher.finalize()
     }
 }
