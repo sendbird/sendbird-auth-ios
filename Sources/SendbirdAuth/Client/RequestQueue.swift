@@ -377,7 +377,7 @@ import Foundation
     @_spi(SendbirdInternal) public func post<R: Decodable, K: RequestCodingKey>(
         path: some URLPathConvertible,
         body: [K: Encodable] = [:],
-        additionalBody: [Encodable] = [],
+        additionalBody: Encodable...,
         multipart: [String: Any] = [:],
         header: [String: String] = [:],
         queryParams: [K: Any] = [:],
@@ -423,7 +423,7 @@ import Foundation
     @_spi(SendbirdInternal) public func put<R: Decodable, K: RequestCodingKey>(
         path: some URLPathConvertible,
         body: [K: Encodable] = [:],
-        additionalBody: [Encodable] = [],
+        additionalBody: Encodable...,
         multipart: [String: Any] = [:],
         header: [String: String] = [:],
         queryParams: [K: Any] = [:],
@@ -469,7 +469,7 @@ import Foundation
     @_spi(SendbirdInternal) public func patch<R: Decodable, K: RequestCodingKey>(
         path: some URLPathConvertible,
         body: [K: Encodable] = [:],
-        additionalBody: [Encodable] = [],
+        additionalBody: Encodable...,
         multipart: [String: Any] = [:],
         header: [String: String] = [:],
         queryParams: [K: Any] = [:],
@@ -515,7 +515,7 @@ import Foundation
     @_spi(SendbirdInternal) public func get<R: Decodable, K: RequestCodingKey>(
         path: some URLPathConvertible,
         queryParams: [K: Encodable] = [:],
-        additionalBody: [Encodable] = [],
+        additionalBody: Encodable...,
         header: [String: String] = [:],
         isSessionRequired: Bool = true,
         isLoginRequired: Bool = true,
@@ -544,7 +544,7 @@ import Foundation
         path: some URLPathConvertible,
         body: [K: Encodable] = [:],
         multipart: [String: Encodable] = [:],
-        additionalBody: [Encodable] = [],
+        additionalBody: Encodable...,
         header: [String: String] = [:],
         queryParams: [K: Any] = [:],
         isSessionRequired: Bool = true,
@@ -791,13 +791,13 @@ import Foundation
         #if DEBUG
         callSendWSInterceptionIfNeeded(commandType, requestId, body, additionalBody, completionHandler: completionHandler)
         #endif
-        
+
         let request = BaseWSRequest<R, CodeCodingKeys>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBody)
         self.send(request: request) { command, error in
             completionHandler?(.init(command, error))
         }
     }
-    
+
     @_spi(SendbirdInternal) public func sendWS(
         commandType: CommandType,
         requestId: String?,
@@ -805,6 +805,31 @@ import Foundation
         additionalBody: Encodable...
     ) {
         let request = BaseWSRequest<DefaultResponse, CodeCodingKeys>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBody)
+        self.send(request: request)
+    }
+
+    // MARK: - Generic sendWS methods for custom CodingKeys
+
+    @_spi(SendbirdInternal) public func sendWS<R: Decodable, K: RequestCodingKey>(
+        commandType: CommandType,
+        requestId: String?,
+        body: [K: Encodable] = [:],
+        additionalBody: Encodable...,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = BaseWSRequest<R, K>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBody)
+        self.send(request: request) { command, error in
+            completionHandler?(.init(command, error))
+        }
+    }
+
+    @_spi(SendbirdInternal) public func sendWS<K: RequestCodingKey>(
+        commandType: CommandType,
+        requestId: String?,
+        body: [K: Encodable] = [:],
+        additionalBody: Encodable...
+    ) {
+        let request = BaseWSRequest<DefaultResponse, K>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBody)
         self.send(request: request)
     }
         
