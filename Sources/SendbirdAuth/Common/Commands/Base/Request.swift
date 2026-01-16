@@ -41,31 +41,33 @@ extension WSRequestable {
     @_spi(SendbirdInternal) public var identifier: RequestIdentifier { .ws(commandType) }
 }
 
-@_spi(SendbirdInternal) public class BaseWSRequest<T: Decodable>: ResultableWSRequest {
+@_spi(SendbirdInternal) public class BaseWSRequest<T: Decodable, K: RequestCodingKey>: ResultableWSRequest {
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         for body in additionalBodies {
             try? body.encode(to: encoder)
         }
-        
-        var container = encoder.container(keyedBy: CodeCodingKeys.self)
+
+        var container = encoder.container(keyedBy: K.self)
         for (key, value) in body {
             try? container.encode(value, forKey: key)
         }
-        try? container.encode(requestId, forKey: .reqId)
+        if let reqIdKey = CodeCodingKeys.reqId as? K {
+            try? container.encode(requestId, forKey: reqIdKey)
+        }
     }
-    
+
     @_spi(SendbirdInternal) public var resultType: T.Type
-    
+
     @_spi(SendbirdInternal) public var commandType: CommandType
     @_spi(SendbirdInternal) public var requestId: String?
-    
-    @_spi(SendbirdInternal) public var body: [CodeCodingKeys: Encodable]
+
+    @_spi(SendbirdInternal) public var body: [K: Encodable]
     @_spi(SendbirdInternal) public var additionalBodies: [Encodable]
-    
+
     @_spi(SendbirdInternal) public init(
         commandType: CommandType,
         requestId: String?,
-        body: [CodeCodingKeys: Encodable?],
+        body: [K: Encodable?],
         additionalBodies: [Encodable] = []
     ) {
         self.commandType = commandType
@@ -76,40 +78,40 @@ extension WSRequestable {
     }
 }
 
-@_spi(SendbirdInternal) public class APIRequests<T: Decodable>: APIRequestable {
+@_spi(SendbirdInternal) public class APIRequests<T: Decodable, K: RequestCodingKey>: APIRequestable {
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         for body in additionalBodies {
             try? body.encode(to: encoder)
         }
-        
-        var container = encoder.container(keyedBy: CodeCodingKeys.self)
+
+        var container = encoder.container(keyedBy: K.self)
         for (key, value) in body {
             try? container.encode(value, forKey: key)
         }
     }
-    
+
     @_spi(SendbirdInternal) public var resultType: T.Type
-    
+
     @_spi(SendbirdInternal) public var method: HTTPMethod
     @_spi(SendbirdInternal) public var url: URLPath
     @_spi(SendbirdInternal) public var version: String
-    
-    @_spi(SendbirdInternal) public var body: [CodeCodingKeys: Encodable]
-    
+
+    @_spi(SendbirdInternal) public var body: [K: Encodable]
+
     @_spi(SendbirdInternal) public var headers: [String: String]
     @_spi(SendbirdInternal) public var additionalBodies: [Encodable]
     @_spi(SendbirdInternal) public var multipart: [String: Any]
-    
+
     @_spi(SendbirdInternal) public var isSessionRequired: Bool // Request can be sent without session key
     @_spi(SendbirdInternal) public var isLoginRequired: Bool // Session key exists, but user data does not exist
-    
+
     @_spi(SendbirdInternal) public var hasMultipart: Bool { !multipart.isEmpty }
-    
+
     @_spi(SendbirdInternal) public init(
         method: HTTPMethod,
         url: some URLPathConvertible,
         version: String,
-        body: [CodeCodingKeys: Encodable?],
+        body: [K: Encodable?],
         additionalBodies: [Encodable] = [],
         headers: [String: String],
         multipart: [String: Any],

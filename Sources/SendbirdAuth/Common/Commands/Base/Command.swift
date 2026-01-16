@@ -67,11 +67,11 @@ import Foundation
         }
     }
 
-    case get(queryParams: [CodeCodingKeys: Any] = [:])
-    case post(queryParams: [CodeCodingKeys: Any] = [:])
-    case put(queryParams: [CodeCodingKeys: Any] = [:])
-    case delete(queryParams: [CodeCodingKeys: Any] = [:])
-    case patch(queryParams: [CodeCodingKeys: Any] = [:])
+    case get(queryParams: [String: Any] = [:])
+    case post(queryParams: [String: Any] = [:])
+    case put(queryParams: [String: Any] = [:])
+    case delete(queryParams: [String: Any] = [:])
+    case patch(queryParams: [String: Any] = [:])
     
     @_spi(SendbirdInternal) public static var get: Self { .get(queryParams: [:]) }
     @_spi(SendbirdInternal) public static var post: Self { .post(queryParams: [:]) }

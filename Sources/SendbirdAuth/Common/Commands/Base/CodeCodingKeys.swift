@@ -115,3 +115,13 @@ import Foundation
     case userId = "user_id"
 }
 // swiftlint:enable identifier_name
+
+// MARK: - Dictionary Extension for CodingKey Conversion
+
+@_spi(SendbirdInternal)
+public extension Dictionary where Key: RequestCodingKey {
+    /// Converts dictionary keys from RequestCodingKey to String using their description (rawValue).
+    func mapKeysToString() -> [String: Value] {
+        Dictionary<String, Value>(uniqueKeysWithValues: map { ($0.key.description, $0.value) })
+    }
+}
