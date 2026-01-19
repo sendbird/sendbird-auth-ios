@@ -924,6 +924,15 @@ import Foundation
             }
         }
     }
+
+    private func callSendWSInterceptionIfNeeded<R: Decodable>(
+        _ commandType: CommandType,
+        _ requestId: String?,
+        _ additionalBody: [Encodable],
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        callSendWSInterceptionIfNeeded(commandType, requestId, [:], additionalBody, completionHandler: completionHandler)
+    }
     #endif
     
     func sendWS<R: Decodable>(
@@ -994,6 +1003,10 @@ import Foundation
         additionalBodies: [Encodable],
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
+        #if DEBUG
+        callSendWSInterceptionIfNeeded(commandType, requestId, additionalBodies, completionHandler: completionHandler)
+        #endif
+
         let request = BaseWSRequest<R, K>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBodies)
         self.send(request: request) { command, error in
             completionHandler?(.init(command, error))
