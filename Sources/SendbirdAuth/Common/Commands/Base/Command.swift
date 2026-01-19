@@ -78,7 +78,29 @@ import Foundation
     @_spi(SendbirdInternal) public static var put: Self { .put(queryParams: [:]) }
     @_spi(SendbirdInternal) public static var delete: Self { .delete(queryParams: [:]) }
     @_spi(SendbirdInternal) public static var patch: Self { .patch(queryParams: [:]) }
-    
+
+    // MARK: - Generic static methods for custom CodingKeys
+
+    @_spi(SendbirdInternal) public static func get<K: RequestCodingKey>(queryParams: [K: Any]) -> Self {
+        .get(queryParams: queryParams.mapKeysToString())
+    }
+
+    @_spi(SendbirdInternal) public static func post<K: RequestCodingKey>(queryParams: [K: Any]) -> Self {
+        .post(queryParams: queryParams.mapKeysToString())
+    }
+
+    @_spi(SendbirdInternal) public static func put<K: RequestCodingKey>(queryParams: [K: Any]) -> Self {
+        .put(queryParams: queryParams.mapKeysToString())
+    }
+
+    @_spi(SendbirdInternal) public static func delete<K: RequestCodingKey>(queryParams: [K: Any]) -> Self {
+        .delete(queryParams: queryParams.mapKeysToString())
+    }
+
+    @_spi(SendbirdInternal) public static func patch<K: RequestCodingKey>(queryParams: [K: Any]) -> Self {
+        .patch(queryParams: queryParams.mapKeysToString())
+    }
+
     @_spi(SendbirdInternal) public var rawValue: String {
         switch self {
         case .get: return "GET"

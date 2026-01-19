@@ -13,8 +13,8 @@ import Foundation
 @_spi(SendbirdInternal) public protocol RequestCodingKey: CodingKey, Hashable, CustomStringConvertible {}
 
 // swiftlint:disable identifier_name
-@_spi(SendbirdInternal) public enum CodeCodingKeys: String, CodingKey, Codable, CustomStringConvertible, RequestCodingKey {
-    @_spi(SendbirdInternal) public var description: String { rawValue }
+enum CodeCodingKeys: String, CodingKey, Codable, CustomStringConvertible, RequestCodingKey {
+    var description: String { rawValue }
 
     case action
     case aiAgent = "ai_agent"
@@ -122,6 +122,8 @@ import Foundation
 public extension Dictionary where Key: RequestCodingKey {
     /// Converts dictionary keys from RequestCodingKey to String using their description (rawValue).
     func mapKeysToString() -> [String: Value] {
-        Dictionary<String, Value>(uniqueKeysWithValues: map { ($0.key.description, $0.value) })
+        Dictionary<String, Value>(uniqueKeysWithValues: map { 
+            ($0.key.description, $0.value) 
+        })
     }
 }

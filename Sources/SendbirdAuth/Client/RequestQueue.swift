@@ -98,7 +98,7 @@ import Foundation
        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
     */
 
-    @_spi(SendbirdInternal) public func post<R: Decodable>(
+    func post<R: Decodable>(
         path: some URLPathConvertible,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -163,7 +163,7 @@ import Foundation
         - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
-    @_spi(SendbirdInternal) public func put<R: Decodable>(
+    func put<R: Decodable>(
         path: some URLPathConvertible,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -228,7 +228,7 @@ import Foundation
         - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
-    @_spi(SendbirdInternal) public func patch<R: Decodable>(
+    func patch<R: Decodable>(
         path: some URLPathConvertible,
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -291,7 +291,7 @@ import Foundation
         - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
         - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
      */
-    @_spi(SendbirdInternal) public func get<R: Decodable>(
+    func get<R: Decodable>(
         path: some URLPathConvertible,
         queryParams: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...,
@@ -337,7 +337,7 @@ import Foundation
        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
     */
-    @_spi(SendbirdInternal) public func delete<R: Decodable>(
+    func delete<R: Decodable>(
         path: some URLPathConvertible,
         body: [CodeCodingKeys: Encodable] = [:],
         multipart: [String: Encodable] = [:],
@@ -781,7 +781,7 @@ import Foundation
     }
     #endif
     
-    @_spi(SendbirdInternal) public func sendWS<R: Decodable>(
+    func sendWS<R: Decodable>(
         commandType: CommandType,
         requestId: String?,
         body: [CodeCodingKeys: Encodable] = [:],
@@ -798,7 +798,7 @@ import Foundation
         }
     }
 
-    @_spi(SendbirdInternal) public func sendWS(
+    func sendWS(
         commandType: CommandType,
         requestId: String?,
         body: [CodeCodingKeys: Encodable] = [:],
