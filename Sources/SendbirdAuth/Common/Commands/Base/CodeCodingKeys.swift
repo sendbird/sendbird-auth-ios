@@ -10,7 +10,9 @@ import Foundation
 
 /// Protocol for CodingKeys used in API requests.
 /// Both `CodeCodingKeys` (Auth) and `ChatCodingKeys` (Chat) conform to this protocol.
-@_spi(SendbirdInternal) public protocol RequestCodingKey: CodingKey, Hashable, CustomStringConvertible {}
+@_spi(SendbirdInternal) public protocol RequestCodingKey: CodingKey, Hashable, CustomStringConvertible {
+    static var reqId: Self { get }
+}
 
 // swiftlint:disable identifier_name
 enum CodeCodingKeys: String, CodingKey, Codable, CustomStringConvertible, RequestCodingKey {

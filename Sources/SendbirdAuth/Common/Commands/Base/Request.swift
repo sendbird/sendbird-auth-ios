@@ -51,9 +51,7 @@ extension WSRequestable {
         for (key, value) in body {
             try? container.encode(value, forKey: key)
         }
-        if let reqIdKey = CodeCodingKeys.reqId as? K {
-            try? container.encode(requestId, forKey: reqIdKey)
-        }
+        try? container.encode(requestId, forKey: K.reqId)
     }
 
     @_spi(SendbirdInternal) public var resultType: T.Type
