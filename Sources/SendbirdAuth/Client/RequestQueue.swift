@@ -371,354 +371,6 @@ import Foundation
         }
     }
 
-    // MARK: - Generic methods for custom CodingKeys (e.g., ChatCodingKeys)
-
-    /// Generic GET API Request with custom CodingKey type (variadic)
-    @_spi(SendbirdInternal) public func get<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        queryParams: [K: Encodable] = [:],
-        additionalBody: Encodable...,
-        header: [String: String] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        self.get(
-            path: path,
-            queryParams: queryParams,
-            additionalBodies: additionalBody,
-            header: header,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired,
-            progressHandler: progressHandler,
-            completionHandler: completionHandler
-        )
-    }
-
-    /// Generic GET API Request with custom CodingKey type (array)
-    @_spi(SendbirdInternal) public func get<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        queryParams: [K: Encodable] = [:],
-        additionalBodies: [Encodable],
-        header: [String: String] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequests<R, K>(
-            method: .get,
-            url: path,
-            version: "/v3",
-            body: queryParams,
-            additionalBodies: additionalBodies,
-            headers: header,
-            multipart: [:],
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        self.send(request: request, progressHandler: progressHandler) { response, error in
-            completionHandler?(.init(response, error))
-        }
-    }
-
-    /// Generic POST API Request with custom CodingKey type (variadic)
-    @_spi(SendbirdInternal) public func post<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        body: [K: Encodable] = [:],
-        additionalBody: Encodable...,
-        multipart: [String: Any] = [:],
-        header: [String: String] = [:],
-        queryParams: [K: Any] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        sendImmediately: Bool = false,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        self.post(
-            path: path,
-            body: body,
-            additionalBodies: additionalBody,
-            multipart: multipart,
-            header: header,
-            queryParams: queryParams,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired,
-            sendImmediately: sendImmediately,
-            wsEventDeduplicationRules: wsEventDeduplicationRules,
-            progressHandler: progressHandler,
-            completionHandler: completionHandler
-        )
-    }
-
-    /// Generic POST API Request with custom CodingKey type (array)
-    @_spi(SendbirdInternal) public func post<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        body: [K: Encodable] = [:],
-        additionalBodies: [Encodable],
-        multipart: [String: Any] = [:],
-        header: [String: String] = [:],
-        queryParams: [K: Any] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        sendImmediately: Bool = false,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequests<R, K>(
-            method: .post(queryParams: queryParams.mapKeysToString()),
-            url: path,
-            version: "/v3",
-            body: body,
-            additionalBodies: additionalBodies,
-            headers: header,
-            multipart: multipart,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        if sendImmediately {
-            self.sendImmediately(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        } else {
-            self.send(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        }
-    }
-
-    /// Generic PUT API Request with custom CodingKey type (variadic)
-    @_spi(SendbirdInternal) public func put<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        body: [K: Encodable] = [:],
-        additionalBody: Encodable...,
-        multipart: [String: Any] = [:],
-        header: [String: String] = [:],
-        queryParams: [K: Any] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        priority: Bool = false,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        self.put(
-            path: path,
-            body: body,
-            additionalBodies: additionalBody,
-            multipart: multipart,
-            header: header,
-            queryParams: queryParams,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired,
-            priority: priority,
-            wsEventDeduplicationRules: wsEventDeduplicationRules,
-            progressHandler: progressHandler,
-            completionHandler: completionHandler
-        )
-    }
-
-    /// Generic PUT API Request with custom CodingKey type (array)
-    @_spi(SendbirdInternal) public func put<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        body: [K: Encodable] = [:],
-        additionalBodies: [Encodable],
-        multipart: [String: Any] = [:],
-        header: [String: String] = [:],
-        queryParams: [K: Any] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        priority: Bool = false,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequests<R, K>(
-            method: .put(queryParams: queryParams.mapKeysToString()),
-            url: path,
-            version: "/v3",
-            body: body,
-            additionalBodies: additionalBodies,
-            headers: header,
-            multipart: multipart,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        if priority {
-            self.sendImmediately(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        } else {
-            self.send(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        }
-    }
-
-    /// Generic PATCH API Request with custom CodingKey type (variadic)
-    @_spi(SendbirdInternal) public func patch<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        body: [K: Encodable] = [:],
-        additionalBody: Encodable...,
-        multipart: [String: Any] = [:],
-        header: [String: String] = [:],
-        queryParams: [K: Any] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        priority: Bool = false,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        self.patch(
-            path: path,
-            body: body,
-            additionalBodies: additionalBody,
-            multipart: multipart,
-            header: header,
-            queryParams: queryParams,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired,
-            priority: priority,
-            wsEventDeduplicationRules: wsEventDeduplicationRules,
-            progressHandler: progressHandler,
-            completionHandler: completionHandler
-        )
-    }
-
-    /// Generic PATCH API Request with custom CodingKey type (array)
-    @_spi(SendbirdInternal) public func patch<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        body: [K: Encodable] = [:],
-        additionalBodies: [Encodable],
-        multipart: [String: Any] = [:],
-        header: [String: String] = [:],
-        queryParams: [K: Any] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        priority: Bool = false,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequests<R, K>(
-            method: .patch(queryParams: queryParams.mapKeysToString()),
-            url: path,
-            version: "/v3",
-            body: body,
-            additionalBodies: additionalBodies,
-            headers: header,
-            multipart: multipart,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        if priority {
-            self.sendImmediately(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        } else {
-            self.send(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        }
-    }
-
-    /// Generic DELETE API Request with custom CodingKey type (variadic)
-    @_spi(SendbirdInternal) public func delete<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        body: [K: Encodable] = [:],
-        multipart: [String: Encodable] = [:],
-        additionalBody: Encodable...,
-        header: [String: String] = [:],
-        queryParams: [K: Any] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        self.delete(
-            path: path,
-            body: body,
-            multipart: multipart,
-            additionalBodies: additionalBody,
-            header: header,
-            queryParams: queryParams,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired,
-            wsEventDeduplicationRules: wsEventDeduplicationRules,
-            progressHandler: progressHandler,
-            completionHandler: completionHandler
-        )
-    }
-
-    /// Generic DELETE API Request with custom CodingKey type (array)
-    @_spi(SendbirdInternal) public func delete<R: Decodable, K: RequestCodingKey>(
-        path: some URLPathConvertible,
-        body: [K: Encodable] = [:],
-        multipart: [String: Encodable] = [:],
-        additionalBodies: [Encodable],
-        header: [String: String] = [:],
-        queryParams: [K: Any] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequests<R, K>(
-            method: .delete(queryParams: queryParams.mapKeysToString()),
-            url: path,
-            version: "/v3",
-            body: body,
-            additionalBodies: additionalBodies,
-            headers: header,
-            multipart: multipart,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        self.send(
-            request: request,
-            wsEventDeduplicationRules: wsEventDeduplicationRules,
-            progressHandler: progressHandler
-        ) { response, error in
-            completionHandler?(.init(response, error))
-        }
-    }
-
     // MARK: - Send methods
 
     @_spi(SendbirdInternal) public func send<R: APIRequestable>(
@@ -962,66 +614,6 @@ import Foundation
         self.send(request: request)
     }
 
-    // MARK: - Generic sendWS methods for custom CodingKeys (variadic)
-
-    @_spi(SendbirdInternal) public func sendWS<R: Decodable, K: RequestCodingKey>(
-        commandType: CommandType,
-        requestId: String?,
-        body: [K: Encodable] = [:],
-        additionalBody: Encodable...,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        self.sendWS(
-            commandType: commandType,
-            requestId: requestId,
-            body: body,
-            additionalBodies: additionalBody,
-            completionHandler: completionHandler
-        )
-    }
-
-    @_spi(SendbirdInternal) public func sendWS<K: RequestCodingKey>(
-        commandType: CommandType,
-        requestId: String?,
-        body: [K: Encodable] = [:],
-        additionalBody: Encodable...
-    ) {
-        self.sendWS(
-            commandType: commandType,
-            requestId: requestId,
-            body: body,
-            additionalBodies: additionalBody
-        )
-    }
-
-    // MARK: - Generic sendWS methods for custom CodingKeys (array)
-
-    @_spi(SendbirdInternal) public func sendWS<R: Decodable, K: RequestCodingKey>(
-        commandType: CommandType,
-        requestId: String?,
-        body: [K: Encodable] = [:],
-        additionalBodies: [Encodable],
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        #if DEBUG
-        callSendWSInterceptionIfNeeded(commandType, requestId, additionalBodies, completionHandler: completionHandler)
-        #endif
-
-        let request = BaseWSRequest<R, K>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBodies)
-        self.send(request: request) { command, error in
-            completionHandler?(.init(command, error))
-        }
-    }
-
-    @_spi(SendbirdInternal) public func sendWS<K: RequestCodingKey>(
-        commandType: CommandType,
-        requestId: String?,
-        body: [K: Encodable] = [:],
-        additionalBodies: [Encodable]
-    ) {
-        let request = BaseWSRequest<DefaultResponse, K>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBodies)
-        self.send(request: request)
-    }
         
     @_spi(SendbirdInternal) public func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?) {
         let timeout = requestTimeout
@@ -1156,6 +748,242 @@ import Foundation
         case nil, .some(.none):
             return .error(AuthClientError.connectionRequired.asAuthError)
         }
+    }
+}
+
+// MARK: - Generic methods for custom CodingKeys (e.g., ChatCodingKeys)
+
+@_spi(SendbirdInternal) public extension RequestQueue {
+    /// Generic GET API Request with custom CodingKey type (array)
+    func get<R: Decodable, K: RequestCodingKey>(
+        path: some URLPathConvertible,
+        queryParams: [K: Encodable] = [:],
+        additionalBodies: [Encodable],
+        header: [String: String] = [:],
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequests<R, K>(
+            method: .get,
+            url: path,
+            version: "/v3",
+            body: queryParams,
+            additionalBodies: additionalBodies,
+            headers: header,
+            multipart: [:],
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+        
+        self.send(request: request, progressHandler: progressHandler) { response, error in
+            completionHandler?(.init(response, error))
+        }
+    }
+    
+    /// Generic POST API Request with custom CodingKey type (array)
+    func post<R: Decodable, K: RequestCodingKey>(
+        path: some URLPathConvertible,
+        body: [K: Encodable] = [:],
+        additionalBodies: [Encodable],
+        multipart: [String: Any] = [:],
+        header: [String: String] = [:],
+        queryParams: [K: Any] = [:],
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        sendImmediately: Bool = false,
+        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequests<R, K>(
+            method: .post(queryParams: queryParams.mapKeysToString()),
+            url: path,
+            version: "/v3",
+            body: body,
+            additionalBodies: additionalBodies,
+            headers: header,
+            multipart: multipart,
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+        
+        if sendImmediately {
+            self.sendImmediately(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        } else {
+            self.send(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        }
+    }
+    
+    /// Generic PUT API Request with custom CodingKey type (array)
+    func put<R: Decodable, K: RequestCodingKey>(
+        path: some URLPathConvertible,
+        body: [K: Encodable] = [:],
+        additionalBodies: [Encodable],
+        multipart: [String: Any] = [:],
+        header: [String: String] = [:],
+        queryParams: [K: Any] = [:],
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        priority: Bool = false,
+        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequests<R, K>(
+            method: .put(queryParams: queryParams.mapKeysToString()),
+            url: path,
+            version: "/v3",
+            body: body,
+            additionalBodies: additionalBodies,
+            headers: header,
+            multipart: multipart,
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+        
+        if priority {
+            self.sendImmediately(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        } else {
+            self.send(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        }
+    }
+    
+    /// Generic PATCH API Request with custom CodingKey type (array)
+    func patch<R: Decodable, K: RequestCodingKey>(
+        path: some URLPathConvertible,
+        body: [K: Encodable] = [:],
+        additionalBodies: [Encodable],
+        multipart: [String: Any] = [:],
+        header: [String: String] = [:],
+        queryParams: [K: Any] = [:],
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        priority: Bool = false,
+        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequests<R, K>(
+            method: .patch(queryParams: queryParams.mapKeysToString()),
+            url: path,
+            version: "/v3",
+            body: body,
+            additionalBodies: additionalBodies,
+            headers: header,
+            multipart: multipart,
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+        
+        if priority {
+            self.sendImmediately(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        } else {
+            self.send(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        }
+    }
+
+    /// Generic DELETE API Request with custom CodingKey type (array)
+    func delete<R: Decodable, K: RequestCodingKey>(
+        path: some URLPathConvertible,
+        body: [K: Encodable] = [:],
+        multipart: [String: Encodable] = [:],
+        additionalBodies: [Encodable],
+        header: [String: String] = [:],
+        queryParams: [K: Any] = [:],
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequests<R, K>(
+            method: .delete(queryParams: queryParams.mapKeysToString()),
+            url: path,
+            version: "/v3",
+            body: body,
+            additionalBodies: additionalBodies,
+            headers: header,
+            multipart: multipart,
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+
+        self.send(
+            request: request,
+            wsEventDeduplicationRules: wsEventDeduplicationRules,
+            progressHandler: progressHandler
+        ) { response, error in
+            completionHandler?(.init(response, error))
+        }
+    }
+}
+    
+// MARK: - Generic sendWS methods for custom CodingKeys (array)
+
+@_spi(SendbirdInternal) public extension RequestQueue {
+    func sendWS<R: Decodable, K: RequestCodingKey>(
+        commandType: CommandType,
+        requestId: String?,
+        body: [K: Encodable] = [:],
+        additionalBodies: [Encodable],
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        #if DEBUG
+        callSendWSInterceptionIfNeeded(commandType, requestId, additionalBodies, completionHandler: completionHandler)
+        #endif
+
+        let request = BaseWSRequest<R, K>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBodies)
+        self.send(request: request) { command, error in
+            completionHandler?(.init(command, error))
+        }
+    }
+
+    func sendWS<K: RequestCodingKey>(
+        commandType: CommandType,
+        requestId: String?,
+        body: [K: Encodable] = [:],
+        additionalBodies: [Encodable]
+    ) {
+        let request = BaseWSRequest<DefaultResponse, K>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBodies)
+        self.send(request: request)
     }
 }
 
