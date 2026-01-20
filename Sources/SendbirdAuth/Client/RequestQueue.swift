@@ -112,35 +112,20 @@ import Foundation
         progressHandler: MultiProgressHandler? = nil,
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
-        let request = APIRequests<R, CodeCodingKeys>(
-            method: .post(queryParams: queryParams.mapKeysToString()),
-            url: path,
-            version: "/v3",
+        self.post(
+            path: path,
             body: body,
-            additionalBodies: additionalBody,
-            headers: header,
+            additionalBodies: Array(additionalBody),
             multipart: multipart,
+            header: header,
+            queryParams: queryParams,
             isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
+            isLoginRequired: isLoginRequired,
+            sendImmediately: sendImmediately,
+            wsEventDeduplicationRules: wsEventDeduplicationRules,
+            progressHandler: progressHandler,
+            completionHandler: completionHandler
         )
-        
-        if sendImmediately {
-            self.sendImmediately(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        } else {
-            self.send(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        }
     }
     
     /**
@@ -177,35 +162,20 @@ import Foundation
         progressHandler: MultiProgressHandler? = nil,
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
-        let request = APIRequests<R, CodeCodingKeys>(
-            method: .put(queryParams: queryParams.mapKeysToString()),
-            url: path,
-            version: "/v3",
+        self.put(
+            path: path,
             body: body,
-            additionalBodies: additionalBody,
-            headers: header,
+            additionalBodies: Array(additionalBody),
             multipart: multipart,
+            header: header,
+            queryParams: queryParams,
             isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
+            isLoginRequired: isLoginRequired,
+            priority: priority,
+            wsEventDeduplicationRules: wsEventDeduplicationRules,
+            progressHandler: progressHandler,
+            completionHandler: completionHandler
         )
-        
-        if priority {
-            self.sendImmediately(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        } else {
-            self.send(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        }
     }
     
     /**
@@ -242,35 +212,20 @@ import Foundation
         progressHandler: MultiProgressHandler? = nil,
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
-        let request = APIRequests<R, CodeCodingKeys>(
-            method: .patch(queryParams: queryParams.mapKeysToString()),
-            url: path,
-            version: "/v3",
+        self.patch(
+            path: path,
             body: body,
-            additionalBodies: additionalBody,
-            headers: header,
+            additionalBodies: Array(additionalBody),
             multipart: multipart,
+            header: header,
+            queryParams: queryParams,
             isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
+            isLoginRequired: isLoginRequired,
+            priority: priority,
+            wsEventDeduplicationRules: wsEventDeduplicationRules,
+            progressHandler: progressHandler,
+            completionHandler: completionHandler
         )
-        
-        if priority {
-            self.sendImmediately(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        } else {
-            self.send(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        }
     }
     
     /**
@@ -301,21 +256,16 @@ import Foundation
         progressHandler: MultiProgressHandler? = nil,
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
-        let request = APIRequests<R, CodeCodingKeys>(
-            method: .get,
-            url: path,
-            version: "/v3",
-            body: queryParams,
-            additionalBodies: additionalBody,
-            headers: header,
-            multipart: [:],
+        self.get(
+            path: path,
+            queryParams: queryParams,
+            additionalBodies: Array(additionalBody),
+            header: header,
             isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
+            isLoginRequired: isLoginRequired,
+            progressHandler: progressHandler,
+            completionHandler: completionHandler
         )
-        
-        self.send(request: request, progressHandler: progressHandler) { response, error in
-            completionHandler?(.init(response, error))
-        }
     }
     
     /**
@@ -350,25 +300,19 @@ import Foundation
         progressHandler: MultiProgressHandler? = nil,
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
-        let request = APIRequests<R, CodeCodingKeys>(
-            method: .delete(queryParams: queryParams.mapKeysToString()),
-            url: path,
-            version: "/v3",
+        self.delete(
+            path: path,
             body: body,
-            additionalBodies: additionalBody,
-            headers: header,
             multipart: multipart,
+            additionalBodies: Array(additionalBody),
+            header: header,
+            queryParams: queryParams,
             isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        self.send(
-            request: request,
+            isLoginRequired: isLoginRequired,
             wsEventDeduplicationRules: wsEventDeduplicationRules,
-            progressHandler: progressHandler
-        ) { response, error in
-            completionHandler?(.init(response, error))
-        }
+            progressHandler: progressHandler,
+            completionHandler: completionHandler
+        )
     }
 
     // MARK: - Send methods
@@ -598,10 +542,13 @@ import Foundation
         callSendWSInterceptionIfNeeded(commandType, requestId, body, additionalBody, completionHandler: completionHandler)
         #endif
 
-        let request = BaseWSRequest<R, CodeCodingKeys>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBody)
-        self.send(request: request) { command, error in
-            completionHandler?(.init(command, error))
-        }
+        self.sendWS(
+            commandType: commandType,
+            requestId: requestId,
+            body: body,
+            additionalBodies: Array(additionalBody),
+            completionHandler: completionHandler
+        )
     }
 
     func sendWS(
@@ -610,8 +557,12 @@ import Foundation
         body: [CodeCodingKeys: Encodable] = [:],
         additionalBody: Encodable...
     ) {
-        let request = BaseWSRequest<DefaultResponse, CodeCodingKeys>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBody)
-        self.send(request: request)
+        self.sendWS(
+            commandType: commandType,
+            requestId: requestId,
+            body: body,
+            additionalBodies: Array(additionalBody)
+        )
     }
 
         
