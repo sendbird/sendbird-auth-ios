@@ -41,17 +41,18 @@ extension WSRequestable {
     @_spi(SendbirdInternal) public var identifier: RequestIdentifier { .ws(commandType) }
 }
 
-@_spi(SendbirdInternal) public class BaseWSRequest<T: Decodable, K: RequestCodingKey>: ResultableWSRequest {
+@_spi(SendbirdInternal) public class BaseWSRequest<T: Decodable>: ResultableWSRequest {
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         for body in additionalBodies {
             try? body.encode(to: encoder)
         }
 
-        var container = encoder.container(keyedBy: K.self)
-        for (key, value) in body {
-            try? container.encode(value, forKey: key)
+        try body.encode(to: encoder)
+
+        if let requestId = requestId {
+            var container = encoder.container(keyedBy: CodeCodingKeys.self)
+            try container.encode(requestId, forKey: .reqId)
         }
-        try? container.encode(requestId, forKey: K.reqId)
     }
 
     @_spi(SendbirdInternal) public var resultType: T.Type
@@ -59,33 +60,30 @@ extension WSRequestable {
     @_spi(SendbirdInternal) public var commandType: CommandType
     @_spi(SendbirdInternal) public var requestId: String?
 
-    @_spi(SendbirdInternal) public var body: [K: Encodable]
+    @_spi(SendbirdInternal) public var body: RequestParameter
     @_spi(SendbirdInternal) public var additionalBodies: [Encodable]
 
     @_spi(SendbirdInternal) public init(
         commandType: CommandType,
         requestId: String?,
-        body: [K: Encodable?],
+        body: RequestParameter,
         additionalBodies: [Encodable] = []
     ) {
         self.commandType = commandType
-        self.additionalBodies = additionalBodies.compactMap { $0 }
-        self.body = body.compactMapValues { $0 }
         self.requestId = requestId
+        self.body = body
+        self.additionalBodies = additionalBodies
         self.resultType = T.self
     }
 }
 
-@_spi(SendbirdInternal) public class APIRequests<T: Decodable, K: RequestCodingKey>: APIRequestable {
+@_spi(SendbirdInternal) public class APIRequest<T: Decodable>: APIRequestable {
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         for body in additionalBodies {
             try? body.encode(to: encoder)
         }
 
-        var container = encoder.container(keyedBy: K.self)
-        for (key, value) in body {
-            try? container.encode(value, forKey: key)
-        }
+        try body.encode(to: encoder)
     }
 
     @_spi(SendbirdInternal) public var resultType: T.Type
@@ -94,7 +92,7 @@ extension WSRequestable {
     @_spi(SendbirdInternal) public var url: URLPath
     @_spi(SendbirdInternal) public var version: String
 
-    @_spi(SendbirdInternal) public var body: [K: Encodable]
+    @_spi(SendbirdInternal) public var body: RequestParameter
 
     @_spi(SendbirdInternal) public var headers: [String: String]
     @_spi(SendbirdInternal) public var additionalBodies: [Encodable]
@@ -109,7 +107,7 @@ extension WSRequestable {
         method: HTTPMethod,
         url: some URLPathConvertible,
         version: String,
-        body: [K: Encodable?],
+        body: RequestParameter,
         additionalBodies: [Encodable] = [],
         headers: [String: String],
         multipart: [String: Any],
@@ -119,8 +117,8 @@ extension WSRequestable {
         self.method = method
         self.url = url.urlPath
         self.version = version
+        self.body = body
         self.additionalBodies = additionalBodies
-        self.body = body.compactMapValues { $0 }
         self.headers = headers
         self.multipart = multipart
         self.isSessionRequired = isSessionRequired
