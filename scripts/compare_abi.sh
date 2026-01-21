@@ -158,7 +158,7 @@ fi
 echo "Syncing submodules for target commit..."
 git submodule sync --recursive
 git submodule update --init --recursive
-git clean -ffd # -e .build_base  # Remove untracked directories (including removed submodules)
+git clean -ffd -e .build_base  # Remove untracked directories (including removed submodules)
 
 echo "Running xcodegen..."
 xcodegen generate
