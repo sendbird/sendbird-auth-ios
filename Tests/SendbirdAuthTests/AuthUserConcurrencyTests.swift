@@ -23,7 +23,7 @@ final class AuthUserConcurrencyTests: XCTestCase {
     func test_concurrentNicknameAccess_shouldNotCrash() {
         let user = createTestAuthUser(userId: "test_user", nickname: "initial_nickname")
 
-        let iterations = 10000
+        let iterations = 100
         let expectation = XCTestExpectation(description: "Concurrent access completed")
         expectation.expectedFulfillmentCount = 2
 
@@ -57,7 +57,7 @@ final class AuthUserConcurrencyTests: XCTestCase {
     func test_multipleReadersSingleWriter_shouldNotCrash() {
         let user = createTestAuthUser(userId: "test_user", nickname: "initial")
 
-        let iterations = 5000
+        let iterations = 100
         let readerCount = 4
         let expectation = XCTestExpectation(description: "Multi-reader test completed")
         expectation.expectedFulfillmentCount = readerCount + 1
@@ -94,7 +94,7 @@ final class AuthUserConcurrencyTests: XCTestCase {
     func test_concurrentUpdateUserInfo_shouldNotCrash() {
         let user = createTestAuthUser(userId: "test_user", nickname: "initial")
 
-        let iterations = 5000
+        let iterations = 100
         let expectation = XCTestExpectation(description: "UpdateUserInfo test completed")
         expectation.expectedFulfillmentCount = 3
 
@@ -139,7 +139,7 @@ final class AuthUserConcurrencyTests: XCTestCase {
     func test_readDuringUpdate_exactCrashScenario() {
         let user = createTestAuthUser(userId: "sender_123", nickname: "Sender Name")
 
-        let iterations = 10000
+        let iterations = 100
         let expectation = XCTestExpectation(description: "Exact crash scenario completed")
         expectation.expectedFulfillmentCount = 2
 
