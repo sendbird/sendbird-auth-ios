@@ -159,7 +159,7 @@ public extension Dictionary where Key: RequestCodingKey {
 }
 
 extension RequestParameter {
-    static func dict(_ dict: [CodeCodingKeys: Encodable]) -> RequestParameter {
+    static func param(_ dict: [CodeCodingKeys: Encodable]) -> RequestParameter {
         RequestParameter(dict)
     }
 }

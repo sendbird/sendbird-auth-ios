@@ -60,7 +60,7 @@ extension SessionManager: InternalSessionDelegate {
             requestQueue?.sendWS(
                 commandType: .login,
                 requestId: UUID().uuidString,
-                body: .dict([
+                body: .param([
                     .token: authToken,
                     .expiringSession: expiringSession
                 ])
@@ -76,7 +76,7 @@ extension SessionManager: InternalSessionDelegate {
                     
                     self.requestQueue?.post(
                         path: URLPaths.usersSessionKey(userId: self.userId),
-                        body: .dict([.expiringSession: expiringSession]),
+                        body: .param([.expiringSession: expiringSession]),
                         header: headers,
                         isSessionRequired: false,
                         isLoginRequired: false
@@ -99,7 +99,7 @@ extension SessionManager: InternalSessionDelegate {
             
             requestQueue?.post(
                 path: URLPaths.usersSessionKey(userId: userId),
-                body: .dict([.expiringSession: expiringSession]),
+                body: .param([.expiringSession: expiringSession]),
                 header: headers,
                 isSessionRequired: false,
                 isLoginRequired: false

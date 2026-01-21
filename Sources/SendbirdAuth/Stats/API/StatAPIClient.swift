@@ -51,7 +51,7 @@ import Foundation
         return try await withSafeThrowingContinuation { continuation in
             requestQueue.post(
                 path: URLPaths.sdkStatistics,
-                body: .dict([
+                body: .param([
                     CodeCodingKeys.logEntries: copiedStats,
                     CodeCodingKeys.deviceId: deviceId,
                 ])
@@ -94,7 +94,7 @@ import Foundation
         try await withSafeThrowingContinuation { continuation in
             requestQueue.post(
                 path: URLPaths.notificationStatistics,
-                body: .dict([
+                body: .param([
                     CodeCodingKeys.logEntries: copiedStats,
                     CodeCodingKeys.deviceId: deviceId,
                 ])

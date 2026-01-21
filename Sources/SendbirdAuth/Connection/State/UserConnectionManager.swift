@@ -306,7 +306,7 @@ extension WebSocketManager {
             let request = BaseWSRequest<DefaultResponse>(
                 commandType: .ping,
                 requestId: nil,
-                body: .dict([.id: Date().milliSeconds])
+                body: .param([.id: Date().milliSeconds])
             )
             try? await webSocketClient.send(request: request)
         }
