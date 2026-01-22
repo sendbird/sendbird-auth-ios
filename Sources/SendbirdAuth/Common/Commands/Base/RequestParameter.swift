@@ -37,6 +37,7 @@ import Foundation
 }
 
 extension RequestParameter {
+    /// To create RequestParameter with `CodeCodingKeys`, use this method.
     static func param(_ dict: [CodeCodingKeys: Encodable?]) -> RequestParameter {
         RequestParameter(dict)
     }
