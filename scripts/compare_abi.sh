@@ -82,8 +82,8 @@ xcrun simctl list devices available -j | jq -r '.devices | to_entries[] | select
 echo "📱 Available iOS runtimes:"
 xcrun simctl list runtimes available | grep iOS
 
-# Print all available destinations for SendbirdChatSDK scheme
-echo "🎯 Available destinations for SendbirdChatSDK scheme:"
+# Print all available destinations for SendbirdAuthSDK scheme
+echo "🎯 Available destinations for SendbirdAuthSDK scheme:"
 xcodebuild -scheme "$TARGET_NAME" -showdestinations
 
 # Find an available iPhone simulator
@@ -133,15 +133,18 @@ if [ ${PIPESTATUS[0]} -ne 0 ]; then
     exit 1
 fi
 
+echo "✅ Base branch build succeeded."
+
 # Generate the base ABI file path
-BASE_ABI_PATH="$BASE_BUILD_DIR/Build/Products/Release-iphonesimulator/$TARGET_NAME.framework/Modules/$TARGET_NAME.swiftmodule/x86_64-apple-ios-simulator.abi.json"
+BASE_ABI_PATH="$BASE_BUILD_DIR/Build/Products/Release-iphonesimulator/$TARGET_NAME.framework/Modules/$TARGET_NAME.swiftmodule/arm64-apple-ios-simulator.abi.json"
+echo "BASE_ABI_PATH: $BASE_ABI_PATH"
 
 #########################
 ##### Target Commit #####
 #########################
 # Clean up untracked files before checkout
 echo "Cleaning up untracked files before checkout..."
-git clean -fd 2>/dev/null || true
+git clean -fd -e .build_base 2>/dev/null || true
 
 # Checkout target commit and build
 echo "Checking out target commit: $TARGET_COMMIT"
@@ -155,7 +158,7 @@ fi
 echo "Syncing submodules for target commit..."
 git submodule sync --recursive
 git submodule update --init --recursive
-git clean -ffd  # Remove untracked directories (including removed submodules)
+git clean -ffd -e .build_base  # Remove untracked directories (including removed submodules)
 
 echo "Running xcodegen..."
 xcodegen generate
@@ -169,8 +172,11 @@ if [ ${PIPESTATUS[0]} -ne 0 ]; then
     exit 1
 fi
 
+echo "✅ Target branch build succeeded."
+
 # Generate the target ABI file path
-TARGET_ABI_PATH="$TARGET_BUILD_DIR/Build/Products/Release-iphonesimulator/$TARGET_NAME.framework/Modules/$TARGET_NAME.swiftmodule/x86_64-apple-ios-simulator.abi.json"
+TARGET_ABI_PATH="$TARGET_BUILD_DIR/Build/Products/Release-iphonesimulator/$TARGET_NAME.framework/Modules/$TARGET_NAME.swiftmodule/arm64-apple-ios-simulator.abi.json"
+echo "TARGET_ABI_PATH: $TARGET_ABI_PATH"
 
 ##################################
 ##### Run swift api-digester #####
