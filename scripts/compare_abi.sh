@@ -82,8 +82,8 @@ xcrun simctl list devices available -j | jq -r '.devices | to_entries[] | select
 echo "📱 Available iOS runtimes:"
 xcrun simctl list runtimes available | grep iOS
 
-# Print all available destinations for SendbirdAuthSDK scheme
-echo "🎯 Available destinations for SendbirdAuthSDK scheme:"
+# Print all available destinations for the target scheme
+echo "🎯 Available destinations for $TARGET_NAME scheme:"
 xcodebuild -scheme "$TARGET_NAME" -showdestinations
 
 # Find an available iPhone simulator
