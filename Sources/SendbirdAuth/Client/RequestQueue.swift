@@ -249,6 +249,343 @@ import Foundation
             completion?(nil, err as? AuthError)
         }
     }
+
+    // MARK: - RequestParameter based methods
+
+    /**
+     GET API Request
+
+     - Parameters:
+        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
+        - queryParams: URL query parameters to append to the endpoint.
+        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the query parameters.
+        - header: HTTP headers to include in the request.
+        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
+        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
+        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
+        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
+
+     - Note:
+        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
+        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
+     */
+    @_spi(SendbirdInternal) public func get<R: Decodable>(
+        path: some URLPathConvertible,
+        queryParams: RequestParameter = .init(),
+        additionalBody: Encodable...,
+        header: [String: String] = [:],
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequest<R>(
+            method: .get(queryParams: queryParams.parameters),
+            url: path,
+            version: "/v3",
+            body: queryParams,
+            additionalBodies: additionalBody,
+            headers: header,
+            multipart: [:],
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+
+        self.send(request: request, progressHandler: progressHandler) { response, error in
+            completionHandler?(.init(response, error))
+        }
+    }
+
+    /**
+     POST API Request
+
+     - Parameters:
+        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
+        - body: The primary content of the request. This is eventually encoded as a dictionary with the specified key value pairs.
+        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
+        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
+        - header: HTTP headers to include in the request.
+        - queryParams: URL query parameters to append to the endpoint.
+        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
+        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
+        - sendImmediately: If true, sends the request immediately without queueing.
+        - wsEventDeduplicationRules: WS events that should be ignored upon receival.
+        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
+        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
+
+     - Note:
+        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
+        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
+     */
+    @_spi(SendbirdInternal) public func post<R: Decodable>(
+        path: some URLPathConvertible,
+        body: RequestParameter = .init(),
+        additionalBody: Encodable...,
+        multipart: [String: Any] = [:],
+        header: [String: String] = [:],
+        queryParams: RequestParameter = .init(),
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        sendImmediately: Bool = false,
+        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequest<R>(
+            method: .post(queryParams: queryParams.parameters),
+            url: path,
+            version: "/v3",
+            body: body,
+            additionalBodies: additionalBody,
+            headers: header,
+            multipart: multipart,
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+
+        if sendImmediately {
+            self.sendImmediately(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        } else {
+            self.send(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        }
+    }
+
+    /**
+     PUT API Request
+
+     - Parameters:
+        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
+        - body: The primary content of the request. This is eventually encoded as a dictionary with the specified key value pairs.
+        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
+        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
+        - header: HTTP headers to include in the request.
+        - queryParams: URL query parameters to append to the endpoint.
+        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
+        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
+        - priority: If true, sends the request immediately without queueing.
+        - wsEventDeduplicationRules: WS events that should be ignored upon receival.
+        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
+        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
+
+     - Note:
+        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
+        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
+     */
+    @_spi(SendbirdInternal) public func put<R: Decodable>(
+        path: some URLPathConvertible,
+        body: RequestParameter = .init(),
+        additionalBody: Encodable...,
+        multipart: [String: Any] = [:],
+        header: [String: String] = [:],
+        queryParams: RequestParameter = .init(),
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        priority: Bool = false,
+        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequest<R>(
+            method: .put(queryParams: queryParams.parameters),
+            url: path,
+            version: "/v3",
+            body: body,
+            additionalBodies: additionalBody,
+            headers: header,
+            multipart: multipart,
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+
+        if priority {
+            self.sendImmediately(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        } else {
+            self.send(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        }
+    }
+
+    /**
+     PATCH API Request
+
+     - Parameters:
+        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
+        - body: The primary content of the request. This is eventually encoded as a dictionary with the specified key value pairs.
+        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
+        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
+        - header: HTTP headers to include in the request.
+        - queryParams: URL query parameters to append to the endpoint.
+        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
+        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
+        - priority: If true, sends the request immediately without queueing.
+        - wsEventDeduplicationRules: WS events that should be ignored upon receival.
+        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
+        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
+
+     - Note:
+        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
+        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
+     */
+    @_spi(SendbirdInternal) public func patch<R: Decodable>(
+        path: some URLPathConvertible,
+        body: RequestParameter = .init(),
+        additionalBody: Encodable...,
+        multipart: [String: Any] = [:],
+        header: [String: String] = [:],
+        queryParams: RequestParameter = .init(),
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        priority: Bool = false,
+        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequest<R>(
+            method: .patch(queryParams: queryParams.parameters),
+            url: path,
+            version: "/v3",
+            body: body,
+            additionalBodies: additionalBody,
+            headers: header,
+            multipart: multipart,
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+
+        if priority {
+            self.sendImmediately(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        } else {
+            self.send(
+                request: request,
+                wsEventDeduplicationRules: wsEventDeduplicationRules,
+                progressHandler: progressHandler
+            ) { response, error in
+                completionHandler?(.init(response, error))
+            }
+        }
+    }
+
+    /**
+     DELETE API Request
+
+     - Parameters:
+        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
+        - body: The primary content of the request. This is eventually encoded as a dictionary with the specified key value pairs.
+        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
+        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
+        - header: HTTP headers to include in the request.
+        - queryParams: URL query parameters to append to the endpoint.
+        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
+        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
+        - wsEventDeduplicationRules: WS events that should be ignored upon receival.
+        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
+        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
+
+     - Note:
+        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
+        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
+     */
+    @_spi(SendbirdInternal) public func delete<R: Decodable>(
+        path: some URLPathConvertible,
+        body: RequestParameter = .init(),
+        multipart: [String: Encodable] = [:],
+        additionalBody: Encodable...,
+        header: [String: String] = [:],
+        queryParams: RequestParameter = .init(),
+        isSessionRequired: Bool = true,
+        isLoginRequired: Bool = true,
+        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
+        progressHandler: MultiProgressHandler? = nil,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        let request = APIRequest<R>(
+            method: .delete(queryParams: queryParams.parameters),
+            url: path,
+            version: "/v3",
+            body: body,
+            additionalBodies: additionalBody,
+            headers: header,
+            multipart: multipart,
+            isSessionRequired: isSessionRequired,
+            isLoginRequired: isLoginRequired
+        )
+
+        self.send(
+            request: request,
+            wsEventDeduplicationRules: wsEventDeduplicationRules,
+            progressHandler: progressHandler
+        ) { response, error in
+            completionHandler?(.init(response, error))
+        }
+    }
+    
+    // MARK: - WebSocket Request Methods
+    
+    @_spi(SendbirdInternal) public func sendWS<R: Decodable>(
+        commandType: CommandType,
+        requestId: String?,
+        body: RequestParameter = .init(),
+        additionalBody: Encodable...,
+        completionHandler: ((Result<R, AuthError>) -> Void)?
+    ) {
+        #if DEBUG
+        callSendWSInterceptionIfNeeded(
+            commandType,
+            requestId,
+            additionalBody,
+            completionHandler: completionHandler
+        )
+        #endif
+
+        let request = BaseWSRequest<R>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBody)
+        self.send(request: request) { command, error in
+            completionHandler?(.init(command, error))
+        }
+    }
+
+    @_spi(SendbirdInternal) public func sendWS(
+        commandType: CommandType,
+        requestId: String?,
+        body: RequestParameter = .init(),
+        additionalBody: Encodable...
+    ) {
+        let request = BaseWSRequest<DefaultResponse>(
+            commandType: commandType,
+            requestId: requestId,
+            body: body,
+            additionalBodies: additionalBody
+        )
+        self.send(request: request)
+    }
     
     #if DEBUG
     var sendWSInterception: (
@@ -429,346 +766,6 @@ import Foundation
         }
     }
 }
-
-// MARK: - RequestParameter based methods
-
-@_spi(SendbirdInternal) public extension RequestQueue {
-    /**
-     GET API Request
-
-     - Parameters:
-        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
-        - queryParams: URL query parameters to append to the endpoint.
-        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the query parameters.
-        - header: HTTP headers to include in the request.
-        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
-        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
-        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
-        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
-
-     - Note:
-        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
-        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
-     */
-    func get<R: Decodable>(
-        path: some URLPathConvertible,
-        queryParams: RequestParameter = .init(),
-        additionalBody: Encodable...,
-        header: [String: String] = [:],
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequest<R>(
-            method: .get(queryParams: queryParams.parameters),
-            url: path,
-            version: "/v3",
-            body: queryParams,
-            additionalBodies: additionalBody,
-            headers: header,
-            multipart: [:],
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        self.send(request: request, progressHandler: progressHandler) { response, error in
-            completionHandler?(.init(response, error))
-        }
-    }
-
-    /**
-     POST API Request
-
-     - Parameters:
-        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
-        - body: The primary content of the request. This is eventually encoded as a dictionary with the specified key value pairs.
-        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
-        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
-        - header: HTTP headers to include in the request.
-        - queryParams: URL query parameters to append to the endpoint.
-        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
-        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
-        - sendImmediately: If true, sends the request immediately without queueing.
-        - wsEventDeduplicationRules: WS events that should be ignored upon receival.
-        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
-        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
-
-     - Note:
-        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
-        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
-     */
-    func post<R: Decodable>(
-        path: some URLPathConvertible,
-        body: RequestParameter = .init(),
-        additionalBody: Encodable...,
-        multipart: [String: Any] = [:],
-        header: [String: String] = [:],
-        queryParams: RequestParameter = .init(),
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        sendImmediately: Bool = false,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequest<R>(
-            method: .post(queryParams: queryParams.parameters),
-            url: path,
-            version: "/v3",
-            body: body,
-            additionalBodies: additionalBody,
-            headers: header,
-            multipart: multipart,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        if sendImmediately {
-            self.sendImmediately(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        } else {
-            self.send(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        }
-    }
-
-    /**
-     PUT API Request
-
-     - Parameters:
-        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
-        - body: The primary content of the request. This is eventually encoded as a dictionary with the specified key value pairs.
-        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
-        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
-        - header: HTTP headers to include in the request.
-        - queryParams: URL query parameters to append to the endpoint.
-        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
-        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
-        - priority: If true, sends the request immediately without queueing.
-        - wsEventDeduplicationRules: WS events that should be ignored upon receival.
-        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
-        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
-
-     - Note:
-        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
-        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
-     */
-    func put<R: Decodable>(
-        path: some URLPathConvertible,
-        body: RequestParameter = .init(),
-        additionalBody: Encodable...,
-        multipart: [String: Any] = [:],
-        header: [String: String] = [:],
-        queryParams: RequestParameter = .init(),
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        priority: Bool = false,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequest<R>(
-            method: .put(queryParams: queryParams.parameters),
-            url: path,
-            version: "/v3",
-            body: body,
-            additionalBodies: additionalBody,
-            headers: header,
-            multipart: multipart,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        if priority {
-            self.sendImmediately(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        } else {
-            self.send(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        }
-    }
-
-    /**
-     PATCH API Request
-
-     - Parameters:
-        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
-        - body: The primary content of the request. This is eventually encoded as a dictionary with the specified key value pairs.
-        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
-        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
-        - header: HTTP headers to include in the request.
-        - queryParams: URL query parameters to append to the endpoint.
-        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
-        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
-        - priority: If true, sends the request immediately without queueing.
-        - wsEventDeduplicationRules: WS events that should be ignored upon receival.
-        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
-        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
-
-     - Note:
-        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
-        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
-     */
-    func patch<R: Decodable>(
-        path: some URLPathConvertible,
-        body: RequestParameter = .init(),
-        additionalBody: Encodable...,
-        multipart: [String: Any] = [:],
-        header: [String: String] = [:],
-        queryParams: RequestParameter = .init(),
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        priority: Bool = false,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequest<R>(
-            method: .patch(queryParams: queryParams.parameters),
-            url: path,
-            version: "/v3",
-            body: body,
-            additionalBodies: additionalBody,
-            headers: header,
-            multipart: multipart,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        if priority {
-            self.sendImmediately(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        } else {
-            self.send(
-                request: request,
-                wsEventDeduplicationRules: wsEventDeduplicationRules,
-                progressHandler: progressHandler
-            ) { response, error in
-                completionHandler?(.init(response, error))
-            }
-        }
-    }
-
-    /**
-     DELETE API Request
-
-     - Parameters:
-        - path: The server endpoint to which the request is made. Accepts any type conforming to `URLPathConvertible`
-        - body: The primary content of the request. This is eventually encoded as a dictionary with the specified key value pairs.
-        - multipart: Data for multipart/form-data requests, typically files or binary data, keyed by form field name.
-        - additionalBody: Additional encodable objects to be included in the request body. `encode(to:)` function will invoked, and will be included in the body payload as a top-level JSON dictionary.
-        - header: HTTP headers to include in the request.
-        - queryParams: URL query parameters to append to the endpoint.
-        - isSessionRequired: Indicates if the request needs session-based authentication. Default is true.
-        - isLoginRequired: Indicates if the user must be logged in to perform the request. Default is true.
-        - wsEventDeduplicationRules: WS events that should be ignored upon receival.
-        - progressHandler: A closure to monitor the progress of the request. Useful for tracking upload/download progress.
-        - completionHandler: A closure called upon request completion, returning either a decoded response model or an error.
-
-     - Note:
-        - `R` must conform to `Decodable` to be used for the expected response model - This means you **have** to implement a completion handler.
-        - If the response of the request is unused, declare the result as type of `EmptyResponse` or `DefaultResponse`
-     */
-    func delete<R: Decodable>(
-        path: some URLPathConvertible,
-        body: RequestParameter = .init(),
-        multipart: [String: Encodable] = [:],
-        additionalBody: Encodable...,
-        header: [String: String] = [:],
-        queryParams: RequestParameter = .init(),
-        isSessionRequired: Bool = true,
-        isLoginRequired: Bool = true,
-        wsEventDeduplicationRules: [WSEventDeduplicationRule]? = nil,
-        progressHandler: MultiProgressHandler? = nil,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        let request = APIRequest<R>(
-            method: .delete(queryParams: queryParams.parameters),
-            url: path,
-            version: "/v3",
-            body: body,
-            additionalBodies: additionalBody,
-            headers: header,
-            multipart: multipart,
-            isSessionRequired: isSessionRequired,
-            isLoginRequired: isLoginRequired
-        )
-
-        self.send(
-            request: request,
-            wsEventDeduplicationRules: wsEventDeduplicationRules,
-            progressHandler: progressHandler
-        ) { response, error in
-            completionHandler?(.init(response, error))
-        }
-    }
-    
-    // MARK: - WebSocket Request Methods
-    
-    func sendWS<R: Decodable>(
-        commandType: CommandType,
-        requestId: String?,
-        body: RequestParameter = .init(),
-        additionalBody: Encodable...,
-        completionHandler: ((Result<R, AuthError>) -> Void)?
-    ) {
-        #if DEBUG
-        callSendWSInterceptionIfNeeded(
-            commandType,
-            requestId,
-            additionalBody,
-            completionHandler: completionHandler
-        )
-        #endif
-
-        let request = BaseWSRequest<R>(commandType: commandType, requestId: requestId, body: body, additionalBodies: additionalBody)
-        self.send(request: request) { command, error in
-            completionHandler?(.init(command, error))
-        }
-    }
-
-    func sendWS(
-        commandType: CommandType,
-        requestId: String?,
-        body: RequestParameter = .init(),
-        additionalBody: Encodable...
-    ) {
-        let request = BaseWSRequest<DefaultResponse>(
-            commandType: commandType,
-            requestId: requestId,
-            body: body,
-            additionalBodies: additionalBody
-        )
-        self.send(request: request)
-    }
-}
-
 // MARK: - EventDelegate
 
 extension RequestQueue: EventDelegate {
