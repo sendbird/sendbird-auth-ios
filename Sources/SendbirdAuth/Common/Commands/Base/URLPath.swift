@@ -7,6 +7,29 @@
 
 import Foundation
 
+// MARK: - URLPathConvertible Protocol
+
+/// A protocol that allows external modules to define custom API endpoints.
+///
+/// Conform to this protocol to create custom URL paths that can be used with the SDK's request system.
+///
+/// Example:
+/// ```swift
+/// enum MyCustomPaths: URLPathConvertible {
+///     case customEndpoint(id: String)
+///
+///     var urlPath: URLPath {
+///         switch self {
+///         case .customEndpoint(let id):
+///             return ["custom", "endpoint", id]
+///         }
+///     }
+/// }
+/// ```
+@_spi(SendbirdInternal) public protocol URLPathConvertible {
+    var urlPath: URLPath { get }
+}
+
 @_spi(SendbirdInternal) public struct URLPath: ExpressibleByStringLiteral, ExpressibleByArrayLiteral {
     @_spi(SendbirdInternal) public typealias ArrayLiteralElement = CustomStringConvertible
 
@@ -38,4 +61,10 @@ import Foundation
         urlPath.append(element)
         return urlPath
     }
+}
+
+// MARK: - URLPathConvertible Conformance
+
+extension URLPath: URLPathConvertible {
+    @_spi(SendbirdInternal) public var urlPath: URLPath { self }
 }

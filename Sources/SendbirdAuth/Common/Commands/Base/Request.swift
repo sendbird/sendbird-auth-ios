@@ -46,83 +46,84 @@ extension WSRequestable {
         for body in additionalBodies {
             try? body.encode(to: encoder)
         }
-        
-        var container = encoder.container(keyedBy: CodeCodingKeys.self)
-        for (key, value) in body {
-            try? container.encode(value, forKey: key)
+
+        try? body.encode(to: encoder)
+
+        if let requestId = requestId {
+            var container = encoder.container(keyedBy: CodeCodingKeys.self)
+            try? container.encode(requestId, forKey: .reqId)
         }
-        try? container.encode(requestId, forKey: .reqId)
     }
-    
+
     @_spi(SendbirdInternal) public var resultType: T.Type
-    
+
     @_spi(SendbirdInternal) public var commandType: CommandType
     @_spi(SendbirdInternal) public var requestId: String?
-    
-    @_spi(SendbirdInternal) public var body: [CodeCodingKeys: Encodable]
+
+    @_spi(SendbirdInternal) public var body: RequestParameter
     @_spi(SendbirdInternal) public var additionalBodies: [Encodable]
-    
+
     @_spi(SendbirdInternal) public init(
         commandType: CommandType,
         requestId: String?,
-        body: [CodeCodingKeys: Encodable?],
+        body: RequestParameter,
         additionalBodies: [Encodable] = []
     ) {
         self.commandType = commandType
-        self.additionalBodies = additionalBodies.compactMap { $0 }
-        self.body = body.compactMapValues { $0 }
         self.requestId = requestId
+        self.body = body
+        self.additionalBodies = additionalBodies
         self.resultType = T.self
     }
 }
 
-@_spi(SendbirdInternal) public class APIRequests<T: Decodable>: APIRequestable {
+@_spi(SendbirdInternal) public class APIRequest<T: Decodable>: APIRequestable {
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         for body in additionalBodies {
             try? body.encode(to: encoder)
         }
-        
-        var container = encoder.container(keyedBy: CodeCodingKeys.self)
-        for (key, value) in body {
-            try? container.encode(value, forKey: key)
-        }
+
+        try? body.encode(to: encoder)
     }
-    
+
     @_spi(SendbirdInternal) public var resultType: T.Type
-    
+
     @_spi(SendbirdInternal) public var method: HTTPMethod
     @_spi(SendbirdInternal) public var url: URLPath
     @_spi(SendbirdInternal) public var version: String
-    
-    @_spi(SendbirdInternal) public var body: [CodeCodingKeys: Encodable]
-    
+
+    @_spi(SendbirdInternal) public var body: RequestParameter
+
     @_spi(SendbirdInternal) public var headers: [String: String]
     @_spi(SendbirdInternal) public var additionalBodies: [Encodable]
     @_spi(SendbirdInternal) public var multipart: [String: Any]
-    
+    @_spi(SendbirdInternal) public var queryParameters: RequestParameter
+
     @_spi(SendbirdInternal) public var isSessionRequired: Bool // Request can be sent without session key
     @_spi(SendbirdInternal) public var isLoginRequired: Bool // Session key exists, but user data does not exist
-    
+
     @_spi(SendbirdInternal) public var hasMultipart: Bool { !multipart.isEmpty }
-    
+
     @_spi(SendbirdInternal) public init(
         method: HTTPMethod,
-        url: URLPaths,
+        url: some URLPathConvertible,
         version: String,
-        body: [CodeCodingKeys: Encodable?],
+        body: RequestParameter,
         additionalBodies: [Encodable] = [],
         headers: [String: String],
         multipart: [String: Any],
+        queryParameters: RequestParameter = .init(),
         isSessionRequired: Bool,
         isLoginRequired: Bool
     ) {
         self.method = method
-        self.url = .init(array: url.splitPath)
+        self.url = url.urlPath
         self.version = version
+        self.body = body
         self.additionalBodies = additionalBodies
-        self.body = body.compactMapValues { $0 }
         self.headers = headers
         self.multipart = multipart
+        self.queryParameters = queryParameters
         self.isSessionRequired = isSessionRequired
         self.isLoginRequired = isLoginRequired
         self.resultType = T.self
@@ -131,18 +132,19 @@ extension WSRequestable {
 
 @_spi(SendbirdInternal) public protocol APIRequestable: Encodable, Requestable, Resultable {
     typealias KeyEncodingStrategy = JSONEncoder.KeyEncodingStrategy
-    
+
     var method: HTTPMethod { get }
     var url: URLPath { get }
     var version: String { get }
-    
+
     var headers: [String: String] { get }
     var multipart: [String: Any] { get }
     var keyEncodingStrategy: KeyEncodingStrategy { get }
+    var queryParameters: RequestParameter { get }
 
     // Request can be sent without session key
     var isSessionRequired: Bool { get }
-    
+
     // Session key exists, but user data does not exist
     var isLoginRequired: Bool { get }
 }
@@ -156,6 +158,7 @@ extension WSRequestable {
     var isSessionRequired: Bool { true }
     var isLoginRequired: Bool { true }
     var identifier: RequestIdentifier { .api(url, method: method) }
+    var queryParameters: RequestParameter { .param([:]) }
 }
 
 extension APIRequestable {
