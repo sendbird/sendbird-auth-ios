@@ -23,7 +23,7 @@ import Foundation
         self.encodeBlock = { encoder in
             var container = encoder.container(keyedBy: T.self)
             for (key, value) in filteredDict {
-                try container.encode(value, forKey: key)
+                try? container.encode(value, forKey: key)
             }
         }
     }
