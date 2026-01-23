@@ -1,0 +1,105 @@
+name: Claude Workflows
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request:
+    types: [opened]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  # /claude review - Code Review
+  code-review:
+    if: |
+      contains(github.event.comment.html_url, '/pull/') &&
+      contains(github.event.comment.body, '/claude review')
+
+    uses: sendbird/client-workflows/.github/workflows/claude-workflows.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+      issues: read
+
+    secrets: inherit
+
+    with:
+      action_type: 'review'
+      pr_number: ${{ github.event.issue.number }}
+      comment_id: ${{ github.event.comment.id }}
+      repository: ${{ github.repository }}
+      platform: 'ios'
+      review_focus: |
+        Additional focus for Auth SDK:
+        - Authentication flow security
+        - Token management
+        - WebSocket connection handling
+
+  # /claude changelog - PR Changelog
+  pr-changelog:
+    if: |
+      contains(github.event.comment.html_url, '/pull/') &&
+      contains(github.event.comment.body, '/claude changelog')
+
+    uses: sendbird/client-workflows/.github/workflows/claude-workflows.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+      issues: read
+
+    secrets: inherit
+
+    with:
+      action_type: 'changelog'
+      pr_number: ${{ github.event.issue.number }}
+      repository: ${{ github.repository }}
+      custom_template: |
+        ## Changes
+        ### New Features
+        - Feature 1
+
+        ### Bug Fixes
+        - Fix 1
+
+  # PR opened - Auto Summary
+  pr-summary:
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
+
+    uses: sendbird/client-workflows/.github/workflows/claude-workflows.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    secrets: inherit
+
+    with:
+      action_type: 'summary'
+      pr_number: ${{ github.event.pull_request.number }}
+      language: 'ko'
+      project_context: |
+        - Language: Swift
+
+  # @claude - General Assistant
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+
+    uses: sendbird/client-workflows/.github/workflows/claude-workflows.yml@main
+
+    secrets: inherit
+
+    with:
+      action_type: 'claude'
+      system_prompt: |
+        You are an expert iOS developer specializing in authentication and networking.
+        Always consider security, memory management and performance.
