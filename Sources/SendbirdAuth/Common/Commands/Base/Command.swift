@@ -55,37 +55,10 @@ import Foundation
     }
 }
 
-@_spi(SendbirdInternal) public enum HTTPMethod: RawRepresentable {
-    @_spi(SendbirdInternal) public init?(rawValue: String) {
-        switch rawValue {
-        case "GET": self = .get(queryParams: [:])
-        case "POST": self = .post(queryParams: [:])
-        case "PUT": self = .put(queryParams: [:])
-        case "DELETE": self = .delete(queryParams: [:])
-        case "PATCH": self = .patch(queryParams: [:])
-        default: return nil
-        }
-    }
-
-    case get(queryParams: [CodeCodingKeys: Any] = [:])
-    case post(queryParams: [CodeCodingKeys: Any] = [:])
-    case put(queryParams: [CodeCodingKeys: Any] = [:])
-    case delete(queryParams: [CodeCodingKeys: Any] = [:])
-    case patch(queryParams: [CodeCodingKeys: Any] = [:])
-    
-    @_spi(SendbirdInternal) public static var get: Self { .get(queryParams: [:]) }
-    @_spi(SendbirdInternal) public static var post: Self { .post(queryParams: [:]) }
-    @_spi(SendbirdInternal) public static var put: Self { .put(queryParams: [:]) }
-    @_spi(SendbirdInternal) public static var delete: Self { .delete(queryParams: [:]) }
-    @_spi(SendbirdInternal) public static var patch: Self { .patch(queryParams: [:]) }
-    
-    @_spi(SendbirdInternal) public var rawValue: String {
-        switch self {
-        case .get: return "GET"
-        case .post: return "POST"
-        case .put: return "PUT"
-        case .delete: return "DELETE"
-        case .patch: return "PATCH"
-        }
-    }
+@_spi(SendbirdInternal) public enum HTTPMethod: String {
+    case get = "GET"
+    case post = "POST"
+    case put = "PUT"
+    case delete = "DELETE"
+    case patch = "PATCH"
 }

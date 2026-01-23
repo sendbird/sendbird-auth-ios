@@ -51,10 +51,10 @@ import Foundation
         return try await withSafeThrowingContinuation { continuation in
             requestQueue.post(
                 path: URLPaths.sdkStatistics,
-                body: [
-                    .logEntries: copiedStats,
-                    .deviceId: deviceId,
-                ]
+                body: .param([
+                    CodeCodingKeys.logEntries: copiedStats,
+                    CodeCodingKeys.deviceId: deviceId,
+                ])
             ) { (res: Result<DefaultResponse, AuthError>) in
                 switch res {
                 case .success:
@@ -94,10 +94,10 @@ import Foundation
         try await withSafeThrowingContinuation { continuation in
             requestQueue.post(
                 path: URLPaths.notificationStatistics,
-                body: [
-                    .logEntries: copiedStats,
-                    .deviceId: deviceId,
-                ]
+                body: .param([
+                    CodeCodingKeys.logEntries: copiedStats,
+                    CodeCodingKeys.deviceId: deviceId,
+                ])
             ) { (res: Result<DefaultResponse, AuthError>) in
                 switch res {
                 case .success:
