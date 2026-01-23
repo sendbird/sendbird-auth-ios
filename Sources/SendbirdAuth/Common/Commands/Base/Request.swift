@@ -44,7 +44,7 @@ extension WSRequestable {
 @_spi(SendbirdInternal) public class BaseWSRequest<T: Decodable>: ResultableWSRequest {
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         for body in additionalBodies {
-            try? body.encode(to: encoder)
+            try body.encode(to: encoder)
         }
 
         try body.encode(to: encoder)
@@ -80,7 +80,7 @@ extension WSRequestable {
 @_spi(SendbirdInternal) public class APIRequest<T: Decodable>: APIRequestable {
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
         for body in additionalBodies {
-            try? body.encode(to: encoder)
+            try body.encode(to: encoder)
         }
 
         try body.encode(to: encoder)

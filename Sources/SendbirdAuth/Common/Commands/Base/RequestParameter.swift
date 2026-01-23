@@ -8,14 +8,12 @@
 import Foundation
 
 @_spi(SendbirdInternal) public struct RequestParameter: Encodable {
-    @_spi(SendbirdInternal) public let parameters: [String: Any]
+    let parameters: [String: Any]
     private let encodeBlock: (Encoder) throws -> Void
-    private let codingKeyType: any RequestCodingKey.Type
 
     @_spi(SendbirdInternal) public init() {
         self.parameters = [:]
         self.encodeBlock = { _ in }
-        self.codingKeyType = CodeCodingKeys.self
     }
 
     @_spi(SendbirdInternal) public init<T: RequestCodingKey>(_ dict: [T: Encodable?]) {
@@ -28,7 +26,6 @@ import Foundation
                 try container.encode(value, forKey: key)
             }
         }
-        self.codingKeyType = T.self
     }
 
     @_spi(SendbirdInternal) public func encode(to encoder: Encoder) throws {
