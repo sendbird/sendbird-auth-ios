@@ -152,6 +152,7 @@ import Foundation
     case sdkUsersPushApns(userId: String)
     case sdkPushDelivery
     case sdkStatistics
+    case sdkAIAgentStatistics
     case notificationStatistics
     case settings
     case authenticate(userId: String)
@@ -506,6 +507,8 @@ import Foundation
             return ["storage", "file"]
         case .sdkStatistics:
             return ["sdk", "statistics"]
+        case .sdkAIAgentStatistics:
+            return ["sdk", "ai_agent_statistics"]
         case .notificationStatistics:
             return ["sdk", "notification_statistics"]
         case .settings:

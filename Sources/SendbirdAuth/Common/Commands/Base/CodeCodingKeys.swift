@@ -552,6 +552,7 @@ import Foundation
     case retryAfter = "retry_after"
     case role
     case rootMessageId = "root_message_id"
+    case runtimeId = "runtime_id"
     case scheduledAt = "scheduled_at"
     case scheduledId = "scheduled_id"
     case scheduledMessageId = "scheduled_message_id"
