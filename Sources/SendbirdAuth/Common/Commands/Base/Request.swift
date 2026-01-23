@@ -97,7 +97,7 @@ extension WSRequestable {
     @_spi(SendbirdInternal) public var headers: [String: String]
     @_spi(SendbirdInternal) public var additionalBodies: [Encodable]
     @_spi(SendbirdInternal) public var multipart: [String: Any]
-    @_spi(SendbirdInternal) public var queryParameters: [String: Any]
+    @_spi(SendbirdInternal) public var queryParameters: RequestParameter
 
     @_spi(SendbirdInternal) public var isSessionRequired: Bool // Request can be sent without session key
     @_spi(SendbirdInternal) public var isLoginRequired: Bool // Session key exists, but user data does not exist
@@ -112,7 +112,7 @@ extension WSRequestable {
         additionalBodies: [Encodable] = [],
         headers: [String: String],
         multipart: [String: Any],
-        queryParameters: [String: Any] = [:],
+        queryParameters: RequestParameter = .init(),
         isSessionRequired: Bool,
         isLoginRequired: Bool
     ) {
@@ -140,7 +140,7 @@ extension WSRequestable {
     var headers: [String: String] { get }
     var multipart: [String: Any] { get }
     var keyEncodingStrategy: KeyEncodingStrategy { get }
-    var queryParameters: [String: Any] { get }
+    var queryParameters: RequestParameter { get }
 
     // Request can be sent without session key
     var isSessionRequired: Bool { get }
@@ -158,7 +158,7 @@ extension WSRequestable {
     var isSessionRequired: Bool { true }
     var isLoginRequired: Bool { true }
     var identifier: RequestIdentifier { .api(url, method: method) }
-    var queryParameters: [String: Any] { [:] }
+    var queryParameters: RequestParameter { .param([:]) }
 }
 
 extension APIRequestable {

@@ -287,7 +287,7 @@ import Foundation
             additionalBodies: additionalBody,
             headers: header,
             multipart: [:],
-            queryParameters: queryParams.parameters,
+            queryParameters: queryParams,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )
@@ -340,7 +340,7 @@ import Foundation
             additionalBodies: additionalBody,
             headers: header,
             multipart: multipart,
-            queryParameters: queryParams.parameters,
+            queryParameters: queryParams,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )
@@ -407,7 +407,7 @@ import Foundation
             additionalBodies: additionalBody,
             headers: header,
             multipart: multipart,
-            queryParameters: queryParams.parameters,
+            queryParameters: queryParams,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )
@@ -474,7 +474,7 @@ import Foundation
             additionalBodies: additionalBody,
             headers: header,
             multipart: multipart,
-            queryParameters: queryParams.parameters,
+            queryParameters: queryParams,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )
@@ -539,7 +539,7 @@ import Foundation
             additionalBodies: additionalBody,
             headers: header,
             multipart: multipart,
-            queryParameters: queryParams.parameters,
+            queryParameters: queryParams,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )

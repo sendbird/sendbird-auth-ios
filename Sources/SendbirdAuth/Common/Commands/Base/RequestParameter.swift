@@ -41,4 +41,9 @@ extension RequestParameter {
     static func param(_ dict: [CodeCodingKeys: Encodable?]) -> RequestParameter {
         RequestParameter(dict)
     }
+
+    /// Converts parameters to stringified dictionary for URL query encoding.
+    func stringify() -> [String: String] {
+        parameters.stringify()
+    }
 }
