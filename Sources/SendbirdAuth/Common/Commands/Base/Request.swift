@@ -97,6 +97,7 @@ extension WSRequestable {
     @_spi(SendbirdInternal) public var headers: [String: String]
     @_spi(SendbirdInternal) public var additionalBodies: [Encodable]
     @_spi(SendbirdInternal) public var multipart: [String: Any]
+    @_spi(SendbirdInternal) public var queryParameters: [String: Any]
 
     @_spi(SendbirdInternal) public var isSessionRequired: Bool // Request can be sent without session key
     @_spi(SendbirdInternal) public var isLoginRequired: Bool // Session key exists, but user data does not exist
@@ -111,6 +112,7 @@ extension WSRequestable {
         additionalBodies: [Encodable] = [],
         headers: [String: String],
         multipart: [String: Any],
+        queryParameters: [String: Any] = [:],
         isSessionRequired: Bool,
         isLoginRequired: Bool
     ) {
@@ -121,6 +123,7 @@ extension WSRequestable {
         self.additionalBodies = additionalBodies
         self.headers = headers
         self.multipart = multipart
+        self.queryParameters = queryParameters
         self.isSessionRequired = isSessionRequired
         self.isLoginRequired = isLoginRequired
         self.resultType = T.self
@@ -129,18 +132,19 @@ extension WSRequestable {
 
 @_spi(SendbirdInternal) public protocol APIRequestable: Encodable, Requestable, Resultable {
     typealias KeyEncodingStrategy = JSONEncoder.KeyEncodingStrategy
-    
+
     var method: HTTPMethod { get }
     var url: URLPath { get }
     var version: String { get }
-    
+
     var headers: [String: String] { get }
     var multipart: [String: Any] { get }
     var keyEncodingStrategy: KeyEncodingStrategy { get }
+    var queryParameters: [String: Any] { get }
 
     // Request can be sent without session key
     var isSessionRequired: Bool { get }
-    
+
     // Session key exists, but user data does not exist
     var isLoginRequired: Bool { get }
 }
@@ -154,6 +158,7 @@ extension WSRequestable {
     var isSessionRequired: Bool { true }
     var isLoginRequired: Bool { true }
     var identifier: RequestIdentifier { .api(url, method: method) }
+    var queryParameters: [String: Any] { [:] }
 }
 
 extension APIRequestable {

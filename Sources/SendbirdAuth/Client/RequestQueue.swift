@@ -280,13 +280,14 @@ import Foundation
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
         let request = APIRequest<R>(
-            method: .get(queryParams: queryParams.parameters),
+            method: .get,
             url: path,
             version: "/v3",
             body: queryParams,
             additionalBodies: additionalBody,
             headers: header,
             multipart: [:],
+            queryParameters: queryParams.parameters,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )
@@ -332,13 +333,14 @@ import Foundation
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
         let request = APIRequest<R>(
-            method: .post(queryParams: queryParams.parameters),
+            method: .post,
             url: path,
             version: "/v3",
             body: body,
             additionalBodies: additionalBody,
             headers: header,
             multipart: multipart,
+            queryParameters: queryParams.parameters,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )
@@ -398,13 +400,14 @@ import Foundation
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
         let request = APIRequest<R>(
-            method: .put(queryParams: queryParams.parameters),
+            method: .put,
             url: path,
             version: "/v3",
             body: body,
             additionalBodies: additionalBody,
             headers: header,
             multipart: multipart,
+            queryParameters: queryParams.parameters,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )
@@ -464,13 +467,14 @@ import Foundation
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
         let request = APIRequest<R>(
-            method: .patch(queryParams: queryParams.parameters),
+            method: .patch,
             url: path,
             version: "/v3",
             body: body,
             additionalBodies: additionalBody,
             headers: header,
             multipart: multipart,
+            queryParameters: queryParams.parameters,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )
@@ -528,13 +532,14 @@ import Foundation
         completionHandler: ((Result<R, AuthError>) -> Void)?
     ) {
         let request = APIRequest<R>(
-            method: .delete(queryParams: queryParams.parameters),
+            method: .delete,
             url: path,
             version: "/v3",
             body: body,
             additionalBodies: additionalBody,
             headers: header,
             multipart: multipart,
+            queryParameters: queryParams.parameters,
             isSessionRequired: isSessionRequired,
             isLoginRequired: isLoginRequired
         )

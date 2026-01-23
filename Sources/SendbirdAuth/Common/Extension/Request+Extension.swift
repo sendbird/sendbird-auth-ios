@@ -13,22 +13,21 @@ import Foundation
             var components = try makeComponents(url: URL(string: baseURL))
             var request = try makeRequest(url: components.url)
 
-            switch method { // Creat body / Query String
-            case .get(let query):
-                var queryMaps = query
-                    .stringify()
+            switch method {
+            case .get:
+                var queryMaps = queryParameters.stringify()
 
                 if let otherQueryItems = queryItems() {
                     queryMaps.merge(otherQueryItems, uniquingKeysWith: { _, defined in defined })
                 }
-                
+
                 components.percentEncodedQuery = queryMaps
                     .reduce("") { result, entry in result + "&" + "\(entry.key)=\(entry.value)" }
 
                 request.url = components.url
-                
-            case .post(let query), .put(let query), .delete(let query), .patch(let query):
-                components.queryItems = query.stringify()
+
+            case .post, .put, .delete, .patch:
+                components.queryItems = queryParameters.stringify()
                     .filter({ $0.value != "" })
                     .map(URLQueryItem.init)
                 request.url = components.url
