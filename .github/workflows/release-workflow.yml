@@ -64,6 +64,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           ssh-key: ${{ secrets.SSH_KEY }}
           fetch-depth: 0
 
