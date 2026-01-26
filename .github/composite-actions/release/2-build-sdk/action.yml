@@ -1,0 +1,91 @@
+name: '2. Build SDK'
+description: 'Build XCFramework (Dynamic and Static)'
+
+inputs:
+  release_version:
+    description: 'SDK version for release'
+    required: true
+
+outputs:
+  spm_checksum_dynamic:
+    description: 'SPM checksum for dynamic framework'
+    value: ${{ steps.calculate-checksums.outputs.spm_checksum_dynamic }}
+  spm_checksum_static:
+    description: 'SPM checksum for static framework'
+    value: ${{ steps.calculate-checksums.outputs.spm_checksum_static }}
+  cocoapods_sha1:
+    description: 'CocoaPods SHA1 for dynamic framework'
+    value: ${{ steps.calculate-checksums.outputs.cocoapods_sha1 }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Git - Private Repo - Reset to RELEASE_VERSION tag
+      env:
+        RELEASE_VERSION: ${{ inputs.release_version }}
+      run: |
+        echo "Fetching only tag $RELEASE_VERSION"
+        git fetch origin refs/tags/$RELEASE_VERSION:refs/tags/$RELEASE_VERSION
+
+        echo "git reset --hard $RELEASE_VERSION"
+        git reset --hard $RELEASE_VERSION
+      shell: bash
+
+    - name: Generate Xcode project
+      shell: bash
+      run: |
+        xcodegen generate
+
+    - name: Build Dynamic XCFramework
+      shell: bash
+      run: |
+        echo "Building Dynamic XCFramework..."
+        python3 script/build_xcframework.py -p SendbirdAuthSDK --mac
+
+        # Move to artifacts directory
+        mkdir -p artifacts/dynamic
+        cp release/SendbirdAuthSDK.xcframework.zip artifacts/dynamic/
+        cp release/SendbirdAuthSDK.zip artifacts/dynamic/
+
+    - name: Build Static XCFramework
+      shell: bash
+      run: |
+        echo "Building Static XCFramework..."
+        python3 script/build_xcframework.py -p SendbirdAuthSDK --mac --static
+
+        # Move to artifacts directory
+        mkdir -p artifacts/static
+        cp release/SendbirdAuthSDKStatic.xcframework.zip artifacts/static/
+
+    - name: Calculate checksums
+      id: calculate-checksums
+      shell: bash
+      run: |
+        # SPM checksum - Dynamic (SHA256 for Swift Package)
+        SPM_CHECKSUM_DYNAMIC=$(swift package compute-checksum artifacts/dynamic/SendbirdAuthSDK.xcframework.zip)
+        echo "spm_checksum_dynamic=$SPM_CHECKSUM_DYNAMIC" >> $GITHUB_OUTPUT
+        echo "SPM Checksum (Dynamic): $SPM_CHECKSUM_DYNAMIC"
+
+        # SPM checksum - Static (SHA256 for Swift Package)
+        SPM_CHECKSUM_STATIC=$(swift package compute-checksum artifacts/static/SendbirdAuthSDKStatic.xcframework.zip)
+        echo "spm_checksum_static=$SPM_CHECKSUM_STATIC" >> $GITHUB_OUTPUT
+        echo "SPM Checksum (Static): $SPM_CHECKSUM_STATIC"
+
+        # CocoaPods SHA1 (for dynamic framework zip with LICENSE)
+        COCOAPODS_SHA1=$(shasum -a 1 artifacts/dynamic/SendbirdAuthSDK.zip | awk '{print $1}')
+        echo "cocoapods_sha1=$COCOAPODS_SHA1" >> $GITHUB_OUTPUT
+        echo "CocoaPods SHA1: $COCOAPODS_SHA1"
+
+    - name: Upload Dynamic artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dynamic-xcframework
+        path: artifacts/dynamic/
+        retention-days: 7
+
+    - name: Upload Static artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: static-xcframework
+        path: artifacts/static/
+        retention-days: 7

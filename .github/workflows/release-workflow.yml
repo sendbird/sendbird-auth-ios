@@ -1,0 +1,160 @@
+name: Release
+run-name: Release SendbirdAuthSDK (SPM, CocoaPods)
+
+# NOTE
+# This file name must be `release-workflow.yml`
+# This workflow is triggered via API call from Jira ticket automation (approve release).
+# It can also be triggered manually via GitHub Actions UI.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iphone_device:
+        description: "iPhone model for testing"
+        required: false
+        default: "iPhone 16 Pro Max"
+      xcode_version:
+        description: "Xcode version for testing"
+        required: false
+        default: "16.4"
+      configuration:
+        description: "Configuration for building and testing (e.g., Debug, Release, etc.)"
+        required: false
+        default: "Debug"
+      release_ticket_key:
+        description: "key for release ticket (SDKRLSD-xxxx)"
+        type: string
+        default: ""
+      is_test:
+        description: "Is this a test?"
+        required: false
+        type: boolean
+        default: false
+
+env:
+  GITHUB_PUBLIC_REPO: sendbird-auth-ios
+
+jobs:
+  release:
+    name: Release SendbirdAuthSDK
+    runs-on: macos-15
+    env:
+      GITHUB_PUBLIC_REPO: sendbird-auth-ios
+      GH_TOKEN_FOR_PR_APPROVAL: ${{ secrets.GH_TOKEN_FOR_PR_APPROVAL }}
+      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      XCODE_VERSION: ${{ inputs.xcode_version }}
+      IS_TEST: ${{ inputs.is_test }}
+      COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+    outputs:
+      release_version: ${{ steps.setup.outputs.release_version }}
+      release_status: ${{ steps.set-status.outputs.status }}
+
+    steps:
+      - name: Debug - Print all inputs
+        run: |
+          echo "=== Release Workflow Inputs ==="
+          echo "iphone_device: ${{ inputs.iphone_device }}"
+          echo "xcode_version: ${{ inputs.xcode_version }}"
+          echo "configuration: ${{ inputs.configuration }}"
+          echo "release_ticket_key: ${{ inputs.release_ticket_key }}"
+          echo "is_test: ${{ inputs.is_test }}"
+          echo "==============================="
+        shell: bash
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.SSH_KEY }}
+          fetch-depth: 0
+
+      - name: 0. Setup
+        id: setup
+        uses: ./.github/composite-actions/release/0-setup
+        with:
+          xcode_version: ${{ env.XCODE_VERSION }}
+          ssh_key: ${{ secrets.SSH_KEY }}
+          gh_api_token: ${{ secrets.GH_API_TOKEN }}
+          gh_token_for_pr_approval: ${{ secrets.GH_TOKEN_FOR_PR_APPROVAL }}
+
+      - name: 1. Manage Private Repository
+        id: manage-private-repo
+        uses: ./.github/composite-actions/release/1-manage-private-repo
+        with:
+          release_version: ${{ steps.setup.outputs.release_version }}
+          gh_api_token: ${{ secrets.GH_API_TOKEN }}
+          gh_token_for_pr_approval: ${{ secrets.GH_TOKEN_FOR_PR_APPROVAL }}
+          is_test: ${{ env.IS_TEST }}
+
+      - name: Check repo structure
+        run: |
+          pwd
+          ls -la
+
+      - name: 2. Build SDK
+        id: build
+        uses: ./.github/composite-actions/release/2-build-sdk
+        with:
+          release_version: ${{ steps.setup.outputs.release_version }}
+
+      - name: Check repo structure
+        run: |
+          echo "pwd: "
+          pwd
+          echo "ls -la"
+          ls -la
+
+      - name: 3. Manage Public Repository
+        id: manage-public-repo
+        uses: ./.github/composite-actions/release/3-manage-public-repo
+        with:
+          release_version: ${{ steps.setup.outputs.release_version }}
+          spm_checksum_dynamic: ${{ steps.build.outputs.spm_checksum_dynamic }}
+          spm_checksum_static: ${{ steps.build.outputs.spm_checksum_static }}
+          cocoapods_sha1: ${{ steps.build.outputs.cocoapods_sha1 }}
+          gh_token: ${{ secrets.GH_API_TOKEN }}
+          gh_token_for_pr_approval: ${{ secrets.GH_TOKEN_FOR_PR_APPROVAL }}
+          github_public_repo: ${{ env.GITHUB_PUBLIC_REPO }}
+          is_test: ${{ env.IS_TEST }}
+
+      - name: Check public repo structure
+        run: |
+          echo "pwd: "
+          pwd
+          echo "ls -la"
+          ls -la
+        shell: bash
+
+      - name: 4. Release Distribution
+        id: release-distribution
+        uses: ./.github/composite-actions/release/4-release-distribution
+        with:
+          release_version: ${{ steps.setup.outputs.release_version }}
+          gh_api_token: ${{ secrets.GH_API_TOKEN }}
+          cocoapods_trunk_token: ${{ env.COCOAPODS_TRUNK_TOKEN }}
+          github_public_repo: ${{ env.GITHUB_PUBLIC_REPO }}
+          is_test: ${{ env.IS_TEST }}
+
+      - name: Set release status
+        id: set-status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 5. Notifications
+        id: notifications
+        if: always()
+        uses: ./.github/composite-actions/release/5-notifications
+        with:
+          release_version: ${{ steps.setup.outputs.release_version }}
+          release_distribution_result: ${{ steps.release-distribution.outcome }}
+          release_ticket_key: ${{ inputs.release_ticket_key }}
+          slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack_release_channel_id: ${{ secrets.SLACK_RELEASE_CHANNEL_ID }}
+          slack_release_approver_channel_id: ${{ secrets.SLACK_RELEASE_APPROVER_CHANNEL_ID }}
+          jira_auth_user: ${{ secrets.JIRA_AUTH_USER }}
+          jira_auth_api_token: ${{ secrets.JIRA_AUTH_API_TOKEN }}
+          is_test: ${{ env.IS_TEST }}
