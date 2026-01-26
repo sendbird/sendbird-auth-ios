@@ -79,6 +79,7 @@ runs:
         pod trunk me
 
     - name: Lint podspec
+      if: inputs.is_test == 'false'
       shell: bash
       run: |
         cd ~/public-repo
