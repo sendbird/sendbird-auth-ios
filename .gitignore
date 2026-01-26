@@ -23,7 +23,7 @@ DerivedData/
 # 기타 편집기 파일
 *.swp
 *.swo
-release/
+/release/
 
 *.podspec
 

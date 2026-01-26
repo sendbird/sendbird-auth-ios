@@ -1,0 +1,152 @@
+name: 'Manage Private Repository'
+description: 'Handles operations in the private repository'
+
+inputs:
+  release_version:
+    description: 'The release version'
+    required: true
+  gh_api_token:
+    description: 'GitHub API token'
+    required: true
+  gh_token_for_pr_approval:
+    description: 'GitHub token for PR approval'
+    required: true
+  is_test:
+    description: "Is this a test?"
+    required: false
+
+outputs:
+  merge_to_develop_pr_number:
+    description: 'PR number for back-merge to develop'
+    value: ${{ steps.create_develop_pr.outputs.merge_to_develop_pr_number }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Debug - Check IS_TEST value in composite action
+      env:
+        IS_TEST: ${{ inputs.is_test }}
+      run: |
+        echo "=== Composite Action Debug ==="
+        echo "IS_TEST env var: '$IS_TEST'"
+        if [ "$IS_TEST" == "true" ]; then
+          echo "Condition evaluates to TRUE - will skip actual operations"
+        else
+          echo "Condition evaluates to FALSE - will execute operations"
+        fi
+        echo "==============================="
+      shell: bash
+
+    - name: Git - Private Repo - Merge PR (release/xx -> main)
+      env:
+        GH_API_TOKEN: ${{ inputs.gh_api_token }}
+        REPOSITORY_NAME: ${{ github.event.repository.name }}
+        REF_NAME: ${{ github.ref_name }}
+        IS_TEST: ${{ inputs.is_test }}
+      run: |
+        if [ "$IS_TEST" == "true" ]; then
+          echo "python3 ~/sdk-deployment/scripts/v1.2/github_pr_merge.py \\
+            --github_api_token \$GH_API_TOKEN \\
+            --repo_name \$REPOSITORY_NAME \\
+            --branch_name \$REF_NAME"
+        else
+          python3 ~/sdk-deployment/scripts/v1.2/github_pr_merge.py \
+            --github_api_token $GH_API_TOKEN \
+            --repo_name $REPOSITORY_NAME \
+            --branch_name $REF_NAME
+        fi
+      shell: bash
+
+    - name: Git - Private Repo - Create PR (main -> develop)
+      id: create_develop_pr
+      env:
+        GH_API_TOKEN: ${{ inputs.gh_api_token }}
+        REPOSITORY_NAME: ${{ github.event.repository.name }}
+        IS_TEST: ${{ inputs.is_test }}
+      run: |
+        if [ "$IS_TEST" == "true" ]; then
+          echo "python3 -u ~/sdk-deployment/scripts/v1.2/github_pr_create.py \\
+            --github_api_token \$GH_API_TOKEN \\
+            --repo_name \$REPOSITORY_NAME \\
+            --head main \\
+            --base develop \\
+            --title \"Merge main -> develop\" \\
+            --body \"This PR is created by automation.\" \\
+            --output_pr_number"
+        else
+          result_pr_number=$(python3 -u ~/sdk-deployment/scripts/v1.2/github_pr_create.py \
+            --github_api_token $GH_API_TOKEN \
+            --repo_name $REPOSITORY_NAME \
+            --head main \
+            --base develop \
+            --title "Merge main -> develop" \
+            --body "This PR is created by automation." \
+            --output_pr_number)
+
+          echo "MERGE_TO_DEVELOP_PR_NUMBER=$result_pr_number" >> $GITHUB_ENV
+          echo "merge_to_develop_pr_number=$result_pr_number" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+
+    - name: Git - Private Repo - Approve PR (main -> develop)
+      env:
+        GH_TOKEN_FOR_PR_APPROVAL: ${{ inputs.gh_token_for_pr_approval }}
+        REPOSITORY_OWNER: ${{ github.repository_owner }}
+        REPOSITORY_NAME: ${{ github.event.repository.name }}
+        MERGE_TO_DEVELOP_PR_NUMBER: ${{ env.MERGE_TO_DEVELOP_PR_NUMBER }}
+        IS_TEST: ${{ inputs.is_test }}
+      run: |
+        if [ "$IS_TEST" == "true" ]; then
+          echo "curl -L -X POST ... (approve PR)"
+        else
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN_FOR_PR_APPROVAL" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/$REPOSITORY_OWNER/$REPOSITORY_NAME/pulls/$MERGE_TO_DEVELOP_PR_NUMBER/reviews \
+            -d '{"body":"This PR is created by automation. Merge to develop.","event":"APPROVE"}'
+        fi
+      shell: bash
+
+    - name: Git - Private Repo - Merge PR (main -> develop)
+      env:
+        GH_API_TOKEN: ${{ inputs.gh_api_token }}
+        REPOSITORY_NAME: ${{ github.event.repository.name }}
+        IS_TEST: ${{ inputs.is_test }}
+      run: |
+        if [ "$IS_TEST" == "true" ]; then
+          echo "python3 ~/sdk-deployment/scripts/v1.2/github_pr_merge.py \\
+            --github_api_token \$GH_API_TOKEN \\
+            --repo_name \$REPOSITORY_NAME \\
+            --branch_name main \\
+            --auto"
+        else
+          python3 ~/sdk-deployment/scripts/v1.2/github_pr_merge.py \
+            --github_api_token $GH_API_TOKEN \
+            --repo_name $REPOSITORY_NAME \
+            --branch_name main \
+            --auto
+        fi
+      shell: bash
+
+    - name: Git - Private Repo - Create new version and tag
+      env:
+        GH_API_TOKEN: ${{ inputs.gh_api_token }}
+        REPOSITORY_NAME: ${{ github.event.repository.name }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        IS_TEST: ${{ inputs.is_test }}
+      run: |
+        if [ "$IS_TEST" == "true" ]; then
+          target_branch="${{ github.ref_name }}"
+        else
+          target_branch="main"
+        fi
+
+        python3 ~/sdk-deployment/scripts/v1.2/create_github_release.py \
+          --github_api_token $GH_API_TOKEN \
+          --repo_name $REPOSITORY_NAME \
+          --tag_name "$RELEASE_VERSION" \
+          --target_commitish "$target_branch" \
+          --body_path "./CHANGELOG_DRAFT.md"
+      shell: bash
