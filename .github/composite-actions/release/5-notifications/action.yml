@@ -1,0 +1,147 @@
+name: 'Slack Notifications and Jira Ticket Updates'
+description: 'Sends slack notifications and updates Jira release ticket'
+
+inputs:
+  release_version:
+    description: 'The release version'
+    required: true
+  release_distribution_result:
+    description: 'Result of the release distribution job'
+    required: true
+  release_ticket_key:
+    description: 'Jira ticket key'
+    required: false
+    default: ""
+  slack_bot_token:
+    description: 'Slack bot token'
+    required: true
+  slack_release_channel_id:
+    description: 'Slack release channel ID'
+    required: true
+  slack_release_approver_channel_id:
+    description: 'Slack release approver channel ID'
+    required: true
+  jira_auth_user:
+    description: 'Jira auth user'
+    required: true
+  jira_auth_api_token:
+    description: 'Jira auth API token'
+    required: true
+  is_test:
+    description: 'Test mode flag'
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    # MARK: Echo release_distribution_result
+    - name: Slack Notification results
+      if: inputs.release_distribution_result == 'success'
+      run: |
+        echo "✅ Should notify slack success"
+      shell: bash
+
+    - name: Slack Notification results
+      if: inputs.release_distribution_result != 'success'
+      run: |
+        echo "❌ Should notify slack failure"
+      shell: bash
+
+    # MARK: Slack notification
+    # Release success
+    - name: Slack notification - Success
+      if: inputs.release_distribution_result == 'success' && inputs.is_test == 'false'
+      uses: slackapi/slack-github-action@v1.24.0
+      env:
+        SLACK_BOT_TOKEN: ${{ inputs.slack_bot_token }}
+        SLACK_RELEASE_CHANNEL_ID: ${{ inputs.slack_release_channel_id }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+      with:
+        channel-id: ${{ env.SLACK_RELEASE_CHANNEL_ID }}
+        payload: |
+          {
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":tada: <https://github.com/sendbird/sendbird-auth-ios/releases/tag/${{ env.RELEASE_VERSION }}|sendbird-auth-ios ${{ env.RELEASE_VERSION }}> has been released! :sendbird:"
+                }
+              }
+            ]
+          }
+
+    - name: Slack notification - Failure
+      if: inputs.release_distribution_result != 'success' && inputs.is_test == 'false'
+      uses: slackapi/slack-github-action@v1.24.0
+      env:
+        SLACK_BOT_TOKEN: ${{ inputs.slack_bot_token }}
+        SLACK_RELEASE_APPROVER_CHANNEL_ID: ${{ inputs.slack_release_approver_channel_id }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+      with:
+        channel-id: ${{ env.SLACK_RELEASE_APPROVER_CHANNEL_ID }}
+        payload: |
+          {
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":x: Release for sendbird-auth-ios version ${{ env.RELEASE_VERSION }} has failed!"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "<${{ env.GITHUB_SERVER_URL }}/${{ env.GITHUB_REPOSITORY }}/actions/runs/${{ env.GITHUB_RUN_ID }}|View workflow run>"
+                }
+              }
+            ]
+          }
+
+    # MARK: Update Jira ticket
+    # Release success
+    - name: Jira - Transit ticket to RELEASED
+      if: inputs.release_distribution_result == 'success' && inputs.release_ticket_key != '' && inputs.is_test == 'false'
+      env:
+        JIRA_AUTH_USER: ${{ inputs.jira_auth_user }}
+        JIRA_AUTH_API_TOKEN: ${{ inputs.jira_auth_api_token }}
+        RELEASE_TICKET_KEY: ${{ inputs.release_ticket_key }}
+      run: |
+        python3 ~/sdk-deployment/scripts/v1.2/transit_ticket.py \
+          --jira_auth_user $JIRA_AUTH_USER \
+          --jira_auth_api_token $JIRA_AUTH_API_TOKEN \
+          --issue_key $RELEASE_TICKET_KEY \
+          --from_issue_state RELEASING \
+          --to_issue_state RELEASED
+      shell: bash
+
+    # Release failure
+    - name: Jira - Transit ticket to CONDITIONAL_RELEASE_APPROVED
+      if: inputs.release_distribution_result != 'success' && inputs.release_ticket_key != '' && inputs.is_test == 'false'
+      env:
+        JIRA_AUTH_USER: ${{ inputs.jira_auth_user }}
+        JIRA_AUTH_API_TOKEN: ${{ inputs.jira_auth_api_token }}
+        RELEASE_TICKET_KEY: ${{ inputs.release_ticket_key }}
+      run: |
+        python3 ~/sdk-deployment/scripts/v1.2/transit_ticket.py \
+          --jira_auth_user $JIRA_AUTH_USER \
+          --jira_auth_api_token $JIRA_AUTH_API_TOKEN \
+          --issue_key $RELEASE_TICKET_KEY \
+          --from_issue_state RELEASING \
+          --to_issue_state CONDITIONAL_RELEASE_APPROVED
+      shell: bash
+
+    - name: Test mode summary
+      if: inputs.is_test == 'true'
+      shell: bash
+      run: |
+        echo "=== TEST MODE - Notifications Summary ==="
+        echo "Would send Slack notification (result: ${{ inputs.release_distribution_result }})"
+        echo "Would update Jira ticket: ${{ inputs.release_ticket_key }}"
+        echo "Skipped actual Slack and Jira operations"

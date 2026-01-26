@@ -1,0 +1,137 @@
+name: '3. Manage Public Repository'
+description: 'Update public repository with new release'
+
+inputs:
+  release_version:
+    description: 'SDK version for release'
+    required: true
+  spm_checksum_dynamic:
+    description: 'SPM checksum for dynamic framework'
+    required: true
+  spm_checksum_static:
+    description: 'SPM checksum for static framework'
+    required: true
+  cocoapods_sha1:
+    description: 'CocoaPods SHA1'
+    required: true
+  gh_token:
+    description: 'GitHub API token'
+    required: true
+  gh_token_for_pr_approval:
+    description: 'GitHub token for PR approval'
+    required: true
+  github_public_repo:
+    description: 'Public repository name'
+    required: true
+  is_test:
+    description: 'Test mode flag'
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Clone public repository
+      shell: bash
+      run: |
+        git clone git@github.com:sendbird/${{ inputs.github_public_repo }}.git ~/public-repo
+        cd ~/public-repo
+        git checkout -b release/${{ inputs.release_version }}
+
+    - name: Update CHANGELOG.md
+      shell: bash
+      run: |
+        cd ~/public-repo
+
+        # Read CHANGELOG_DRAFT.md from private repo
+        DRAFT_CONTENT=$(cat $GITHUB_WORKSPACE/CHANGELOG_DRAFT.md)
+
+        # Create new changelog entry
+        NEW_ENTRY="# Changelog
+
+## [${{ inputs.release_version }}](https://github.com/sendbird/${{ inputs.github_public_repo }}/releases/tag/${{ inputs.release_version }}) ($(date +%b\ %d,\ %Y))
+$DRAFT_CONTENT
+"
+
+        # Check if CHANGELOG.md exists
+        if [ -f CHANGELOG.md ]; then
+          # Remove the header and prepend new entry
+          EXISTING=$(tail -n +2 CHANGELOG.md)
+          echo -e "$NEW_ENTRY\n$EXISTING" > CHANGELOG.md
+        else
+          echo -e "$NEW_ENTRY" > CHANGELOG.md
+        fi
+
+        echo "Updated CHANGELOG.md"
+
+    - name: Generate Package.swift
+      shell: bash
+      run: |
+        cd ~/public-repo
+        bash $GITHUB_WORKSPACE/scripts/generate_package.sh \
+          -v ${{ inputs.release_version }} \
+          -c ${{ inputs.spm_checksum_dynamic }} \
+          -s ${{ inputs.spm_checksum_static }} \
+          -p SendbirdAuthSDK \
+          -r ${{ inputs.github_public_repo }}
+
+        echo "Generated Package.swift"
+        cat Package.swift
+
+    - name: Generate Podspec
+      shell: bash
+      run: |
+        cd ~/public-repo
+        bash $GITHUB_WORKSPACE/script/generate_podspec.sh \
+          -v ${{ inputs.release_version }} \
+          -s ${{ inputs.cocoapods_sha1 }}
+
+        echo "Generated SendbirdAuthSDK.podspec"
+        cat SendbirdAuthSDK.podspec
+
+    - name: Commit and push changes
+      shell: bash
+      run: |
+        cd ~/public-repo
+        git config user.name "sendbird-sdk-deployment"
+        git config user.email "sha.sdk_deployment@sendbird.com"
+
+        git add -A
+        git commit -m "Release ${{ inputs.release_version }}"
+        git push origin release/${{ inputs.release_version }}
+
+    - name: Create and merge PR
+      if: inputs.is_test == 'false'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+        APPROVAL_TOKEN: ${{ inputs.gh_token_for_pr_approval }}
+      run: |
+        cd ~/public-repo
+
+        # Create PR
+        PR_URL=$(gh pr create --base main --head release/${{ inputs.release_version }} \
+          --title "Release ${{ inputs.release_version }}" \
+          --body "## Release ${{ inputs.release_version }}
+
+        This PR updates:
+        - Package.swift for SPM (Dynamic + Static)
+        - SendbirdAuthSDK.podspec for CocoaPods
+        - CHANGELOG.md")
+
+        PR_NUMBER=$(echo $PR_URL | grep -oE '[0-9]+$')
+        echo "Created PR #$PR_NUMBER"
+
+        # Approve and merge
+        GH_TOKEN=$APPROVAL_TOKEN gh pr review $PR_NUMBER --approve
+        gh pr merge $PR_NUMBER --merge --admin
+
+    - name: Create release tag on public repo
+      if: inputs.is_test == 'false'
+      shell: bash
+      run: |
+        cd ~/public-repo
+        git checkout main
+        git pull origin main
+        git tag ${{ inputs.release_version }}
+        git push origin ${{ inputs.release_version }}
