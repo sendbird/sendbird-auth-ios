@@ -26,6 +26,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Debug - Check token and user permissions
+        env:
+          GH_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+        run: |
+          echo "=== Token Scope Check ==="
+          SCOPES=$(curl -sI -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user | grep -i x-oauth-scopes | cut -d' ' -f2-)
+          echo "Token scopes: $SCOPES"
+
+          echo "=== Token User Check ==="
+          TOKEN_USER=$(curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user | jq -r '.login')
+          echo "Token user: $TOKEN_USER"
+
+          echo "=== Comment User Permission Check ==="
+          echo "Comment user: $COMMENT_USER"
+          PERMISSION=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/collaborators/$COMMENT_USER/permission" \
+            | jq -r '.permission')
+          echo "User permission: $PERMISSION"
+
       - uses: sendbird/release-automation-action@latest
         with:
           gh_token: ${{ secrets.GH_API_TOKEN }}
