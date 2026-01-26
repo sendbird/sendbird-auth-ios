@@ -1,0 +1,36 @@
+name: PR Comment Bot
+on:
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  debug-comment-event:
+    runs-on: ubuntu-latest
+    if: contains(github.event.comment.html_url, '/pull/')
+    steps:
+      - name: Print comment details
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+        run: |
+          echo "Comment URL: $COMMENT_URL"
+          echo "Comment body: $COMMENT_BODY"
+          echo "Comment body length: ${#COMMENT_BODY}"
+          echo "Body contains '/bot create ticket': $(echo "$COMMENT_BODY" | grep -q '/bot create ticket' && echo 'true' || echo 'false')"
+
+  pull_request_comment_create_ticket:
+    # CI: Github Actions (default for auth-ios)
+    if: |
+      contains(github.event.comment.html_url, '/pull/')
+        && contains(github.event.comment.body, '/bot create ticket')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sendbird/release-automation-action@latest
+        with:
+          gh_token: ${{ secrets.GH_API_TOKEN }}
+          product: 'auth'
+          platform: 'ios'
+          product_jira_project_key: 'CORE'
+          product_jira_version_prefix: 'auth-ios'
+          ci: 'github'
