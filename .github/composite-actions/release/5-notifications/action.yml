@@ -31,6 +31,10 @@ inputs:
     description: 'Test mode flag'
     required: false
     default: 'false'
+  gh_api_token:
+    description: 'GitHub API token for cleanup'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -145,3 +149,26 @@ runs:
         echo "Would send Slack notification (result: ${{ inputs.release_distribution_result }})"
         echo "Would update Jira ticket: ${{ inputs.release_ticket_key }}"
         echo "Skipped actual Slack and Jira operations"
+
+    - name: Test mode cleanup
+      if: inputs.is_test == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_api_token }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+      run: |
+        echo "=== TEST MODE - Cleanup ==="
+
+        # Delete tag on private repo
+        echo "Deleting tag $RELEASE_VERSION on private repo..."
+        gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$RELEASE_VERSION" || echo "Tag not found or already deleted"
+
+        # Delete GitHub release on private repo (if exists)
+        echo "Deleting release $RELEASE_VERSION on private repo..."
+        gh release delete "$RELEASE_VERSION" --repo "${{ github.repository }}" --yes || echo "Release not found or already deleted"
+
+        # Delete branch on public repo
+        echo "Deleting branch release/$RELEASE_VERSION on public repo..."
+        gh api -X DELETE "repos/sendbird/sendbird-auth-ios/git/refs/heads/release/$RELEASE_VERSION" || echo "Branch not found or already deleted"
+
+        echo "=== Cleanup complete ==="

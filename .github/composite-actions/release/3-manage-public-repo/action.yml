@@ -33,10 +33,21 @@ runs:
   steps:
     - name: Clone public repository
       shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        PUBLIC_REPO: ${{ inputs.github_public_repo }}
       run: |
-        git clone git@github.com:sendbird/${{ inputs.github_public_repo }}.git ~/public-repo
+        git clone git@github.com:sendbird/${PUBLIC_REPO}.git ~/public-repo
         cd ~/public-repo
-        git checkout -b release/${{ inputs.release_version }}
+
+        # Check if remote branch exists and delete it
+        if git ls-remote --heads origin release/${RELEASE_VERSION} | grep -q release/${RELEASE_VERSION}; then
+          echo "Branch release/${RELEASE_VERSION} exists, deleting..."
+          git push origin --delete release/${RELEASE_VERSION}
+        fi
+
+        git checkout -b release/${RELEASE_VERSION}
 
     - name: Update CHANGELOG.md
       shell: bash
