@@ -1,0 +1,98 @@
+name: PR Comment Bot
+on:
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      test_user:
+        description: 'Username to test permission check'
+        required: true
+        default: ''
+
+jobs:
+  # Manual test job - only runs on workflow_dispatch
+  test-permissions:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Debug - Check token and user permissions
+        env:
+          GH_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          TEST_USER: ${{ inputs.test_user }}
+        run: |
+          echo "=== Token Scope Check ==="
+          SCOPES=$(curl -sI -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user | grep -i x-oauth-scopes | cut -d' ' -f2-)
+          echo "Token scopes: $SCOPES"
+
+          echo "=== Token User Check ==="
+          TOKEN_USER=$(curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user | jq -r '.login')
+          echo "Token user: $TOKEN_USER"
+
+          echo "=== Test User Permission Check ==="
+          echo "Test user: $TEST_USER"
+          PERMISSION=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/collaborators/$TEST_USER/permission" \
+            | jq -r '.permission')
+          echo "User permission: $PERMISSION"
+
+          echo "=== Permission Summary ==="
+          if [[ "$PERMISSION" == "admin" || "$PERMISSION" == "write" ]]; then
+            echo "✅ User has sufficient permission ($PERMISSION)"
+          else
+            echo "❌ User does NOT have write/admin permission ($PERMISSION)"
+          fi
+
+  debug-comment-event:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' && contains(github.event.comment.html_url, '/pull/')
+    steps:
+      - name: Print comment details
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+        run: |
+          echo "Comment URL: $COMMENT_URL"
+          echo "Comment body: $COMMENT_BODY"
+          echo "Comment body length: ${#COMMENT_BODY}"
+          echo "Body contains '/bot create ticket': $(echo "$COMMENT_BODY" | grep -q '/bot create ticket' && echo 'true' || echo 'false')"
+
+  pull_request_comment_create_ticket:
+    # CI: Github Actions (default for auth-ios)
+    if: |
+      github.event_name == 'issue_comment'
+        && contains(github.event.comment.html_url, '/pull/')
+        && contains(github.event.comment.body, '/bot create ticket')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Debug - Check token and user permissions
+        env:
+          GH_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+        run: |
+          echo "=== Token Scope Check ==="
+          SCOPES=$(curl -sI -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user | grep -i x-oauth-scopes | cut -d' ' -f2-)
+          echo "Token scopes: $SCOPES"
+
+          echo "=== Token User Check ==="
+          TOKEN_USER=$(curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user | jq -r '.login')
+          echo "Token user: $TOKEN_USER"
+
+          echo "=== Comment User Permission Check ==="
+          echo "Comment user: $COMMENT_USER"
+          PERMISSION=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/collaborators/$COMMENT_USER/permission" \
+            | jq -r '.permission')
+          echo "User permission: $PERMISSION"
+
+      - uses: sendbird/release-automation-action@latest
+        with:
+          gh_token: ${{ secrets.GH_API_TOKEN }}
+          product: 'auth'
+          platform: 'ios'
+          product_jira_project_key: 'CORE'
+          product_jira_version_prefix: 'auth-ios'
+          ci: 'github'

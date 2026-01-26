@@ -1,0 +1,106 @@
+name: '4. Release Distribution'
+description: 'Create GitHub Release and publish to CocoaPods'
+
+inputs:
+  release_version:
+    description: 'SDK version for release'
+    required: true
+  gh_api_token:
+    description: 'GitHub API token'
+    required: true
+  cocoapods_trunk_token:
+    description: 'CocoaPods trunk token'
+    required: true
+  github_public_repo:
+    description: 'Public repository name'
+    required: true
+  is_test:
+    description: 'Test mode flag'
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: release-artifacts
+
+    - name: Prepare release assets
+      shell: bash
+      run: |
+        mkdir -p release-assets
+
+        # Dynamic framework for SPM
+        cp release-artifacts/dynamic-xcframework/SendbirdAuthSDK.xcframework.zip release-assets/
+
+        # Static framework for SPM
+        cp release-artifacts/static-xcframework/SendbirdAuthSDKStatic.xcframework.zip release-assets/
+
+        # CocoaPods package (Dynamic with LICENSE)
+        cp release-artifacts/dynamic-xcframework/SendbirdAuthSDK.zip release-assets/
+
+        echo "Release assets:"
+        ls -la release-assets/
+
+    - name: Create GitHub Release
+      if: inputs.is_test == 'false'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_api_token }}
+      run: |
+        cd ~/public-repo
+
+        # Read changelog for release notes from private repo
+        RELEASE_NOTES=$(cat $GITHUB_WORKSPACE/CHANGELOG_DRAFT.md || echo "Release ${{ inputs.release_version }}")
+
+        # Create release with assets (Dynamic + Static + CocoaPods)
+        gh release create ${{ inputs.release_version }} \
+          --title "${{ inputs.release_version }}" \
+          --notes "$RELEASE_NOTES" \
+          $GITHUB_WORKSPACE/release-assets/SendbirdAuthSDK.xcframework.zip \
+          $GITHUB_WORKSPACE/release-assets/SendbirdAuthSDKStatic.xcframework.zip \
+          $GITHUB_WORKSPACE/release-assets/SendbirdAuthSDK.zip
+
+    - name: Set up .netrc with CocoaPods token
+      shell: bash
+      env:
+        COCOAPODS_TRUNK_TOKEN: ${{ inputs.cocoapods_trunk_token }}
+      run: |
+        echo "machine trunk.cocoapods.org" >> ~/.netrc
+        echo "  login sha.sdk_deployment@sendbird.com" >> ~/.netrc
+        echo "  password $COCOAPODS_TRUNK_TOKEN" >> ~/.netrc
+        chmod 600 ~/.netrc
+
+    - name: Check CocoaPods trunk user
+      shell: bash
+      run: |
+        pod trunk me
+
+    - name: Lint podspec
+      shell: bash
+      run: |
+        cd ~/public-repo
+        pod spec lint --allow-warnings
+
+    - name: Publish to CocoaPods
+      if: inputs.is_test == 'false'
+      shell: bash
+      env:
+        COCOAPODS_TRUNK_TOKEN: ${{ inputs.cocoapods_trunk_token }}
+      run: |
+        cd ~/public-repo
+
+        echo "Publishing to CocoaPods trunk..."
+        pod trunk push --allow-warnings
+
+    - name: Test mode summary
+      if: inputs.is_test == 'true'
+      shell: bash
+      run: |
+        echo "=== TEST MODE - Distribution Summary ==="
+        echo "Would create GitHub Release: ${{ inputs.release_version }}"
+        echo "Would upload assets:"
+        ls -la release-assets/
+        echo "Would publish to CocoaPods: SendbirdAuthSDK.podspec"
