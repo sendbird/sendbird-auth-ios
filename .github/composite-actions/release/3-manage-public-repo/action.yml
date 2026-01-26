@@ -40,28 +40,25 @@ runs:
 
     - name: Update CHANGELOG.md
       shell: bash
+      env:
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        PUBLIC_REPO: ${{ inputs.github_public_repo }}
       run: |
         cd ~/public-repo
 
-        # Read CHANGELOG_DRAFT.md from private repo
         DRAFT_CONTENT=$(cat $GITHUB_WORKSPACE/CHANGELOG_DRAFT.md)
+        RELEASE_DATE=$(date +"%b %d, %Y")
 
-        # Create new changelog entry
-        NEW_ENTRY="# Changelog
+        echo "# Changelog" > new_changelog.md
+        echo "" >> new_changelog.md
+        echo "## [${RELEASE_VERSION}](https://github.com/sendbird/${PUBLIC_REPO}/releases/tag/${RELEASE_VERSION}) (${RELEASE_DATE})" >> new_changelog.md
+        echo "${DRAFT_CONTENT}" >> new_changelog.md
 
-## [${{ inputs.release_version }}](https://github.com/sendbird/${{ inputs.github_public_repo }}/releases/tag/${{ inputs.release_version }}) ($(date +%b\ %d,\ %Y))
-$DRAFT_CONTENT
-"
-
-        # Check if CHANGELOG.md exists
         if [ -f CHANGELOG.md ]; then
-          # Remove the header and prepend new entry
-          EXISTING=$(tail -n +2 CHANGELOG.md)
-          echo -e "$NEW_ENTRY\n$EXISTING" > CHANGELOG.md
-        else
-          echo -e "$NEW_ENTRY" > CHANGELOG.md
+          tail -n +2 CHANGELOG.md >> new_changelog.md
         fi
 
+        mv new_changelog.md CHANGELOG.md
         echo "Updated CHANGELOG.md"
 
     - name: Generate Package.swift
