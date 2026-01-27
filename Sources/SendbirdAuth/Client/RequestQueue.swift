@@ -22,7 +22,7 @@ import Foundation
         progressHandler: MultiProgressHandler?,
         completion: R.CommandHandler?
     )
-    func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?)
+    func send<R: ResultableWSRequest>(request: R, ackTimeoutHandler: R.CommandHandler?)
     func send<R: WSRequestable>(request: R)
 }
 
@@ -636,35 +636,37 @@ import Foundation
     }
     #endif
     
-    @_spi(SendbirdInternal) public func send<R: ResultableWSRequest>(request: R, completion: R.CommandHandler?) {
+    @_spi(SendbirdInternal) public func send<R: ResultableWSRequest>(request: R, ackTimeoutHandler: R.CommandHandler?) {
         let timeout = requestTimeout
-        
+
         service.async { [weak self] in
             guard let self = self else { return }
-            
+
             let timer = SBTimer(
                 timeInterval: timeout,
                 userInfo: nil,
                 onBoard: nil) {
-                    completion?(nil, AuthClientError.connectionRequired.asAuthError)
+                    ackTimeoutHandler?(nil, AuthClientError.connectionRequired.asAuthError)
                 }
-            
+
             let queueItem: QueuedRequestHandler = {
                 guard timer.valid else { return .process }
-                
+
                 let processResult = self.wsProcessStrategy(request: request)
                 switch processResult {
                 case .onHold:
                     return processResult
                 case .error(let error):
                     timer.abort()
-                    
-                    completion?(nil, error)
+
+                    ackTimeoutHandler?(nil, error)
                     return processResult
                 case .process:
                     timer.abort()
-                    
-                    self.router.send(request: request, completion: completion)
+
+                    Task {
+                        try await self.router.send(request: request, ackTimeoutHandler: ackTimeoutHandler)
+                    }
                     return .process
                 }
             }
@@ -683,7 +685,9 @@ import Foundation
                 case .onHold, .error:
                     return processResult
                 case .process:
-                    self.router.send(request: request)
+                    Task {
+                        try await self.router.send(request: request)
+                    }
                     return processResult
                 }
             }

@@ -1,0 +1,142 @@
+name: 'Setup Release Environment'
+description: 'Prepares the environment for SDK release'
+
+inputs:
+  xcode_version:
+    description: 'Xcode version to use'
+    required: true
+  ssh_key:
+    description: 'SSH key for repository access'
+    required: true
+  gh_api_token:
+    description: 'GitHub API token'
+    required: true
+  gh_token_for_pr_approval:
+    description: 'GitHub token for PR approval'
+    required: true
+
+outputs:
+  release_version:
+    description: 'The extracted release version'
+    value: ${{ steps.extract_version.outputs.release_version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Select Xcode version
+      env:
+        XCODE_VERSION: ${{ inputs.xcode_version }}
+      run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      shell: bash
+
+    - name: Set up SSH Key
+      env:
+        SSH_KEY: ${{ inputs.ssh_key }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+      shell: bash
+
+    - name: Configure git for private SPM dependencies
+      run: |
+        git config --global url."git@github.com:".insteadOf "https://github.com/"
+      shell: bash
+
+    - name: Validate GitHub tokens
+      env:
+        GH_API_TOKEN: ${{ inputs.gh_api_token }}
+        GH_TOKEN_FOR_PR_APPROVAL: ${{ inputs.gh_token_for_pr_approval }}
+      run: |
+        echo "Validating GH_API_TOKEN..."
+        api_user=$(curl -s -H "Authorization: Bearer $GH_API_TOKEN" https://api.github.com/user | jq -r '.login')
+        if [ "$api_user" == "null" ] || [ -z "$api_user" ]; then
+          echo "❌ GH_API_TOKEN is invalid"
+          exit 1
+        fi
+        echo "✅ GH_API_TOKEN is valid (user: $api_user)"
+
+        echo "Validating GH_TOKEN_FOR_PR_APPROVAL..."
+        approval_user=$(curl -s -H "Authorization: Bearer $GH_TOKEN_FOR_PR_APPROVAL" https://api.github.com/user | jq -r '.login')
+        if [ "$approval_user" == "null" ] || [ -z "$approval_user" ]; then
+          echo "❌ GH_TOKEN_FOR_PR_APPROVAL is invalid"
+          exit 1
+        fi
+        echo "✅ GH_TOKEN_FOR_PR_APPROVAL is valid (user: $approval_user)"
+
+        echo "✅ All GitHub tokens are valid"
+      shell: bash
+
+    - name: Clone python scripts from sdk-deployment repository
+      run: |
+        git config --global user.email "sha.sdk_deployment@sendbird.com"
+        git clone --depth 1 --branch main git@github.com:sendbird/sdk-deployment.git ~/sdk-deployment
+
+        ls -la ~/sdk-deployment
+      shell: bash
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12.2'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+
+        pip install -r ~/sdk-deployment/requirements.txt
+      shell: bash
+
+    - name: Check python3
+      run: |
+        which python3
+        python3 --version
+      shell: bash
+
+    - name: Setup brew packages
+      run: |
+        # Update brew
+        brew update
+
+        # Update brew resources - handle packages individually to prevent errors
+        brew_packages=("xcbeautify" "gpg" "xcodegen")
+
+        for package in "${brew_packages[@]}"; do
+          if brew list "$package" &>/dev/null; then
+            echo "$package is already installed, linking..."
+            brew link "$package" || echo "Couldn't link $package, but continuing..."
+          else
+            echo "$package not found, installing..."
+            brew install "$package" || echo "Couldn't install $package, but continuing..."
+          fi
+        done
+      shell: bash
+
+    - name: Select Xcode version
+      env:
+        XCODE_VERSION: ${{ inputs.xcode_version }}
+      run: |
+        sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+
+        echo "Available Xcode versions:"
+        ls /Applications/ | grep Xcode
+        echo "Current XCODE_VERSION: $XCODE_VERSION"
+        echo "Using path: /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer"
+        ls -la "/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer" || echo "Path does not exist"
+      shell: bash
+
+    - name: Generate Xcode Project
+      run: xcodegen generate
+      shell: bash
+
+    - name: Extract release version
+      id: extract_version
+      env:
+        GITHUB_REF_NAME: ${{ github.ref_name }}
+      run: |
+        release_version=$(python3 ~/sdk-deployment/scripts/v1.2/extract_version.py --branch_name $GITHUB_REF_NAME)
+        echo "Release version: $release_version"
+        echo "RELEASE_VERSION=$release_version" >> $GITHUB_ENV
+        echo "release_version=$release_version" >> $GITHUB_OUTPUT
+      shell: bash

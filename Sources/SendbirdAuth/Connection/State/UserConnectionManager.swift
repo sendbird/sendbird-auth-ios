@@ -42,12 +42,12 @@ import Foundation
     func disconnectSocket()
 }
 
-@_spi(SendbirdInternal) public protocol WebSocketManagerDelegate: AnyObject {
-    func didReceiveMessage(_ message: String)
+@_spi(SendbirdInternal) public enum WebsocketManagerEvent {
+    case didReceiveMessage(String)
 }
 
 @_spi(SendbirdInternal) public typealias UserConnectionManager = WebSocketManager
-@_spi(SendbirdInternal) public class WebSocketManager {
+@_spi(SendbirdInternal) public class WebSocketManager: EventStreamable {
     // MARK: Injectable
     @DependencyWrapper private var dependency: Dependency?
     private var service: QueueService? { dependency?.service }
@@ -100,8 +100,6 @@ import Foundation
         statManager?.wsOpenedEvent?.hostURL ?? ""
     }
     
-    @_spi(SendbirdInternal) public weak var delegate: WebSocketManagerDelegate?
-    
     @_spi(SendbirdInternal) public var connectionState: AuthWebSocketConnectionState {
         queue.sync {
             if isConnecting || isReconnecting {
@@ -130,6 +128,11 @@ import Foundation
     private var webSocketEventTask: Task<Void, Never>? // stream consumption
     // !!!: Shouldn't it be much more strict?
     
+    private let eventBroadcaster: AsyncEventBroadcaster<WebsocketManagerEvent>
+    @_spi(SendbirdInternal) public func makeStream() async -> AsyncStream<WebsocketManagerEvent> {
+        await eventBroadcaster.makeStream()
+    }
+    
     @_spi(SendbirdInternal) public init(
         userId: String,
         queue: SafeSerialQueue,
@@ -152,6 +155,8 @@ import Foundation
             sendbirdConfig: sendbirdConfig,
             webSocketEngine: webSocketEngine
         )
+        
+        self.eventBroadcaster = AsyncEventBroadcaster()
         
         // Start consuming websocket events
         // 나중에 actor base로 리팩하면서 Engine처럼 바뀔 거임
@@ -298,7 +303,7 @@ extension WebSocketManager {
             
         case .received(let message):
             Logger.socket.debug("received \(message)")
-            delegate?.didReceiveMessage(message)
+            await eventBroadcaster.yield(.didReceiveMessage(message))
             
         case .timerExpired(let timerType):
             Logger.socket.debug("Timer expired for \(timerType)")

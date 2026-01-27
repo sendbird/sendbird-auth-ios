@@ -7,79 +7,115 @@
 
 import Foundation
 
-@_spi(SendbirdInternal) public enum ACKKey: String {
-    case requestId   = "request_id"
-    case handler     = "handler"
-    case command     = "command"
-    case type        = "type"
-}
+actor AckTimerManager {
+    private struct AckContext {
+        let timer: AsyncTimer
+        let request: AnyResultable
+        let handler: Any?
+    }
+    
+    private var contexts: [String: [AckContext]] = [:]
+     
+     init() {}
+     
+     var isEmpty: Bool {
+         contexts.isEmpty
+     }
 
-@_spi(SendbirdInternal) public final class AckTimerManager {
-    @_spi(SendbirdInternal) public let board: SBTimerBoard
+     func contains(_ requestId: String?) -> Bool {
+         guard let requestId, let contexts = contexts[requestId] else {
+             return false
+         }
+         
+         return !contexts.isEmpty
+     }
     
-    @_spi(SendbirdInternal) public init(board: SBTimerBoard = SBTimerBoard()) {
-        self.board = board
-    }
-    
-    @_spi(SendbirdInternal) public func contains(_ requestId: String?) -> Bool {
-        guard let requestId = requestId else { return false }
-        return board.timer(identifier: requestId) != nil
-    }
-    
-    @_spi(SendbirdInternal) public func handleResponse(with command: SBCommand, error: Error? = nil) {
+    func handleResponse(with command: SBCommand) async {
         guard let identifier = command.reqId else { return }
-        guard let timer = board.timer(identifier: identifier), timer.valid else { return }
-        
-        Logger.external.info("ACK timer: \(timer)")
-        timer.stop()
-        
-        guard let request = timer.userInfo?[ACKKey.command.rawValue] as? AnyResultable else { return }
-        guard let handler = timer.userInfo?[ACKKey.handler.rawValue] else { return }
-        
+        guard let context = popContext(for: identifier) else { return }
+
+        Logger.external.info("ACK timer: identifier=\(identifier) received. Stopping timer.")
+
+        await context.timer.abort()
+
         if let errorCommand = command as? ErrorEvent {
-            request.handleError(errorCommand.asAuthError, handler: handler)
+            context.request.handleError(errorCommand.asAuthError, handler: context.handler)
         } else {
-            request.handleCommand(command, handler: handler)
+            context.request.handleCommand(command, handler: context.handler)
         }
     }
     
-    @_spi(SendbirdInternal) public func register<R: ResultableRequest>(request: R, completionHandler: R.CommandHandler? = nil, timeout: TimeInterval) {
-        guard let identifier = (request as? WSRequestable)?.requestId else { return }
-        
-        let userInfo: [String: Any?] = [
-            ACKKey.command.rawValue: request,
-            ACKKey.handler.rawValue: completionHandler
-        ]
-        
-        SBTimer(
+    func register<R: ResultableRequest>(
+        request: R,
+        completionHandler: R.CommandHandler? = nil,
+        timeout: TimeInterval
+    ) where R: WSRequestable {
+        guard let identifier = request.requestId else { return }
+
+        let timer = AsyncTimer(
             timeInterval: timeout,
-            userInfo: userInfo.compactMapValues { $0 },
-            onBoard: board,
             identifier: identifier
-        ) {
-            completionHandler?(nil, AuthClientError.ackTimeout.asAuthError)
+        )
+        
+        storeContext(
+            AckContext(
+                timer: timer,
+                request: request,
+                handler: completionHandler
+            ),
+            for: identifier
+        )
+        
+        timer.run { [weak self] in
+            guard let self else { return }
+            await self.handleTimeout(for: identifier)
         }
     }
     
-    @_spi(SendbirdInternal) public func clear(completion: (() -> Void)? = nil) {
-        Logger.external.info("Configure ACK Timers.")
-        let timers = board.timers
+    func clear() async {
+        Logger.external.info("Clearing ACK Timers.")
+
+        let contextsToClear = contexts.values.flatMap { $0 }
+        guard !contextsToClear.isEmpty else {
+            return
+        }
+
+        for context in contextsToClear {
+            await context.timer.abort()
+            context.request.handleError(
+                AuthCoreError.requestFailed.asAuthError,
+                handler: context.handler
+            )
+        }
         
-        guard !timers.isEmpty else {
-            completion?()
+        contexts.removeAll()
+    }
+    
+    // MARK: - Private
+    private func storeContext(_ context: AckContext, for identifier: String) {
+        var bucket = contexts[identifier] ?? []
+        bucket.append(context)
+        contexts[identifier] = bucket
+    }
+    
+    private func popContext(for identifier: String) -> AckContext? {
+        guard var bucket = contexts[identifier], !bucket.isEmpty else {
+            return nil
+        }
+
+        let context = bucket.removeFirst()
+        contexts[identifier] = bucket.isEmpty ? nil : bucket
+        return context
+    }
+    
+    private func handleTimeout(for identifier: String) async {
+        guard let context = popContext(for: identifier) else {
             return
         }
         
-        let endIndex = (timers.count - 1)
+        Logger.external.warning("ACK Timeout for requestId: \(identifier)")
         
-        for (index, timer) in timers.enumerated() {
-            timer.stop()
-            defer { if endIndex == index { completion?() } }
-            
-            guard let request = timer.userInfo?[ACKKey.command.rawValue] as? AnyResultable else { return }
-            guard let handler = timer.userInfo?[ACKKey.handler.rawValue] else { return }
-            
-            request.handleError(AuthCoreError.requestFailed.asAuthError, handler: handler)
-        }
+        await context.timer.abort()
+        context.request.handleError(AuthClientError.ackTimeout.asAuthError, handler: context.handler)
     }
 }
