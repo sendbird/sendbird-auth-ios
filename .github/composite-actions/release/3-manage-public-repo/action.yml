@@ -38,16 +38,16 @@ runs:
         RELEASE_VERSION: ${{ inputs.release_version }}
         PUBLIC_REPO: ${{ inputs.github_public_repo }}
       run: |
-        git clone git@github.com:sendbird/${PUBLIC_REPO}.git ~/public-repo
+        git clone git@github.com:sendbird/"${PUBLIC_REPO}".git ~/public-repo
         cd ~/public-repo
 
         # Check if remote branch exists and delete it
-        if git ls-remote --heads origin release/${RELEASE_VERSION} | grep -q release/${RELEASE_VERSION}; then
+        if git ls-remote --heads origin "release/${RELEASE_VERSION}" | grep -q "release/${RELEASE_VERSION}"; then
           echo "Branch release/${RELEASE_VERSION} exists, deleting..."
-          git push origin --delete release/${RELEASE_VERSION}
+          git push origin --delete "release/${RELEASE_VERSION}"
         fi
 
-        git checkout -b release/${RELEASE_VERSION}
+        git checkout -b "release/${RELEASE_VERSION}"
 
     - name: Update CHANGELOG.md
       shell: bash
@@ -74,39 +74,49 @@ runs:
 
     - name: Generate Package.swift
       shell: bash
+      env:
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        SPM_CHECKSUM_DYNAMIC: ${{ inputs.spm_checksum_dynamic }}
+        SPM_CHECKSUM_STATIC: ${{ inputs.spm_checksum_static }}
+        PUBLIC_REPO: ${{ inputs.github_public_repo }}
       run: |
         cd ~/public-repo
         bash $GITHUB_WORKSPACE/scripts/generate_package.sh \
-          -v ${{ inputs.release_version }} \
-          -c ${{ inputs.spm_checksum_dynamic }} \
-          -s ${{ inputs.spm_checksum_static }} \
+          -v "$RELEASE_VERSION" \
+          -c "$SPM_CHECKSUM_DYNAMIC" \
+          -s "$SPM_CHECKSUM_STATIC" \
           -p SendbirdAuthSDK \
-          -r ${{ inputs.github_public_repo }}
+          -r "$PUBLIC_REPO"
 
         echo "Generated Package.swift"
         cat Package.swift
 
     - name: Generate Podspec
       shell: bash
+      env:
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        COCOAPODS_SHA1: ${{ inputs.cocoapods_sha1 }}
       run: |
         cd ~/public-repo
         bash $GITHUB_WORKSPACE/script/generate_podspec.sh \
-          -v ${{ inputs.release_version }} \
-          -s ${{ inputs.cocoapods_sha1 }}
+          -v "$RELEASE_VERSION" \
+          -s "$COCOAPODS_SHA1"
 
         echo "Generated SendbirdAuthSDK.podspec"
         cat SendbirdAuthSDK.podspec
 
     - name: Commit and push changes
       shell: bash
+      env:
+        RELEASE_VERSION: ${{ inputs.release_version }}
       run: |
         cd ~/public-repo
         git config user.name "sendbird-sdk-deployment"
         git config user.email "sha.sdk_deployment@sendbird.com"
 
         git add -A
-        git commit -m "Release ${{ inputs.release_version }}"
-        git push origin release/${{ inputs.release_version }}
+        git commit -m "Release ${RELEASE_VERSION}"
+        git push origin "release/${RELEASE_VERSION}"
 
     - name: Create and merge PR
       if: inputs.is_test == 'false'
@@ -114,13 +124,14 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
         APPROVAL_TOKEN: ${{ inputs.gh_token_for_pr_approval }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
       run: |
         cd ~/public-repo
 
         # Create PR
-        PR_URL=$(gh pr create --base main --head release/${{ inputs.release_version }} \
-          --title "Release ${{ inputs.release_version }}" \
-          --body "## Release ${{ inputs.release_version }}
+        PR_URL=$(gh pr create --base main --head "release/${RELEASE_VERSION}" \
+          --title "Release ${RELEASE_VERSION}" \
+          --body "## Release ${RELEASE_VERSION}
 
         This PR updates:
         - Package.swift for SPM (Dynamic + Static)
@@ -137,9 +148,11 @@ runs:
     - name: Create release tag on public repo
       if: inputs.is_test == 'false'
       shell: bash
+      env:
+        RELEASE_VERSION: ${{ inputs.release_version }}
       run: |
         cd ~/public-repo
         git checkout main
         git pull origin main
-        git tag ${{ inputs.release_version }}
-        git push origin ${{ inputs.release_version }}
+        git tag "$RELEASE_VERSION"
+        git push origin "$RELEASE_VERSION"
