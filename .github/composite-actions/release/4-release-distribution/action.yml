@@ -49,15 +49,16 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_api_token }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
       run: |
         cd ~/public-repo
 
         # Read changelog for release notes from private repo
-        RELEASE_NOTES=$(cat $GITHUB_WORKSPACE/CHANGELOG_DRAFT.md || echo "Release ${{ inputs.release_version }}")
+        RELEASE_NOTES=$(cat $GITHUB_WORKSPACE/CHANGELOG_DRAFT.md || echo "Release ${RELEASE_VERSION}")
 
         # Create release with assets (Dynamic + Static + CocoaPods)
-        gh release create ${{ inputs.release_version }} \
-          --title "${{ inputs.release_version }}" \
+        gh release create "$RELEASE_VERSION" \
+          --title "$RELEASE_VERSION" \
           --notes "$RELEASE_NOTES" \
           $GITHUB_WORKSPACE/release-assets/SendbirdAuthSDK.xcframework.zip \
           $GITHUB_WORKSPACE/release-assets/SendbirdAuthSDKStatic.xcframework.zip \
@@ -79,6 +80,7 @@ runs:
         pod trunk me
 
     - name: Lint podspec
+      if: inputs.is_test == 'false'
       shell: bash
       run: |
         cd ~/public-repo
@@ -98,9 +100,11 @@ runs:
     - name: Test mode summary
       if: inputs.is_test == 'true'
       shell: bash
+      env:
+        RELEASE_VERSION: ${{ inputs.release_version }}
       run: |
         echo "=== TEST MODE - Distribution Summary ==="
-        echo "Would create GitHub Release: ${{ inputs.release_version }}"
+        echo "Would create GitHub Release: ${RELEASE_VERSION}"
         echo "Would upload assets:"
         ls -la release-assets/
         echo "Would publish to CocoaPods: SendbirdAuthSDK.podspec"

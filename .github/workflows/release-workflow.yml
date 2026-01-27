@@ -64,6 +64,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           ssh-key: ${{ secrets.SSH_KEY }}
           fetch-depth: 0
 
@@ -158,3 +159,4 @@ jobs:
           jira_auth_user: ${{ secrets.JIRA_AUTH_USER }}
           jira_auth_api_token: ${{ secrets.JIRA_AUTH_API_TOKEN }}
           is_test: ${{ env.IS_TEST }}
+          gh_api_token: ${{ secrets.GH_API_TOKEN }}
