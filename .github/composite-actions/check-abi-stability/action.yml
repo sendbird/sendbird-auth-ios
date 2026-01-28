@@ -9,7 +9,7 @@ inputs:
   base_branch:
     description: 'The base branch or commit to compare against'
     required: true
-    default: 'master'
+    default: 'main'
   target_branch:
     description: 'The target branch or commit to check'
     required: true
