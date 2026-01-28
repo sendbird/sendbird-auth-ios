@@ -7,11 +7,8 @@
 
 import Foundation
 
-internal final class InstanceRegistry {
-    private let instances = NSMapTable<NSString, SendbirdAuthMain>(
-        keyOptions: .strongMemory,
-        valueOptions: .weakMemory
-    )
+final class InstanceRegistry {
+    private var instances: [String: WeakReference<SendbirdAuthMain>] = [:]
     private let lock = NSLock()
 
     static func createKey(appId: String, apiHostUrl: String?) -> String {
@@ -27,10 +24,10 @@ internal final class InstanceRegistry {
         customRouterConfig: CommandRouterConfiguration? = nil,
         customSendbirdConfig: SendbirdConfiguration? = nil
     ) -> SendbirdAuthMain {
-        let key = Self.createKey(appId: params.applicationId, apiHostUrl: params.customAPIHost) as NSString
+        let key = Self.createKey(appId: params.applicationId, apiHostUrl: params.customAPIHost)
 
         return lock.withLock {
-            if let existing = instances.object(forKey: key) {
+            if let existing = instances[key]?.value {
                 return existing
             }
 
@@ -42,22 +39,22 @@ internal final class InstanceRegistry {
                 customRouterConfig: customRouterConfig,
                 customSendbirdConfig: customSendbirdConfig
             )
-            instances.setObject(newInstance, forKey: key)
+            instances[key] = WeakReference(value: newInstance)
             return newInstance
         }
     }
 
     func get(appId: String, apiHostUrl: String? = nil) -> SendbirdAuthMain? {
-        let key = Self.createKey(appId: appId, apiHostUrl: apiHostUrl) as NSString
+        let key = Self.createKey(appId: appId, apiHostUrl: apiHostUrl)
         return lock.withLock {
-            instances.object(forKey: key)
+            instances[key]?.value
         }
     }
 
     func remove(appId: String, apiHostUrl: String? = nil) {
-        let key = Self.createKey(appId: appId, apiHostUrl: apiHostUrl) as NSString
+        let key = Self.createKey(appId: appId, apiHostUrl: apiHostUrl)
         lock.withLock {
-            instances.removeObject(forKey: key)
+            instances[key] = nil
         }
     }
 
@@ -65,28 +62,28 @@ internal final class InstanceRegistry {
         let appId = instance.applicationId
         let apiHostUrl = instance.routerConfig.apiHost
 
-        let key = Self.createKey(appId: appId, apiHostUrl: apiHostUrl) as NSString
+        let key = Self.createKey(appId: appId, apiHostUrl: apiHostUrl)
         lock.withLock {
-            instances.removeObject(forKey: key)
+            instances[key] = nil
         }
     }
 
     func update(_ instance: SendbirdAuthMain) {
-        let key = Self.createKey(appId: instance.applicationId, apiHostUrl: instance.routerConfig.apiHost) as NSString
+        let key = Self.createKey(appId: instance.applicationId, apiHostUrl: instance.routerConfig.apiHost)
         lock.withLock {
-            instances.setObject(instance, forKey: key)
+            instances[key] = WeakReference(value: instance)
         }
     }
 
     func clear() {
         lock.withLock {
-            instances.removeAllObjects()
+            instances.removeAll()
         }
     }
 
     func first() -> SendbirdAuthMain? {
         lock.withLock {
-            instances.objectEnumerator()?.nextObject() as? SendbirdAuthMain
+            instances.values.first { $0.value != nil }?.value
         }
     }
 }
