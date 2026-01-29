@@ -118,32 +118,60 @@ runs:
         git commit -m "Release ${RELEASE_VERSION}"
         git push origin "release/${RELEASE_VERSION}"
 
-    - name: Create and merge PR
-      if: inputs.is_test == 'false'
+    - name: Git - Public Repo - Create PR (release/xxx -> main)
+      id: create_public_release_pr
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
-        APPROVAL_TOKEN: ${{ inputs.gh_token_for_pr_approval }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        PUBLIC_REPO: ${{ inputs.github_public_repo }}
+      run: |
+        result_pr_number=$(python3 ~/sdk-deployment/scripts/v1.2/github_pr_create.py \
+          --github_api_token $GH_TOKEN \
+          --repo_name $PUBLIC_REPO \
+          --head "release/$RELEASE_VERSION" \
+          --base main \
+          --title "Release $RELEASE_VERSION" \
+          --body "Release $RELEASE_VERSION" \
+          --output_pr_number)
+        echo "PUBLIC_RELEASE_PR_NUMBER=$result_pr_number" >> $GITHUB_ENV
+        echo "public_release_pr_number=$result_pr_number" >> $GITHUB_OUTPUT
+
+    - name: Git - Public Repo - Approve PR (release/xxx -> main)
+      shell: bash
+      env:
+        GH_TOKEN_FOR_PR_APPROVAL: ${{ inputs.gh_token_for_pr_approval }}
+        PUBLIC_REPO: ${{ inputs.github_public_repo }}
+        PUBLIC_RELEASE_PR_NUMBER: ${{ env.PUBLIC_RELEASE_PR_NUMBER }}
         RELEASE_VERSION: ${{ inputs.release_version }}
       run: |
-        cd ~/public-repo
+        curl -L \
+          -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $GH_TOKEN_FOR_PR_APPROVAL" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/repos/sendbird/${PUBLIC_REPO}/pulls/${PUBLIC_RELEASE_PR_NUMBER}/reviews \
+          -d '{"body":"Release '$RELEASE_VERSION'","event":"APPROVE"}'
 
-        # Create PR
-        PR_URL=$(gh pr create --base main --head "release/${RELEASE_VERSION}" \
-          --title "Release ${RELEASE_VERSION}" \
-          --body "## Release ${RELEASE_VERSION}
-
-        This PR updates:
-        - Package.swift for SPM (Dynamic + Static)
-        - SendbirdAuthSDK.podspec for CocoaPods
-        - CHANGELOG.md")
-
-        PR_NUMBER=$(echo $PR_URL | grep -oE '[0-9]+$')
-        echo "Created PR #$PR_NUMBER"
-
-        # Approve and merge
-        GH_TOKEN=$APPROVAL_TOKEN gh pr review $PR_NUMBER --approve
-        gh pr merge $PR_NUMBER --merge --admin
+    - name: Git - Public Repo - Merge PR (release/xxx -> main)
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+        PUBLIC_REPO: ${{ inputs.github_public_repo }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        IS_TEST: ${{ inputs.is_test }}
+      run: |
+        if [ "$IS_TEST" == "true" ]; then
+          echo "python3 ~/sdk-deployment/scripts/v1.2/github_pr_merge.py \\
+            --github_api_token \$GH_TOKEN \\
+            --repo_name $PUBLIC_REPO \\
+            --branch_name release/$RELEASE_VERSION"
+        else
+          python3 ~/sdk-deployment/scripts/v1.2/github_pr_merge.py \
+            --github_api_token $GH_TOKEN \
+            --repo_name $PUBLIC_REPO \
+            --branch_name "release/$RELEASE_VERSION"
+        fi
 
     - name: Create release tag on public repo
       if: inputs.is_test == 'false'
