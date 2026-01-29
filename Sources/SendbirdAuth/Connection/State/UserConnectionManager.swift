@@ -308,7 +308,11 @@ extension WebSocketManager {
         case .timerExpired(let timerType):
             Logger.socket.debug("Timer expired for \(timerType)")
             
-            let request = BaseWSRequest<DefaultResponse>(commandType: .ping, requestId: nil, body: [.id: Date().milliSeconds])
+            let request = BaseWSRequest<DefaultResponse>(
+                commandType: .ping,
+                requestId: nil,
+                body: .param([.id: Date().milliSeconds])
+            )
             try? await webSocketClient.send(request: request)
         }
     }

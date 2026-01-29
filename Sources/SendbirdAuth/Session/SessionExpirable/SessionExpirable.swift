@@ -60,10 +60,10 @@ extension SessionManager: InternalSessionDelegate {
             requestQueue?.sendWS(
                 commandType: .login,
                 requestId: UUID().uuidString,
-                body: [
+                body: .param([
                     .token: authToken,
                     .expiringSession: expiringSession
-                ]
+                ])
             ) { [weak self] (res: Result<LoginEvent, AuthError>) in
                 guard let loginEvent = res.success,
                       let sessionKey = loginEvent.sessionKey,
@@ -75,8 +75,8 @@ extension SessionManager: InternalSessionDelegate {
                     if let authToken { headers["Access-Token"] = authToken }
                     
                     self.requestQueue?.post(
-                        path: .usersSessionKey(userId: self.userId),
-                        body: [.expiringSession: expiringSession],
+                        path: URLPaths.usersSessionKey(userId: self.userId),
+                        body: .param([.expiringSession: expiringSession]),
                         header: headers,
                         isSessionRequired: false,
                         isLoginRequired: false
@@ -98,8 +98,8 @@ extension SessionManager: InternalSessionDelegate {
             if let authToken { headers["Access-Token"] = authToken }
             
             requestQueue?.post(
-                path: .usersSessionKey(userId: userId),
-                body: [.expiringSession: expiringSession],
+                path: URLPaths.usersSessionKey(userId: userId),
+                body: .param([.expiringSession: expiringSession]),
                 header: headers,
                 isSessionRequired: false,
                 isLoginRequired: false

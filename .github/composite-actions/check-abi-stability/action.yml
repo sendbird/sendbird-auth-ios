@@ -1,0 +1,144 @@
+name: 'Check ABI Stability'
+description: 'Compares ABI between branches to detect breaking changes'
+
+inputs:
+  target_name:
+    description: 'The target name to check ABI stability for'
+    required: true
+    default: 'SendbirdAuthSDK'
+  base_branch:
+    description: 'The base branch or commit to compare against'
+    required: true
+    default: 'main'
+  target_branch:
+    description: 'The target branch or commit to check'
+    required: true
+    default: ''
+  fail_on_breaking_changes:
+    description: 'Whether to fail the action if breaking changes are detected'
+    required: false
+    default: 'true'
+
+outputs:
+  has_changes:
+    description: 'Whether there are ABI changes detected'
+    value: ${{ steps.check_results.outputs.has_changes }}
+  changes_count:
+    description: 'Number of detected ABI changes'
+    value: ${{ steps.check_results.outputs.changes_count }}
+  report_path:
+    description: 'Path to the ABI comparison report'
+    value: 'abi_diff.txt'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run ABI comparison script
+      id: run_comparison
+      shell: bash
+      env:
+        TARGET_BRANCH_INPUT: ${{ inputs.target_branch }}
+        BASE_BRANCH: ${{ inputs.base_branch }}
+        TARGET_NAME: ${{ inputs.target_name }}
+      run: |
+        # Stash any current changes
+        echo "Stashing local changes before ABI check..."
+        git status
+        git stash -u
+        echo "Local changes stashed."
+
+        # Store current branch to return to it after comparison
+        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        echo "Current branch: $CURRENT_BRANCH"
+        
+        # Determine target branch if not provided
+        TARGET_BRANCH="$TARGET_BRANCH_INPUT"
+        if [ -z "$TARGET_BRANCH" ]; then
+          TARGET_BRANCH="$CURRENT_BRANCH"
+          echo "Using current branch as target: $TARGET_BRANCH"
+        fi
+        
+        # Fetch the latest commit of both branches
+        echo "Fetching latest commit of base branch: $BASE_BRANCH"
+        git fetch --depth=1 origin $BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH
+        
+        echo "Fetching latest commit of target branch: $TARGET_BRANCH"
+        if [ "$TARGET_BRANCH" != "$CURRENT_BRANCH" ]; then
+          git fetch --depth=1 origin $TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH
+        fi
+        
+        # Create local branches pointing to the latest commits
+        echo "Creating local tracking branches"
+        git branch -f local_base_branch origin/$BASE_BRANCH
+        
+        if [ "$TARGET_BRANCH" != "$CURRENT_BRANCH" ]; then
+          git branch -f local_target_branch origin/$TARGET_BRANCH
+        else
+          git branch -f local_target_branch $CURRENT_BRANCH
+        fi
+        
+        # Run the ABI comparison script with the temporary branches
+        bash ./scripts/compare_abi.sh $TARGET_NAME local_base_branch local_target_branch
+        echo "Show abi_results.txt"
+        cat "abi_results.txt"
+    
+        # Restore stashed changes if needed
+        echo "Restoring stashed changes..."
+        git stash list
+        git stash pop || echo "No stashed changes to restore or merge conflicts occurred"
+        echo "Stash restoration attempted."
+
+        # # Clean up temporary branches
+        # git branch -D local_base_branch
+        # git branch -D local_target_branch
+
+        echo "git branch"
+        git branch
+        
+        echo "git branch --show-current"
+        git branch --show-current
+
+    - name: Check comparison results
+      id: check_results
+      shell: bash
+      run: |
+        # Parse the abi_results.txt file to extract FOUND_CHANGES value
+        if [ -f "abi_results.txt" ]; then
+          # Try to extract FOUND_CHANGES value
+          FOUND_CHANGES=$(grep "FOUND_CHANGES=" abi_results.txt | cut -d'=' -f2)
+
+          # If FOUND_CHANGES is not found, exit 1
+          if [ -z "$FOUND_CHANGES" ]; then
+            echo "🛑 Could not find FOUND_CHANGES in abi_results.txt"
+            exit 1
+          fi
+          
+          echo "Extracted FOUND_CHANGES: $FOUND_CHANGES"
+          
+          # Set outputs for the GitHub Action
+          echo "has_changes=$FOUND_CHANGES" >> $GITHUB_OUTPUT
+        else
+          echo "🛑 abi_results.txt file not found!"
+          exit 1
+        fi
+        
+    - name: Upload ABI comparison report
+      uses: actions/upload-artifact@v4
+      with:
+        name: abi_results
+        path: abi_results.txt
+        if-no-files-found: warn
+    
+    - name: Fail if breaking changes detected
+      shell: bash
+      env:
+        HAS_CHANGES: ${{ steps.check_results.outputs.has_changes }}
+        FAIL_ON_BREAKING_CHANGES: ${{ inputs.fail_on_breaking_changes }}
+      run: |
+        if [ "$HAS_CHANGES" = "true" ] && [ "$FAIL_ON_BREAKING_CHANGES" = "true" ]; then
+          echo "🛑 ABI breaking changes detected!"
+          echo "Please review the full report in the artifacts."
+          exit 1
+        else
+          echo "✅ No ABI breaking changes detected or failure on breaking changes is disabled."
+        fi
