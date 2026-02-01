@@ -58,6 +58,7 @@ enum Configuration {
 // MARK: - Custom Host Configuration
 
 @_spi(SendbirdInternal) public extension SendbirdAuthMain {
+    @available(*, deprecated, message: "Use updateCustomHost(apiHost:wsHost:) instead")
     enum CustomHostEnvironment {
         case nightlydev
         case nightlyrel
@@ -99,6 +100,7 @@ enum Configuration {
     /// Sets custom host URLs for API and WebSocket connections.
     /// - Note: If you want to use release environment's host,
     ///        build configuration should be set to `Release` and clear custom host after setting it.
+    @available(*, deprecated, message: "Use updateCustomHost(apiHost:wsHost:) instead")
     func setCustomHost(_ environment: CustomHostEnvironment) {
         routerConfig.updateHost(apiHost: environment.apiHost, wsHost: environment.wsHost)
     }
@@ -111,6 +113,19 @@ enum Configuration {
         }
         let apiHost = Configuration.apiHostURL(for: applicationId)
         let wsHost = Configuration.wsHostURL(for: applicationId)
+        routerConfig.updateHost(apiHost: apiHost, wsHost: wsHost)
+    }
+
+    /// Updates custom host URLs dynamically after initialization.
+    /// - Parameters:
+    ///   - apiHost: Custom API host URL (e.g., "https://api-no3.sendbirdtest.com")
+    ///   - wsHost: Custom WebSocket host URL (e.g., "wss://ws-no3.sendbirdtest.com")
+    /// - Note: Should be called before connect/authenticate. If already connected, operation is aborted.
+    func updateCustomHost(apiHost: String, wsHost: String) {
+        if router.connected {
+            Logger.main.error("updateCustomHost() called while already connected. Operation aborted.")
+            return
+        }
         routerConfig.updateHost(apiHost: apiHost, wsHost: wsHost)
     }
 }

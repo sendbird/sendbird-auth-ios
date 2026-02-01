@@ -22,8 +22,10 @@ Custom host 관리를 UserDefaults(pref)에서 메모리(routerConfig)로 변경
 
 - `apiHostURL(for:customHost:)`: `customHost` 파라미터 추가, pref 조회 제거
 - `wsHostURL(for:customHost:)`: `customHost` 파라미터 추가, pref 조회 제거
-- `setCustomHost(_:)`: pref 저장 → `routerConfig.updateHost()` 호출로 변경
+- `setCustomHost(_:)`: pref 저장 → `routerConfig.updateHost()` 호출로 변경, **deprecated**
+- `CustomHostEnvironment`: **deprecated** (updateCustomHost 사용 권장)
 - `clearCustomHost()`: pref 삭제 → 기본 host로 `routerConfig.updateHost()` 호출로 변경
+- `updateCustomHost(apiHost:wsHost:)`: **신규 SPI** - init 이후 동적으로 host 변경 (connected 상태면 abort)
 
 ### SendbirdAuthMain.swift
 
