@@ -31,20 +31,18 @@ enum Configuration {
         return defaultHost
     }
 
-    static func apiHostURL(for appId: String) -> String {
-        let pref = SendbirdAuth.pref
-        if let customAPIHost: String = pref.value(forKey: PreferenceKey.customAPIHost) {
-            return customAPIHost
+    static func apiHostURL(for appId: String, customHost: String? = nil) -> String {
+        if let customHost, customHost.hasElements {
+            return customHost
         }
 
         let template = hostURL(for: "API_HOST_URL", default: defaultAPIHost)
         return template.replacingOccurrences(of: "@@", with: appId)
     }
 
-    static func wsHostURL(for appId: String) -> String {
-        let pref = SendbirdAuth.pref
-        if let customWsHost: String = pref.value(forKey: PreferenceKey.customWsHost) {
-            return customWsHost
+    static func wsHostURL(for appId: String, customHost: String? = nil) -> String {
+        if let customHost, customHost.hasElements {
+            return customHost
         }
 
         let template = hostURL(for: "WS_HOST_URL", default: defaultWSHost)
@@ -102,14 +100,13 @@ enum Configuration {
     /// - Note: If you want to use release environment's host,
     ///        build configuration should be set to `Release` and clear custom host after setting it.
     func setCustomHost(_ environment: CustomHostEnvironment) {
-        let pref = SendbirdAuth.pref
-        pref.set(value: environment.apiHost, forKey: PreferenceKey.customAPIHost)
-        pref.set(value: environment.wsHost, forKey: PreferenceKey.customWsHost)
+        routerConfig.updateHost(apiHost: environment.apiHost, wsHost: environment.wsHost)
     }
 
+    /// Clears custom host and reverts to default hosts based on applicationId.
     func clearCustomHost() {
-        let pref = SendbirdAuth.pref
-        pref.remove(forKey: PreferenceKey.customAPIHost)
-        pref.remove(forKey: PreferenceKey.customWsHost)
+        let defaultApiHost = Configuration.apiHostURL(for: applicationId)
+        let defaultWsHost = Configuration.wsHostURL(for: applicationId)
+        routerConfig.updateHost(apiHost: defaultApiHost, wsHost: defaultWsHost)
     }
 }
