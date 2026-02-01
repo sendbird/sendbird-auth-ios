@@ -105,8 +105,12 @@ enum Configuration {
 
     /// Clears custom host and reverts to default hosts based on applicationId.
     func clearCustomHost() {
-        let defaultApiHost = Configuration.apiHostURL(for: applicationId)
-        let defaultWsHost = Configuration.wsHostURL(for: applicationId)
-        routerConfig.updateHost(apiHost: defaultApiHost, wsHost: defaultWsHost)
+        guard applicationId.hasElements else {
+            Logger.main.error("clearCustomHost() called before initialization")
+            return
+        }
+        let apiHost = Configuration.apiHostURL(for: applicationId)
+        let wsHost = Configuration.wsHostURL(for: applicationId)
+        routerConfig.updateHost(apiHost: apiHost, wsHost: wsHost)
     }
 }
