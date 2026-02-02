@@ -30,6 +30,11 @@ import Foundation
     
     @_spi(SendbirdInternal) public var session: Session? {
         get {
+            // Provider가 있으면 provider에서 조회
+            if let provider = sessionProvider {
+                return provider.session(for: userId)
+            }
+            // 기존 로직 (provider 없는 경우 fallback)
             let defaultKey = Session.buildFromUserDefaults()
             if internalSession == nil {
                 internalSession = defaultKey
@@ -43,16 +48,21 @@ import Foundation
             }
             return internalSession
         }
-        
-        set {
-            internalSession = newValue
-            delegate?.sessionKeyChanged(newValue?.key)
-            if let sessionKey = newValue, let userId = stateData?.currentUser?.userId {
-                Session.saveToUserDefaults(session: sessionKey, userId: userId)
-            } else {
-                Session.clearUserDefaults()
-            }
 
+        set {
+            if let provider = sessionProvider {
+                // Provider가 있으면 provider에 저장 (영속성도 provider가 담당)
+                provider.setSession(newValue, for: userId)
+            } else {
+                // 기존 로직
+                internalSession = newValue
+                if let sessionKey = newValue, let userId = stateData?.currentUser?.userId {
+                    Session.saveToUserDefaults(session: sessionKey, userId: userId)
+                } else {
+                    Session.clearUserDefaults()
+                }
+            }
+            delegate?.sessionKeyChanged(newValue?.key)
         }
     }
     
@@ -60,6 +70,8 @@ import Foundation
     @InternalAtomic @_spi(SendbirdInternal) public var eKey: String?
 
     @_spi(SendbirdInternal) public private(set) var userId: String
+
+    @_spi(SendbirdInternal) public private(set) var sessionProvider: SessionProvider?
 
     private let board: SBTimerBoard
     
@@ -91,20 +103,28 @@ import Foundation
         sessionHandler: SessionEventBroadcaster,
         isLocalCachingEnabled: Bool,
         localCachePreference: LocalPreferences,
-        config: SendbirdConfiguration
+        config: SendbirdConfiguration,
+        sessionProvider: SessionProvider? = nil
     ) {
         self.sessionHandler = sessionHandler
-        
+
         self.router = router
         self.board = SBTimerBoard(capacity: 1)
-        
+
         self.applicationId = applicationId
         self.userId = userId
         self.expirationHandler = GuestSessionExpirationHandler(expiringSession: false)
-        
+
         self.localCachePreference = localCachePreference
         self.isLocalCachingEnabled = isLocalCachingEnabled
         self.authenticateQueue = DispatchQueue(label: "com.sendbird.chat.session.authenticate.\(userId)")
+
+        self.sessionProvider = sessionProvider
+        sessionProvider?.addObserver(self)
+    }
+
+    deinit {
+        sessionProvider?.removeObserver(self)
     }
 
     @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
@@ -362,4 +382,12 @@ extension SessionManager: SessionValidator {
     func sessionReconnectRequired()
     func sessionReconnectIfNeeded()
     func sessionRefreshFailed()
+}
+
+extension SessionManager: SessionProviderObserver {
+    @_spi(SendbirdInternal) public func sessionDidChange(_ session: Session?, for userId: String) {
+        guard userId == self.userId else { return }
+        // delegate만 호출 (setter 호출 X → 무한 루프 방지)
+        delegate?.sessionKeyChanged(session?.key)
+    }
 }
