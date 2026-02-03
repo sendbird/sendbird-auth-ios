@@ -23,7 +23,7 @@ final class PersistentSessionProviderTests: XCTestCase {
     // MARK: - Initial State
 
     func testInitialState_sessionIsNil() {
-        XCTAssertNil(sut.session)
+        XCTAssertNil(sut.loadSession(for: userId))
         XCTAssertNil(sut.userId)
     }
 
@@ -32,34 +32,60 @@ final class PersistentSessionProviderTests: XCTestCase {
     func testSetSession_storesSessionAndUserId() {
         // Given
         let session = Session(key: sessionKey, services: [.chat])
+        let expectation = expectation(description: "Session should be set")
+
+        sut.onSessionChanged { _, _ in
+            expectation.fulfill()
+        }
 
         // When
         sut.setSession(session, for: userId)
 
         // Then
-        XCTAssertEqual(sut.session?.key, sessionKey)
+        wait(for: [expectation], timeout: 1.0)
+        XCTAssertEqual(sut.loadSession(for: userId)?.key, sessionKey)
         XCTAssertEqual(sut.userId, userId)
     }
 
     func testSetSession_withNil_clearsSessionAndUserId() {
         // Given
         let session = Session(key: sessionKey, services: [.chat])
+        let setExpectation = expectation(description: "Session should be set")
+        let clearExpectation = expectation(description: "Session should be cleared")
+        var callCount = 0
+
+        sut.onSessionChanged { _, _ in
+            callCount += 1
+            if callCount == 1 {
+                setExpectation.fulfill()
+            } else if callCount == 2 {
+                clearExpectation.fulfill()
+            }
+        }
         sut.setSession(session, for: userId)
+        wait(for: [setExpectation], timeout: 1.0)
 
         // When
         sut.setSession(nil, for: userId)
 
         // Then
-        XCTAssertNil(sut.session)
+        wait(for: [clearExpectation], timeout: 1.0)
+        XCTAssertNil(sut.loadSession(for: userId))
         XCTAssertNil(sut.userId)
     }
 
     func testSetSession_persistsToUserDefaults() {
         // Given
         let session = Session(key: sessionKey, services: [.chat, .feed])
+        let expectation = expectation(description: "Session should be set")
+
+        sut.onSessionChanged { _, _ in
+            expectation.fulfill()
+        }
 
         // When
         sut.setSession(session, for: userId)
+        wait(for: [expectation], timeout: 1.0)
 
         // Then - verify persistence by loading in new instance
         let newProvider = PersistentSessionProvider()
@@ -75,7 +101,13 @@ final class PersistentSessionProviderTests: XCTestCase {
         // Given - 다른 인스턴스에서 저장
         let otherProvider = PersistentSessionProvider()
         let session = Session(key: sessionKey, services: [.chat])
+        let expectation = expectation(description: "Session should be set")
+
+        otherProvider.onSessionChanged { _, _ in
+            expectation.fulfill()
+        }
         otherProvider.setSession(session, for: userId)
+        wait(for: [expectation], timeout: 1.0)
 
         // When - 새 인스턴스에서 로드
         let loadedSession = sut.loadSession(for: userId)
@@ -83,14 +115,20 @@ final class PersistentSessionProviderTests: XCTestCase {
         // Then
         XCTAssertNotNil(loadedSession)
         XCTAssertEqual(loadedSession?.key, sessionKey)
-        XCTAssertEqual(sut.session?.key, sessionKey)
+        XCTAssertEqual(sut.loadSession(for: userId)?.key, sessionKey)
         XCTAssertEqual(sut.userId, userId)
     }
 
     func testLoadSession_withDifferentUserId_returnsNil() {
         // Given
         let session = Session(key: sessionKey, services: [.chat])
+        let expectation = expectation(description: "Session should be set")
+
+        sut.onSessionChanged { _, _ in
+            expectation.fulfill()
+        }
         sut.setSession(session, for: userId)
+        wait(for: [expectation], timeout: 1.0)
 
         // When
         let newProvider = PersistentSessionProvider()
@@ -151,21 +189,29 @@ final class PersistentSessionProviderTests: XCTestCase {
     func testOnSessionChanged_notifiesOnClear() {
         // Given
         let session = Session(key: sessionKey, services: [.chat])
-        sut.setSession(session, for: userId)
-
-        let expectation = expectation(description: "Handler should be called on clear")
+        let setExpectation = expectation(description: "Session should be set")
+        let clearExpectation = expectation(description: "Handler should be called on clear")
+        var callCount = 0
         var receivedSession: Session?
 
         sut.onSessionChanged { session, _ in
-            receivedSession = session
-            expectation.fulfill()
+            callCount += 1
+            if callCount == 1 {
+                setExpectation.fulfill()
+            } else if callCount == 2 {
+                receivedSession = session
+                clearExpectation.fulfill()
+            }
         }
+
+        sut.setSession(session, for: userId)
+        wait(for: [setExpectation], timeout: 1.0)
 
         // When
         sut.setSession(nil, for: userId)
 
         // Then
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [clearExpectation], timeout: 1.0)
         XCTAssertNil(receivedSession)
     }
 

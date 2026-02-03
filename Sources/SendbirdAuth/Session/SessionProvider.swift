@@ -38,6 +38,7 @@ import Foundation
                 }
 
                 self.session = savedSession
+                self.userId = userId
                 return savedSession
             }
         }
@@ -50,7 +51,7 @@ import Foundation
         
         queue.async {
             self.session = session
-            self.userId = userId
+            self.userId = session != nil ? userId : nil
 
             if let session = session {
                 Session.saveToUserDefaults(session: session, userId: userId)
@@ -58,7 +59,7 @@ import Foundation
                 Session.clearUserDefaults()
             }
 
-            self.notifyHandlers(session: session, userId: userId)
+            self.notifyHandlers(session: session, userId: self.userId)
         }
     }
 
