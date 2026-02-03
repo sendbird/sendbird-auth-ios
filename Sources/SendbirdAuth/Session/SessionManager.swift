@@ -28,9 +28,10 @@ import Foundation
     
     @_spi(SendbirdInternal) public var session: Session? {
         get {
-            sessionProvider.session
+            sessionProvider.loadSession(for: userId)
         }
         set {
+            guard userId.isEmpty == false else { return }
             sessionProvider.setSession(newValue, for: userId)
             delegate?.sessionKeyChanged(newValue?.key)
         }
