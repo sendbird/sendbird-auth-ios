@@ -7,15 +7,10 @@
 
 import Foundation
 
-@_spi(SendbirdInternal) public protocol SessionProviderObserver: AnyObject {
-    func sessionDidChange(_ session: Session?, for userId: String)
-}
-
 @_spi(SendbirdInternal) public protocol SessionProvider: AnyObject {
     func session(for userId: String) -> Session?
     func setSession(_ session: Session?, for userId: String)
-    func addObserver(_ observer: SessionProviderObserver)
-    func removeObserver(_ observer: SessionProviderObserver)
+    func onSessionChanged(_ handler: @escaping (Session?, String) -> Void)
 }
 
 /// SDK 제공 기본 구현체 - UserDefaults 영속성 포함
@@ -23,7 +18,7 @@ import Foundation
     @_spi(SendbirdInternal) public static let shared = SharedSessionProvider()
 
     @InternalAtomic private var sessions: [String: Session] = [:]
-    private let observers = NSHashTable<AnyObject>.weakObjects()
+    private var handlers: [(Session?, String) -> Void] = []
     private let lock = NSLock()
 
     @_spi(SendbirdInternal) public init() {}
@@ -50,29 +45,21 @@ import Foundation
             Session.clearUserDefaults()
         }
 
-        // Observer들에게 통지
-        notifyObservers(session: session, userId: userId)
+        // Handler들에게 통지
+        notifyHandlers(session: session, userId: userId)
     }
 
-    @_spi(SendbirdInternal) public func addObserver(_ observer: SessionProviderObserver) {
+    @_spi(SendbirdInternal) public func onSessionChanged(_ handler: @escaping (Session?, String) -> Void) {
         lock.lock()
         defer { lock.unlock() }
-        observers.add(observer)
+        handlers.append(handler)
     }
 
-    @_spi(SendbirdInternal) public func removeObserver(_ observer: SessionProviderObserver) {
+    private func notifyHandlers(session: Session?, userId: String) {
         lock.lock()
-        defer { lock.unlock() }
-        observers.remove(observer)
-    }
-
-    private func notifyObservers(session: Session?, userId: String) {
-        lock.lock()
-        let currentObservers = observers.allObjects
+        let currentHandlers = handlers
         lock.unlock()
 
-        currentObservers
-            .compactMap { $0 as? SessionProviderObserver }
-            .forEach { $0.sessionDidChange(session, for: userId) }
+        currentHandlers.forEach { $0(session, userId) }
     }
 }

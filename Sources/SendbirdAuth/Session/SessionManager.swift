@@ -120,11 +120,10 @@ import Foundation
         self.authenticateQueue = DispatchQueue(label: "com.sendbird.chat.session.authenticate.\(userId)")
 
         self.sessionProvider = sessionProvider
-        sessionProvider?.addObserver(self)
-    }
-
-    deinit {
-        sessionProvider?.removeObserver(self)
+        sessionProvider?.onSessionChanged { [weak self] session, userId in
+            guard let self, userId == self.userId else { return }
+            self.delegate?.sessionKeyChanged(session?.key)
+        }
     }
 
     @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
@@ -382,12 +381,4 @@ extension SessionManager: SessionValidator {
     func sessionReconnectRequired()
     func sessionReconnectIfNeeded()
     func sessionRefreshFailed()
-}
-
-extension SessionManager: SessionProviderObserver {
-    @_spi(SendbirdInternal) public func sessionDidChange(_ session: Session?, for userId: String) {
-        guard userId == self.userId else { return }
-        // delegate만 호출 (setter 호출 X → 무한 루프 방지)
-        delegate?.sessionKeyChanged(session?.key)
-    }
 }
