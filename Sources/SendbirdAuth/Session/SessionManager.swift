@@ -74,7 +74,7 @@ import Foundation
         isLocalCachingEnabled: Bool,
         localCachePreference: LocalPreferences,
         config: SendbirdConfiguration,
-        sessionProvider: SessionProvider
+        sessionProvider: SessionProvider = PersistentSessionProvider()
     ) {
         self.sessionHandler = sessionHandler
 
