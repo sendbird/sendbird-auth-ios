@@ -46,7 +46,7 @@ import Foundation
     @_spi(SendbirdInternal) public func setSession(_ session: Session?, for userId: String) {
         lock.lock()
         self.session = session
-        self.userId = session != nil ? userId : nil
+        self.userId = if session != nil { userId } else { nil }
         lock.unlock()
 
         // UserDefaults에 저장
