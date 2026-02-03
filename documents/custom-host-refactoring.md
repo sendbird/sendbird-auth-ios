@@ -29,9 +29,12 @@ Custom host 관리를 UserDefaults(pref)에서 메모리(routerConfig)로 변경
 
 ### SendbirdAuthMain.swift
 
-- `init()`: pref 저장 제거, custom host를 Configuration 메서드에 직접 전달
-- `connect()`: pref 저장/삭제 제거 (private connect에서 routerConfig.updateHost 호출됨)
-- `authenticate()`: pref 저장/삭제 제거
+- **신규 property 추가**:
+  - `defaultApiHost`, `defaultWsHost`: init 시 계산된 기본 host (불변)
+  - `currentApiHost`, `currentWsHost`: 현재 설정된 host 추적
+- `init()`: pref 저장 제거, 기본/현재 host property 초기화
+- `private connect()`: nil이면 기본값 사용, 값 변경 시에만 routerConfig 업데이트
+- `private authenticate()`: nil이면 기본값 사용, 값 변경 시에만 routerConfig 업데이트
 
 ## API 변경사항
 

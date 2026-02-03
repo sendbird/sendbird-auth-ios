@@ -7,6 +7,31 @@
 
 import Foundation
 
+extension Configuration {
+    struct HostEnvironments {
+        let apiHost: String
+        let wsHost: String
+        
+        init(
+            applicationId: String,
+            customAPIHost: String? = nil,
+            customWSHost: String? = nil
+        ) {
+            if let apiHost = customAPIHost, apiHost.hasElements {
+                self.apiHost = apiHost
+            } else {
+                self.apiHost = Configuration.apiHostURL(for: applicationId)
+            }
+            
+            if let wsHost = customWSHost, wsHost.hasElements {
+                self.wsHost = wsHost
+            } else {
+                self.wsHost = Configuration.wsHostURL(for: applicationId)
+            }
+        }
+    }
+}
+
 enum Configuration {
     // MARK: - Environment URLs (hardcoded for SPM build config)
 
@@ -31,20 +56,12 @@ enum Configuration {
         return defaultHost
     }
 
-    static func apiHostURL(for appId: String, customHost: String? = nil) -> String {
-        if let customHost, customHost.hasElements {
-            return customHost
-        }
-
+    static func apiHostURL(for appId: String) -> String {
         let template = hostURL(for: "API_HOST_URL", default: defaultAPIHost)
         return template.replacingOccurrences(of: "@@", with: appId)
     }
 
-    static func wsHostURL(for appId: String, customHost: String? = nil) -> String {
-        if let customHost, customHost.hasElements {
-            return customHost
-        }
-
+    static func wsHostURL(for appId: String) -> String {
         let template = hostURL(for: "WS_HOST_URL", default: defaultWSHost)
         return template.replacingOccurrences(of: "@@", with: appId)
     }
@@ -111,9 +128,8 @@ enum Configuration {
             Logger.main.error("clearCustomHost() called before initialization")
             return
         }
-        let apiHost = Configuration.apiHostURL(for: applicationId)
-        let wsHost = Configuration.wsHostURL(for: applicationId)
-        routerConfig.updateHost(apiHost: apiHost, wsHost: wsHost)
+        let host = Configuration.HostEnvironments(applicationId: applicationId)
+        routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
     }
 
     /// Updates custom host URLs dynamically after initialization.
@@ -126,6 +142,12 @@ enum Configuration {
             Logger.main.error("updateCustomHost() called while already connected. Operation aborted.")
             return
         }
-        routerConfig.updateHost(apiHost: apiHost, wsHost: wsHost)
+        
+        let host = Configuration.HostEnvironments.init(
+            applicationId: self.applicationId,
+            customAPIHost: apiHost,
+            customWSHost: wsHost,
+        )
+        routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
     }
 }

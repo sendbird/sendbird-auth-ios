@@ -105,9 +105,15 @@ import Foundation
 
         // NOTE: apiHost/wsHost are stored in routerConfig (in-memory) and share its lifecycle.
         // They are not persisted to UserDefaults. Use setCustomHost() or connect(apiHost:wsHost:) to update after init.
-        let apiHost = Configuration.apiHostURL(for: params.applicationId, customHost: params.customAPIHost)
-        let wsHost = Configuration.wsHostURL(for: params.applicationId, customHost: params.customWSHost)
-
+        let host = Configuration.HostEnvironments.init(
+            applicationId: params.applicationId,
+            customAPIHost: params.customAPIHost,
+            customWSHost: params.customWSHost,
+        )
+        
+        let apiHost = host.apiHost
+        let wsHost = host.wsHost
+        
         // INFO: initialize 과정에서는 service 를 고객이 설정할 수 없음. init 후 setCompletionHandlerDelegateQueue 호출되야 queue 변경 가능
         let service = QueueService()
         let dispatcher = EventDispatcher()
@@ -525,7 +531,17 @@ extension SendbirdAuthMain {
         completionHandler: AuthUserHandler?
     ) {
         Logger.main.debug()
-        routerConfig.updateHost(apiHost: apiHost, wsHost: wsHost)
+
+        let host = Configuration.HostEnvironments.init(
+            applicationId: self.applicationId,
+            customAPIHost: apiHost,
+            customWSHost: wsHost,
+        )
+        
+        if routerConfig.apiHost != host.apiHost || routerConfig.wsHost != host.wsHost {
+            routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
+        }
+        
         sessionManager.connect(authToken: accessToken, sessionKey: sessionKey, loginHandler: completionHandler)
     }
 }
@@ -641,7 +657,15 @@ extension SendbirdAuthMain {
         apiHost: String?,
         completionHandler: AuthUserHandler?
     ) {
-        routerConfig.updateHost(apiHost: apiHost, wsHost: nil)
+        let host = Configuration.HostEnvironments.init(
+            applicationId: self.applicationId,
+            customAPIHost: apiHost
+        )
+        
+        if routerConfig.apiHost != host.apiHost {
+            routerConfig.updateHost(apiHost: host.apiHost, wsHost: nil)
+        }
+
         sessionManager.authenticate(authData: authData, loginHandler: completionHandler)
     }
 }
