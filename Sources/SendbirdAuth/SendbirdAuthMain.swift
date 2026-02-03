@@ -47,7 +47,7 @@ import Foundation
     @_spi(SendbirdInternal) public let applicationId: String
 
     /// Session provider for sharing session across multiple SDK instances.
-    @_spi(SendbirdInternal) public private(set) var sessionProvider: SessionProvider?
+    @_spi(SendbirdInternal) public private(set) var sessionProvider: SessionProvider
 
     /// Instance-specific preferences (isolated per appId + apiHostUrl)
     @_spi(SendbirdInternal) public let preference: LocalPreferences
@@ -171,7 +171,7 @@ import Foundation
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             localCachePreference: localCachePreference,
             config: config,
-            sessionProvider: params.sessionProvider
+            sessionProvider: params.sessionProvider ?? PersistentSessionProvider.shared
         )
         sessionManager = placeHolderSessionManager
 
@@ -212,7 +212,7 @@ import Foundation
         appVersion = params.appVersion
         self.routerConfig = routerConfig
         isLocalCachingEnabled = params.isLocalCachingEnabled
-        self.sessionProvider = params.sessionProvider
+        self.sessionProvider = params.sessionProvider ?? PersistentSessionProvider.shared
 
         self.sessionHandler = sessionHandler
 

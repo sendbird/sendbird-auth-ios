@@ -26,42 +26,12 @@ import Foundation
     
     @_spi(SendbirdInternal) public static let minimumExpiresInForWSRefresh = 5
     
-    @InternalAtomic @_spi(SendbirdInternal) public var internalSession: Session?
-    
     @_spi(SendbirdInternal) public var session: Session? {
         get {
-            // Provider가 있으면 provider에서 조회
-            if let provider = sessionProvider {
-                return provider.session(for: userId)
-            }
-            // 기존 로직 (provider 없는 경우 fallback)
-            let defaultKey = Session.buildFromUserDefaults()
-            if internalSession == nil {
-                internalSession = defaultKey
-            } else if let sessionKey = internalSession,
-                      sessionKey != defaultKey {
-                if let userId = stateData?.currentUser?.userId {
-                    Session.saveToUserDefaults(session: sessionKey, userId: userId)
-                } else {
-                    Session.clearUserDefaults()
-                }
-            }
-            return internalSession
+            sessionProvider.session
         }
-
         set {
-            if let provider = sessionProvider {
-                // Provider가 있으면 provider에 저장 (영속성도 provider가 담당)
-                provider.setSession(newValue, for: userId)
-            } else {
-                // 기존 로직
-                internalSession = newValue
-                if let sessionKey = newValue, let userId = stateData?.currentUser?.userId {
-                    Session.saveToUserDefaults(session: sessionKey, userId: userId)
-                } else {
-                    Session.clearUserDefaults()
-                }
-            }
+            sessionProvider.setSession(newValue, for: userId)
             delegate?.sessionKeyChanged(newValue?.key)
         }
     }
@@ -71,7 +41,7 @@ import Foundation
 
     @_spi(SendbirdInternal) public private(set) var userId: String
 
-    @_spi(SendbirdInternal) public private(set) var sessionProvider: SessionProvider?
+    @_spi(SendbirdInternal) public private(set) var sessionProvider: any SessionProvider
 
     private let board: SBTimerBoard
     
@@ -104,7 +74,7 @@ import Foundation
         isLocalCachingEnabled: Bool,
         localCachePreference: LocalPreferences,
         config: SendbirdConfiguration,
-        sessionProvider: SessionProvider? = nil
+        sessionProvider: SessionProvider
     ) {
         self.sessionHandler = sessionHandler
 
@@ -120,8 +90,8 @@ import Foundation
         self.authenticateQueue = DispatchQueue(label: "com.sendbird.chat.session.authenticate.\(userId)")
 
         self.sessionProvider = sessionProvider
-        sessionProvider?.onSessionChanged { [weak self] session, userId in
-            guard let self, userId == self.userId else { return }
+        sessionProvider.onSessionChanged { [weak self] session, _ in
+            guard let self else { return }
             self.delegate?.sessionKeyChanged(session?.key)
         }
     }
