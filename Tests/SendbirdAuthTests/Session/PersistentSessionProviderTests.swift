@@ -47,7 +47,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         XCTAssertEqual(sut.userId, userId)
     }
 
-    func testSetSession_withNil_clearsSessionAndUserId() {
+    func testSetSession_withNil_clearsSession() {
         // Given
         let session = Session(key: sessionKey, services: [.chat])
         let setExpectation = expectation(description: "Session should be set")
@@ -71,7 +71,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         // Then
         wait(for: [clearExpectation], timeout: 1.0)
         XCTAssertNil(sut.loadSession(for: userId))
-        XCTAssertNil(sut.userId)
+        XCTAssertEqual(sut.userId, userId)
     }
 
     func testSetSession_persistsToUserDefaults() {

@@ -51,7 +51,7 @@ import Foundation
         
         queue.async {
             self.session = session
-            self.userId = session != nil ? userId : nil
+            self.userId = userId
 
             if let session = session {
                 Session.saveToUserDefaults(session: session, userId: userId)
