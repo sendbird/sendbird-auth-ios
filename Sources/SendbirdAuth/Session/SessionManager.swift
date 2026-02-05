@@ -28,10 +28,17 @@ import Foundation
     
     @_spi(SendbirdInternal) public var session: Session? {
         get {
-            sessionProvider.loadSession(for: userId)
+            guard userId.isEmpty == false else {
+                return nil
+            }
+            
+            return sessionProvider.loadSession(for: userId)
         }
         set {
-            guard userId.isEmpty == false else { return }
+            guard userId.isEmpty == false else {
+                return
+            }
+
             sessionProvider.setSession(newValue, for: userId)
         }
     }
