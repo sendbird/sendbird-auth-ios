@@ -108,7 +108,7 @@ import Foundation
         let host = Configuration.HostEnvironments.init(
             applicationId: params.applicationId,
             customAPIHost: params.customAPIHost,
-            customWSHost: params.customWSHost,
+            customWSHost: params.customWSHost
         )
         
         let apiHost = host.apiHost
@@ -535,7 +535,7 @@ extension SendbirdAuthMain {
         let host = Configuration.HostEnvironments.init(
             applicationId: self.applicationId,
             customAPIHost: apiHost,
-            customWSHost: wsHost,
+            customWSHost: wsHost
         )
         
         if routerConfig.apiHost != host.apiHost || routerConfig.wsHost != host.wsHost {
