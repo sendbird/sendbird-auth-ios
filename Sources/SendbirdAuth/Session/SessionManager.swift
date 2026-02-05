@@ -95,6 +95,11 @@ import Foundation
             guard let self else { return }
             self.delegate?.sessionKeyChanged(session?.key)
         }
+        sessionProvider.onSessionRefreshed { [weak self] session in
+            guard let self else { return }
+            self.session = session
+            self.sessionHandler.wasRefreshed()
+        }
     }
 
     @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
@@ -301,8 +306,16 @@ extension SessionManager: EventDelegate {
         switch error?.errorCode {
         case .accessTokenNotValid:
             expirationHandler.refreshSessionToken()
-            
+
         case .sessionKeyExpired:
+            // 다른 SDK가 이미 갱신한 세션이 있는지 확인
+            if let currentSession = session,
+               let refreshedSession = sessionProvider.requestRefresh(current: currentSession) {
+                // 이미 갱신된 세션 사용
+                self.session = refreshedSession
+                return
+            }
+
             session = nil
             expirationHandler.refreshSessionKey(
                 shouldRetry: true,
@@ -311,10 +324,10 @@ extension SessionManager: EventDelegate {
 
         case .sessionTokenRevoked:
             sessionHandler.wasClosed()
-            
+
         case .userDeactivated, .userNotExist:
             sessionHandler.wasClosed()
-            
+
         default: break
         }
     }
