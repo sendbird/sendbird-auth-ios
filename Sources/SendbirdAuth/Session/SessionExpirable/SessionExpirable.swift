@@ -31,13 +31,14 @@ extension SessionManager: InternalSessionDelegate {
     
     @_spi(SendbirdInternal) public func didSessionKeyRefresh(key: Session, requireReconnect: Bool) {
         // 새 세션을 SessionProvider에 제출 (롤백 방지 검증)
+        // submitRefreshedSession이 Provider 내부 세션을 업데이트하고 onSessionChanged 콜백 호출
         guard sessionProvider.submitRefreshedSession(key) else {
             // 이미 사용된 키면 거부됨 - 현재 저장된 세션 사용
             return
         }
 
         stateData?.update(with: key.key)
-        session = key
+        sessionHandler.wasRefreshed()
 
         // Update connection state ONLY when session key was refreshed via API.
         // If refreshed via WS, connection state should remain Connected.
@@ -46,8 +47,6 @@ extension SessionManager: InternalSessionDelegate {
         }
 
         sessionHandler.didHaveError(AuthClientError.sessionKeyRefreshSucceeded.asAuthError)
-        // wasRefreshed는 submitRefreshedSession의 onSessionRefreshed 콜백에서 호출됨
-
         router.eventDispatcher.dispatch(command: SessionExpirationEvent.Refreshed())
     }
     

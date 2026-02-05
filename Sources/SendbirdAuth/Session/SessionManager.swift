@@ -33,7 +33,6 @@ import Foundation
         set {
             guard userId.isEmpty == false else { return }
             sessionProvider.setSession(newValue, for: userId)
-            delegate?.sessionKeyChanged(newValue?.key)
         }
     }
     
@@ -91,14 +90,9 @@ import Foundation
         self.authenticateQueue = DispatchQueue(label: "com.sendbird.chat.session.authenticate.\(userId)")
 
         self.sessionProvider = sessionProvider
-        sessionProvider.onSessionChanged { [weak self] session, _ in
+        sessionProvider.onSessionChanged { [weak self] newSession in
             guard let self else { return }
-            self.delegate?.sessionKeyChanged(session?.key)
-        }
-        sessionProvider.onSessionRefreshed { [weak self] session in
-            guard let self else { return }
-            self.session = session
-            self.sessionHandler.wasRefreshed()
+            delegate?.sessionKeyChanged(newSession?.key)
         }
     }
 

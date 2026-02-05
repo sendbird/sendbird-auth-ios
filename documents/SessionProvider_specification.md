@@ -30,7 +30,7 @@ else:
 | 반환값 | 처리 |
 |--------|------|
 | `Session` | 해당 세션으로 API 재요청 |
-| `nil` | 토큰 갱신 진행 (갱신 로직 있는 SDK만) 또는 `onSessionRefreshed` 콜백 대기 |
+| `nil` | 토큰 갱신 진행 (갱신 로직 있는 SDK만) 또는 `onSessionChanged` 콜백 대기 |
 
 ---
 
@@ -50,20 +50,9 @@ if newSession.key in knownKeys:
 else:
     knownKeys.insert(newSession.key)
     저장된 세션 = newSession
-    onSessionRefreshed 콜백 호출
+    onSessionChanged 콜백 호출
     return true
 ```
-
----
-
-### `onSessionRefreshed(handler: (Session) -> Void)`
-
-| 항목          | 내용                          |
-| ------------- | ----------------------------- |
-| **호출 시점** | SDK 초기화 시                 |
-| **용도**      | 다른 SDK가 갱신한 세션을 수신 |
-
-**콜백 발생 조건**: `submitRefreshedSession`에서 새 세션이 채택되었을 때
 
 ---
 
@@ -79,20 +68,18 @@ else:
 
 ## 콜백 규칙
 
-### `onSessionChanged`
+### `onSessionChanged(handler: (Session?) -> Void)`
 
-| 조건                 | 콜백 호출     |
-| -------------------- | ------------- |
-| 새 세션 ≠ 기존 세션  | ✅ 호출       |
-| 새 세션 == 기존 세션 | ❌ 호출 안 함 |
+| 항목          | 내용                          |
+| ------------- | ----------------------------- |
+| **호출 시점** | SDK 초기화 시                 |
+| **용도**      | 세션 변경 알림 수신 |
 
-**중복 호출 방지**: 동일한 세션으로 `setSession`을 여러 번 호출해도 콜백은 1번만 발생해야 합니다.
-
-### `onSessionRefreshed`
-
-| 조건                                          | 콜백 호출     |
-| --------------------------------------------- | ------------- |
-| `submitRefreshedSession`에서 새 세션 채택됨   | ✅ 호출       |
+**콜백 발생 조건**:
+| 트리거 | 콜백 호출 |
+|--------|-----------|
+| `setSession` 호출 | ✅ 호출 |
+| `submitRefreshedSession`에서 새 세션 채택됨 | ✅ 호출 |
 | `submitRefreshedSession`에서 기존 세션 유지됨 | ❌ 호출 안 함 |
 
 ---
@@ -109,8 +96,8 @@ sequenceDiagram
     participant API as API Server
 
     Note over Chat,Desk: 초기화 시 콜백 등록
-    Chat->>Provider: onSessionRefreshed(handler)
-    Desk->>Provider: onSessionRefreshed(handler)
+    Chat->>Provider: onSessionChanged(handler)
+    Desk->>Provider: onSessionChanged(handler)
 
     Note over Chat,API: 두 SDK가 동시에 401 받음
 
@@ -128,8 +115,8 @@ sequenceDiagram
 
     Chat->>Provider: submitRefreshedSession(v2)
 
-    Provider--)Chat: onSessionRefreshed(v2)
-    Provider--)Desk: onSessionRefreshed(v2)
+    Provider--)Chat: onSessionChanged(v2)
+    Provider--)Desk: onSessionChanged(v2)
 
     Note over Chat,Desk: 두 SDK 모두 v2 세션 사용
 ```
@@ -168,15 +155,13 @@ classDiagram
         +requestRefresh(current: Session) Session?
         +submitRefreshedSession(newSession: Session) Bool
         +onSessionChanged(handler)
-        +onSessionRefreshed(handler)
     }
 
     class PersistentSessionProvider {
         -session: Session?
         -knownKeys: Set~String~
         -userId: String?
-        -sessionChangedHandlers: [Handler]
-        -sessionRefreshedHandlers: [Handler]
+        -handlers: [Handler]
         -queue: SafeSerialQueue
         +shared: PersistentSessionProvider
     }
@@ -209,6 +194,6 @@ stateDiagram-v2
         [*] --> Valid
         Valid --> Expired: API 401
         Expired --> Valid: requestRefresh() → Session
-        Expired --> Valid: onSessionRefreshed 콜백
+        Expired --> Valid: onSessionChanged 콜백
     }
 ```

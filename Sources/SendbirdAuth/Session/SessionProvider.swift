@@ -12,7 +12,9 @@ import Foundation
 @_spi(SendbirdInternal) public protocol SessionProvider {
     func setSession(_ session: Session?, for userId: String)
     func loadSession(for userId: String) -> Session?
-    func onSessionChanged(_ handler: @escaping (Session?, String?) -> Void)
+
+    /// 세션 변경 시 호출되는 콜백 등록
+    func onSessionChanged(_ handler: @escaping (Session?) -> Void)
 
     // MARK: - Refresh Coordination
 
@@ -21,9 +23,6 @@ import Foundation
 
     /// 토큰 갱신 API 응답 후 호출. 새 세션 채택 여부 반환 (이미 사용된 키면 거부)
     func submitRefreshedSession(_ newSession: Session) -> Bool
-
-    /// 다른 SDK가 갱신한 세션을 수신하기 위한 콜백 등록
-    func onSessionRefreshed(_ handler: @escaping (Session) -> Void)
 }
 
 /// UserDefaults 영속성을 포함한 세션 공유 구현체
@@ -31,8 +30,7 @@ import Foundation
     @_spi(SendbirdInternal) public static let shared = PersistentSessionProvider()
 
     private let queue = SafeSerialQueue(label: "com.sendbird.session.provider")
-    private var handlers: [(Session?, String?) -> Void] = []
-    private var refreshedHandlers: [(Session) -> Void] = []
+    private var handlers: [(Session?) -> Void] = []
 
     /// 이미 사용된 세션 키 추적 (롤백 방지)
     private var knownKeys: Set<String> = []
@@ -65,7 +63,7 @@ import Foundation
             return
         }
 
-        let handlersToNotify: [(Session?, String?) -> Void] = queue.sync {
+        let handlersToNotify: [(Session?) -> Void] = queue.sync {
             // userId 변경 시 knownKeys 초기화
             if self.userId != userId {
                 knownKeys.removeAll()
@@ -88,10 +86,10 @@ import Foundation
             return handlers
         }
 
-        handlersToNotify.forEach { $0(session, userId) }
+        handlersToNotify.forEach { $0(session) }
     }
 
-    @_spi(SendbirdInternal) public func onSessionChanged(_ handler: @escaping (Session?, String?) -> Void) {
+    @_spi(SendbirdInternal) public func onSessionChanged(_ handler: @escaping (Session?) -> Void) {
         queue.async {
             self.handlers.append(handler)
         }
@@ -110,7 +108,7 @@ import Foundation
     }
 
     @_spi(SendbirdInternal) public func submitRefreshedSession(_ newSession: Session) -> Bool {
-        let (accepted, handlersToNotify): (Bool, [(Session) -> Void]) = queue.sync {
+        let (accepted, handlersToNotify): (Bool, [(Session?) -> Void]) = queue.sync {
             // 이미 사용된 키면 거부 (롤백 방지)
             if knownKeys.contains(newSession.key) {
                 return (false, [])
@@ -123,7 +121,7 @@ import Foundation
                 Session.saveToUserDefaults(session: newSession, userId: userId)
             }
 
-            return (true, refreshedHandlers)
+            return (true, handlers)
         }
 
         // 데드락 방지: 핸들러는 sync 블록 바깥에서 호출
@@ -133,11 +131,4 @@ import Foundation
 
         return accepted
     }
-
-    @_spi(SendbirdInternal) public func onSessionRefreshed(_ handler: @escaping (Session) -> Void) {
-        queue.async {
-            self.refreshedHandlers.append(handler)
-        }
-    }
-
 }

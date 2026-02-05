@@ -34,7 +34,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let session = Session(key: sessionKey, services: [.chat])
         let expectation = expectation(description: "Session should be set")
 
-        sut.onSessionChanged { _, _ in
+        sut.onSessionChanged { _ in
             expectation.fulfill()
         }
 
@@ -54,7 +54,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let clearExpectation = expectation(description: "Session should be cleared")
         var callCount = 0
 
-        sut.onSessionChanged { _, _ in
+        sut.onSessionChanged { _ in
             callCount += 1
             if callCount == 1 {
                 setExpectation.fulfill()
@@ -79,7 +79,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let session = Session(key: sessionKey, services: [.chat, .feed])
         let expectation = expectation(description: "Session should be set")
 
-        sut.onSessionChanged { _, _ in
+        sut.onSessionChanged { _ in
             expectation.fulfill()
         }
 
@@ -103,7 +103,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let session = Session(key: sessionKey, services: [.chat])
         let expectation = expectation(description: "Session should be set")
 
-        otherProvider.onSessionChanged { _, _ in
+        otherProvider.onSessionChanged { _ in
             expectation.fulfill()
         }
         otherProvider.setSession(session, for: userId)
@@ -124,7 +124,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let session = Session(key: sessionKey, services: [.chat])
         let expectation = expectation(description: "Session should be set")
 
-        sut.onSessionChanged { _, _ in
+        sut.onSessionChanged { _ in
             expectation.fulfill()
         }
         sut.setSession(session, for: userId)
@@ -152,11 +152,9 @@ final class PersistentSessionProviderTests: XCTestCase {
         // Given
         let expectation = expectation(description: "Handler should be called")
         var receivedSession: Session?
-        var receivedUserId: String?
 
-        sut.onSessionChanged { session, userId in
+        sut.onSessionChanged { session in
             receivedSession = session
-            receivedUserId = userId
             expectation.fulfill()
         }
 
@@ -167,7 +165,6 @@ final class PersistentSessionProviderTests: XCTestCase {
         // Then
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(receivedSession?.key, sessionKey)
-        XCTAssertEqual(receivedUserId, userId)
     }
 
     func testOnSessionChanged_notifiesMultipleHandlers() {
@@ -175,8 +172,8 @@ final class PersistentSessionProviderTests: XCTestCase {
         let expectation1 = expectation(description: "Handler 1 should be called")
         let expectation2 = expectation(description: "Handler 2 should be called")
 
-        sut.onSessionChanged { _, _ in expectation1.fulfill() }
-        sut.onSessionChanged { _, _ in expectation2.fulfill() }
+        sut.onSessionChanged { _ in expectation1.fulfill() }
+        sut.onSessionChanged { _ in expectation2.fulfill() }
 
         // When
         let session = Session(key: sessionKey, services: [.chat])
@@ -194,7 +191,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         var callCount = 0
         var receivedSession: Session?
 
-        sut.onSessionChanged { session, _ in
+        sut.onSessionChanged { session in
             callCount += 1
             if callCount == 1 {
                 setExpectation.fulfill()
@@ -232,7 +229,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let currentSession = Session(key: "v1", services: [.chat])
         let expectation = expectation(description: "Session should be set")
 
-        sut.onSessionChanged { _, _ in expectation.fulfill() }
+        sut.onSessionChanged { _ in expectation.fulfill() }
         sut.setSession(storedSession, for: userId)
         wait(for: [expectation], timeout: 1.0)
 
@@ -249,7 +246,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let session = Session(key: "v1", services: [.chat])
         let expectation = expectation(description: "Session should be set")
 
-        sut.onSessionChanged { _, _ in expectation.fulfill() }
+        sut.onSessionChanged { _ in expectation.fulfill() }
         sut.setSession(session, for: userId)
         wait(for: [expectation], timeout: 1.0)
 
@@ -276,10 +273,10 @@ final class PersistentSessionProviderTests: XCTestCase {
     func testSubmitRefreshedSession_withNewKey_acceptsAndNotifies() {
         // Given
         let newSession = Session(key: "v2", services: [.chat])
-        let refreshExpectation = expectation(description: "Refresh handler called")
+        let refreshExpectation = expectation(description: "Handler called")
         var receivedSession: Session?
 
-        sut.onSessionRefreshed { session in
+        sut.onSessionChanged { session in
             receivedSession = session
             refreshExpectation.fulfill()
         }
@@ -297,11 +294,18 @@ final class PersistentSessionProviderTests: XCTestCase {
         // Given
         let session = Session(key: "v1", services: [.chat])
         let setExpectation = expectation(description: "Session set")
-        let refreshExpectation = expectation(description: "Refresh handler should not be called")
+        let refreshExpectation = expectation(description: "Handler should not be called again")
         refreshExpectation.isInverted = true
+        var callCount = 0
 
-        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
-        sut.onSessionRefreshed { _ in refreshExpectation.fulfill() }
+        sut.onSessionChanged { _ in
+            callCount += 1
+            if callCount == 1 {
+                setExpectation.fulfill()
+            } else {
+                refreshExpectation.fulfill()
+            }
+        }
         sut.setSession(session, for: userId)
         wait(for: [setExpectation], timeout: 1.0)
 
@@ -319,7 +323,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let v2Session = Session(key: "v2", services: [.chat])
         let setExpectation = expectation(description: "Initial session set")
 
-        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
+        sut.onSessionChanged { _ in setExpectation.fulfill() }
         sut.setSession(v1Session, for: userId)
         wait(for: [setExpectation], timeout: 1.0)
 
@@ -335,42 +339,6 @@ final class PersistentSessionProviderTests: XCTestCase {
         XCTAssertEqual(sut.loadSession(for: userId)?.key, "v2")
     }
 
-    // MARK: - onSessionRefreshed
-
-    func testOnSessionRefreshed_notifiesMultipleHandlers() {
-        // Given
-        let newSession = Session(key: "v2", services: [.chat])
-        let expectation1 = expectation(description: "Handler 1 called")
-        let expectation2 = expectation(description: "Handler 2 called")
-
-        sut.onSessionRefreshed { _ in expectation1.fulfill() }
-        sut.onSessionRefreshed { _ in expectation2.fulfill() }
-
-        // When
-        _ = sut.submitRefreshedSession(newSession)
-
-        // Then
-        wait(for: [expectation1, expectation2], timeout: 1.0)
-    }
-
-    func testOnSessionRefreshed_notCalledOnRegularSetSession() {
-        // Given
-        let session = Session(key: "v1", services: [.chat])
-        let setExpectation = expectation(description: "Session set")
-        let refreshExpectation = expectation(description: "Refresh handler should not be called")
-        refreshExpectation.isInverted = true
-
-        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
-        sut.onSessionRefreshed { _ in refreshExpectation.fulfill() }
-
-        // When
-        sut.setSession(session, for: userId)
-
-        // Then
-        wait(for: [setExpectation], timeout: 1.0)
-        wait(for: [refreshExpectation], timeout: 0.5)
-    }
-
     // MARK: - knownKeys Management
 
     func testKnownKeys_clearedOnUserChange() {
@@ -380,7 +348,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let newUserExpectation = expectation(description: "New user session set")
         var callCount = 0
 
-        sut.onSessionChanged { _, _ in
+        sut.onSessionChanged { _ in
             callCount += 1
             if callCount == 1 {
                 setExpectation.fulfill()
@@ -409,7 +377,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let v1Session = Session(key: "v1", services: [.chat])
         let setExpectation = expectation(description: "Initial session set")
 
-        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
+        sut.onSessionChanged { _ in setExpectation.fulfill() }
         sut.setSession(v1Session, for: userId)
         wait(for: [setExpectation], timeout: 1.0)
 
@@ -437,7 +405,7 @@ final class PersistentSessionProviderTests: XCTestCase {
         let v2Session = Session(key: "v2", services: [.chat])
         let setExpectation = expectation(description: "Session set")
 
-        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
+        sut.onSessionChanged { _ in setExpectation.fulfill() }
         sut.setSession(v2Session, for: userId)
         wait(for: [setExpectation], timeout: 1.0)
 
