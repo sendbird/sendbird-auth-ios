@@ -146,7 +146,7 @@ enum Configuration {
         let host = Configuration.HostEnvironments.init(
             applicationId: self.applicationId,
             customAPIHost: apiHost,
-            customWSHost: wsHost,
+            customWSHost: wsHost
         )
         routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
     }
