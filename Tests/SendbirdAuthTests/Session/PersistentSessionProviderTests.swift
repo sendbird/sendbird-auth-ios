@@ -322,14 +322,24 @@ final class PersistentSessionProviderTests: XCTestCase {
         let v1Session = Session(key: "v1", services: [.chat])
         let v2Session = Session(key: "v2", services: [.chat])
         let setExpectation = expectation(description: "Initial session set")
+        let v2Expectation = expectation(description: "v2 session set")
+        var callCount = 0
 
-        sut.onSessionChanged { _ in setExpectation.fulfill() }
+        sut.onSessionChanged { _ in
+            callCount += 1
+            if callCount == 1 {
+                setExpectation.fulfill()
+            } else if callCount == 2 {
+                v2Expectation.fulfill()
+            }
+        }
         sut.setSession(v1Session, for: userId)
         wait(for: [setExpectation], timeout: 1.0)
 
         // Submit v2 - should succeed
         let v2Result = sut.submitRefreshedSession(v2Session)
         XCTAssertTrue(v2Result)
+        wait(for: [v2Expectation], timeout: 1.0)
 
         // When - try to rollback to v1
         let rollbackResult = sut.submitRefreshedSession(v1Session)
@@ -376,8 +386,17 @@ final class PersistentSessionProviderTests: XCTestCase {
         // Given - initial session v1
         let v1Session = Session(key: "v1", services: [.chat])
         let setExpectation = expectation(description: "Initial session set")
+        let v2Expectation = expectation(description: "v2 session set")
+        var callCount = 0
 
-        sut.onSessionChanged { _ in setExpectation.fulfill() }
+        sut.onSessionChanged { _ in
+            callCount += 1
+            if callCount == 1 {
+                setExpectation.fulfill()
+            } else if callCount == 2 {
+                v2Expectation.fulfill()
+            }
+        }
         sut.setSession(v1Session, for: userId)
         wait(for: [setExpectation], timeout: 1.0)
 
@@ -395,6 +414,7 @@ final class PersistentSessionProviderTests: XCTestCase {
 
         // Then - submission accepted
         XCTAssertTrue(refreshResult)
+        wait(for: [v2Expectation], timeout: 1.0)
         XCTAssertEqual(sut.loadSession(for: userId)?.key, "v2")
     }
 
