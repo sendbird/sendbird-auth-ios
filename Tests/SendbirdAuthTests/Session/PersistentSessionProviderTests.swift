@@ -223,4 +223,230 @@ final class PersistentSessionProviderTests: XCTestCase {
 
         XCTAssertTrue(instance1 === instance2)
     }
+
+    // MARK: - requestRefresh
+
+    func testRequestRefresh_whenStoredSessionDiffers_returnsStoredSession() {
+        // Given
+        let storedSession = Session(key: "v2", services: [.chat])
+        let currentSession = Session(key: "v1", services: [.chat])
+        let expectation = expectation(description: "Session should be set")
+
+        sut.onSessionChanged { _, _ in expectation.fulfill() }
+        sut.setSession(storedSession, for: userId)
+        wait(for: [expectation], timeout: 1.0)
+
+        // When
+        let result = sut.requestRefresh(current: currentSession)
+
+        // Then
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.key, "v2")
+    }
+
+    func testRequestRefresh_whenStoredSessionSame_returnsNil() {
+        // Given
+        let session = Session(key: "v1", services: [.chat])
+        let expectation = expectation(description: "Session should be set")
+
+        sut.onSessionChanged { _, _ in expectation.fulfill() }
+        sut.setSession(session, for: userId)
+        wait(for: [expectation], timeout: 1.0)
+
+        // When
+        let result = sut.requestRefresh(current: session)
+
+        // Then
+        XCTAssertNil(result)
+    }
+
+    func testRequestRefresh_whenNoStoredSession_returnsNil() {
+        // Given
+        let currentSession = Session(key: "v1", services: [.chat])
+
+        // When
+        let result = sut.requestRefresh(current: currentSession)
+
+        // Then
+        XCTAssertNil(result)
+    }
+
+    // MARK: - submitRefreshedSession
+
+    func testSubmitRefreshedSession_withNewKey_acceptsAndNotifies() {
+        // Given
+        let newSession = Session(key: "v2", services: [.chat])
+        let refreshExpectation = expectation(description: "Refresh handler called")
+        var receivedSession: Session?
+
+        sut.onSessionRefreshed { session in
+            receivedSession = session
+            refreshExpectation.fulfill()
+        }
+
+        // When
+        let result = sut.submitRefreshedSession(newSession)
+
+        // Then
+        wait(for: [refreshExpectation], timeout: 1.0)
+        XCTAssertTrue(result)
+        XCTAssertEqual(receivedSession?.key, "v2")
+    }
+
+    func testSubmitRefreshedSession_withKnownKey_rejects() {
+        // Given
+        let session = Session(key: "v1", services: [.chat])
+        let setExpectation = expectation(description: "Session set")
+        let refreshExpectation = expectation(description: "Refresh handler should not be called")
+        refreshExpectation.isInverted = true
+
+        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
+        sut.onSessionRefreshed { _ in refreshExpectation.fulfill() }
+        sut.setSession(session, for: userId)
+        wait(for: [setExpectation], timeout: 1.0)
+
+        // When - try to submit same session again (rollback attempt)
+        let result = sut.submitRefreshedSession(session)
+
+        // Then
+        wait(for: [refreshExpectation], timeout: 0.5)
+        XCTAssertFalse(result)
+    }
+
+    func testSubmitRefreshedSession_rollbackPrevention() {
+        // Given - v1 -> v2 -> try v1 again
+        let v1Session = Session(key: "v1", services: [.chat])
+        let v2Session = Session(key: "v2", services: [.chat])
+        let setExpectation = expectation(description: "Initial session set")
+
+        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
+        sut.setSession(v1Session, for: userId)
+        wait(for: [setExpectation], timeout: 1.0)
+
+        // Submit v2 - should succeed
+        let v2Result = sut.submitRefreshedSession(v2Session)
+        XCTAssertTrue(v2Result)
+
+        // When - try to rollback to v1
+        let rollbackResult = sut.submitRefreshedSession(v1Session)
+
+        // Then
+        XCTAssertFalse(rollbackResult)
+        XCTAssertEqual(sut.loadSession(for: userId)?.key, "v2")
+    }
+
+    // MARK: - onSessionRefreshed
+
+    func testOnSessionRefreshed_notifiesMultipleHandlers() {
+        // Given
+        let newSession = Session(key: "v2", services: [.chat])
+        let expectation1 = expectation(description: "Handler 1 called")
+        let expectation2 = expectation(description: "Handler 2 called")
+
+        sut.onSessionRefreshed { _ in expectation1.fulfill() }
+        sut.onSessionRefreshed { _ in expectation2.fulfill() }
+
+        // When
+        _ = sut.submitRefreshedSession(newSession)
+
+        // Then
+        wait(for: [expectation1, expectation2], timeout: 1.0)
+    }
+
+    func testOnSessionRefreshed_notCalledOnRegularSetSession() {
+        // Given
+        let session = Session(key: "v1", services: [.chat])
+        let setExpectation = expectation(description: "Session set")
+        let refreshExpectation = expectation(description: "Refresh handler should not be called")
+        refreshExpectation.isInverted = true
+
+        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
+        sut.onSessionRefreshed { _ in refreshExpectation.fulfill() }
+
+        // When
+        sut.setSession(session, for: userId)
+
+        // Then
+        wait(for: [setExpectation], timeout: 1.0)
+        wait(for: [refreshExpectation], timeout: 0.5)
+    }
+
+    // MARK: - knownKeys Management
+
+    func testKnownKeys_clearedOnUserChange() {
+        // Given
+        let session = Session(key: "v1", services: [.chat])
+        let setExpectation = expectation(description: "Session set")
+        let newUserExpectation = expectation(description: "New user session set")
+        var callCount = 0
+
+        sut.onSessionChanged { _, _ in
+            callCount += 1
+            if callCount == 1 {
+                setExpectation.fulfill()
+            } else if callCount == 2 {
+                newUserExpectation.fulfill()
+            }
+        }
+        sut.setSession(session, for: userId)
+        wait(for: [setExpectation], timeout: 1.0)
+
+        // When - change user
+        sut.setSession(nil, for: "differentUser")
+        wait(for: [newUserExpectation], timeout: 1.0)
+
+        // Then - same key should be accepted again for new user
+        let result = sut.submitRefreshedSession(session)
+        XCTAssertTrue(result) // knownKeys was cleared, so v1 is new again
+    }
+
+    // MARK: - Scenario Tests
+
+    func testScenario1_simultaneousRefresh() {
+        // Simulates: Chat and Desk SDK both get 401 at the same time
+
+        // Given - initial session v1
+        let v1Session = Session(key: "v1", services: [.chat])
+        let setExpectation = expectation(description: "Initial session set")
+
+        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
+        sut.setSession(v1Session, for: userId)
+        wait(for: [setExpectation], timeout: 1.0)
+
+        // When - both SDKs call requestRefresh with v1
+        let chatResult = sut.requestRefresh(current: v1Session)
+        let deskResult = sut.requestRefresh(current: v1Session)
+
+        // Then - both get nil (refresh needed)
+        XCTAssertNil(chatResult)
+        XCTAssertNil(deskResult)
+
+        // When - Chat SDK refreshes and submits v2
+        let v2Session = Session(key: "v2", services: [.chat])
+        let refreshResult = sut.submitRefreshedSession(v2Session)
+
+        // Then - submission accepted
+        XCTAssertTrue(refreshResult)
+        XCTAssertEqual(sut.loadSession(for: userId)?.key, "v2")
+    }
+
+    func testScenario2_alreadyRefreshedSession() {
+        // Simulates: Desk SDK has old v1, but provider already has v2
+
+        // Given - stored session is v2
+        let v2Session = Session(key: "v2", services: [.chat])
+        let setExpectation = expectation(description: "Session set")
+
+        sut.onSessionChanged { _, _ in setExpectation.fulfill() }
+        sut.setSession(v2Session, for: userId)
+        wait(for: [setExpectation], timeout: 1.0)
+
+        // When - Desk SDK calls requestRefresh with old v1
+        let v1Session = Session(key: "v1", services: [.chat])
+        let result = sut.requestRefresh(current: v1Session)
+
+        // Then - returns v2 (no refresh needed)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.key, "v2")
+    }
 }
