@@ -769,6 +769,11 @@ extension SendbirdAuthMain {
         version.append("device_os_platform=\(Self.systemName.lowercased())")
         version.append("os_version=\(Self.systemVersion)")
 
+        // Add auth_sdk_info when main SDK is not auth (e.g., chat)
+        if let mainSDKInfo, mainSDKInfo.product != .auth {
+            version.append("auth_sdk_info=auth/\(Self.systemName.lowercased())/\(sdkVersion)")
+        }
+
         if let extensionSdkInfo = extensionSdkInfo {
             version.append("extension_sdk_info=\(extensionSdkInfo)")
         }
