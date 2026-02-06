@@ -30,10 +30,10 @@ extension SessionManager: InternalSessionDelegate {
     }
     
     @_spi(SendbirdInternal) public func didSessionKeyRefresh(key: Session, requireReconnect: Bool) {
-        // 새 세션을 SessionProvider에 제출 (롤백 방지 검증)
-        // submitRefreshedSession이 Provider 내부 세션을 업데이트하고 onSessionChanged 콜백 호출
+        // Submit the new session to SessionProvider (rollback prevention validation)
+        // submitRefreshedSession updates the provider's session and calls onSessionChanged
         guard sessionProvider.submitRefreshedSession(key) else {
-            // 이미 사용된 키면 거부됨 - 현재 저장된 세션 사용
+            // Rejected if the key was already used - use the currently stored session
             return
         }
 

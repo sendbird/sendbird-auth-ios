@@ -33,3 +33,5 @@ __pycache__/
 
 .claude/settings.local.json
 
+
+buildServer.json

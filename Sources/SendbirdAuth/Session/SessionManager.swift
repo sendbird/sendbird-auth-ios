@@ -298,10 +298,10 @@ extension SessionManager: EventDelegate {
             expirationHandler.refreshSessionToken()
 
         case .sessionKeyExpired:
-            // 다른 SDK가 이미 갱신한 세션이 있는지 확인
+            // Check whether another SDK has already refreshed the session
             if let currentSession = session,
                sessionProvider.hasRefreshedSession(current: currentSession) {
-                // 이미 갱신된 세션이 provider에 저장되어 있음
+                // The refreshed session is already stored in the provider
                 return
             }
 
