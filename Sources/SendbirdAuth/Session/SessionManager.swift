@@ -252,6 +252,7 @@ import Foundation
     
     private func reset() {
         self.session = nil
+        self.credential = .initialized
         stateData?.clear()
     }
     
