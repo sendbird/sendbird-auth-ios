@@ -27,16 +27,14 @@ import Foundation
     @_spi(SendbirdInternal) public static let minimumExpiresInForWSRefresh = 5
     
     @_spi(SendbirdInternal) public var session: Session? {
-        guard userId.isEmpty == false else {
-            return nil
-        }
-        return sessionProvider.loadSession(for: userId)
+        get { sessionProvider.loadSession(for: userId) }
+        set { sessionProvider.setSession(newValue, for: userId) }
     }
     
     @_spi(SendbirdInternal) public let applicationId: String
     @InternalAtomic @_spi(SendbirdInternal) public var eKey: String?
 
-    @_spi(SendbirdInternal) public private(set) var userId: String
+    @_spi(SendbirdInternal) public let userId: String
 
     @_spi(SendbirdInternal) public private(set) var sessionProvider: any SessionProvider
 
@@ -223,7 +221,6 @@ import Foundation
     
     private func reset() {
         sessionProvider.setSession(nil, for: userId)
-        userId = ""
         stateData?.clear()
     }
     
