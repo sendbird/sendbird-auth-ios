@@ -18,8 +18,8 @@ import Foundation
 
     // MARK: - Refresh Coordination
 
-    /// 401 응답 시 호출. 다른 SDK가 이미 갱신한 세션이 있으면 반환, 없으면 nil
-    func requestRefresh(current: Session) -> Session?
+    /// 401 응답 시 호출. 다른 SDK가 이미 갱신한 세션이 있으면 true, 없으면 false
+    func hasRefreshedSession(current: Session) -> Bool
 
     /// 토큰 갱신 API 응답 후 호출. 새 세션 채택 여부 반환 (이미 사용된 키면 거부)
     func submitRefreshedSession(_ newSession: Session) -> Bool
@@ -52,6 +52,7 @@ import Foundation
 
                 self.session = savedSession
                 self.userId = userId
+                
                 knownKeys.insert(savedSession.key)
                 return savedSession
             }
@@ -63,7 +64,7 @@ import Foundation
             return
         }
 
-        let handlersToNotify: [(Session?) -> Void] = queue.sync {
+        queue.sync {
             // userId 변경 시 knownKeys 초기화
             if self.userId != userId {
                 knownKeys.removeAll()
@@ -82,10 +83,9 @@ import Foundation
             } else {
                 Session.clearUserDefaults()
             }
-
-            return handlers
         }
 
+        let handlersToNotify = queue.sync { handlers }
         handlersToNotify.forEach { $0(session) }
     }
 
@@ -97,21 +97,21 @@ import Foundation
 
     // MARK: - Refresh Coordination
 
-    @_spi(SendbirdInternal) public func requestRefresh(current: Session) -> Session? {
+    @_spi(SendbirdInternal) public func hasRefreshedSession(current: Session) -> Bool {
         queue.sync {
             // 저장된 세션 키가 다르면 이미 다른 SDK가 갱신함
             if let storedSession = session, storedSession.key != current.key {
-                return storedSession
+                return true
             }
-            return nil // 갱신 필요
+            return false // 갱신 필요
         }
     }
 
     @_spi(SendbirdInternal) public func submitRefreshedSession(_ newSession: Session) -> Bool {
-        let (accepted, handlersToNotify): (Bool, [(Session?) -> Void]) = queue.sync {
+        let accepted = queue.sync {
             // 이미 사용된 키면 거부 (롤백 방지)
             if knownKeys.contains(newSession.key) {
-                return (false, [])
+                return false
             }
 
             knownKeys.insert(newSession.key)
@@ -121,11 +121,11 @@ import Foundation
                 Session.saveToUserDefaults(session: newSession, userId: userId)
             }
 
-            return (true, handlers)
+            return true
         }
 
-        // 데드락 방지: 핸들러는 sync 블록 바깥에서 호출
         if accepted {
+            let handlersToNotify = queue.sync { handlers }
             handlersToNotify.forEach { $0(newSession) }
         }
 

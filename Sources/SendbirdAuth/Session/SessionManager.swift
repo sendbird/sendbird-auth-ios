@@ -27,20 +27,10 @@ import Foundation
     @_spi(SendbirdInternal) public static let minimumExpiresInForWSRefresh = 5
     
     @_spi(SendbirdInternal) public var session: Session? {
-        get {
-            guard userId.isEmpty == false else {
-                return nil
-            }
-            
-            return sessionProvider.loadSession(for: userId)
+        guard userId.isEmpty == false else {
+            return nil
         }
-        set {
-            guard userId.isEmpty == false else {
-                return
-            }
-
-            sessionProvider.setSession(newValue, for: userId)
-        }
+        return sessionProvider.loadSession(for: userId)
     }
     
     @_spi(SendbirdInternal) public let applicationId: String
@@ -232,8 +222,8 @@ import Foundation
     }
     
     private func reset() {
+        sessionProvider.setSession(nil, for: userId)
         userId = ""
-        session = nil
         stateData?.clear()
     }
     
@@ -250,7 +240,8 @@ extension SessionManager: EventDelegate {
         switch command {
         case let event as SessionRefreshedEvent:
             if let sessionKey = event.sessionKey {
-                self.session = Session(key: sessionKey, services: self.session?.services ?? [.chat, .feed])
+                let newSession = Session(key: sessionKey, services: self.session?.services ?? [.chat, .feed])
+                sessionProvider.setSession(newSession, for: userId)
             }
         case let event as SessionExpiredEvent:
             Logger.session.info("EXPR payload: \(String(describing: event.reason))")
@@ -270,11 +261,12 @@ extension SessionManager: EventDelegate {
             if let sessionKey = event.loginEvent.sessionKey,
                let services = event.loginEvent.services {
                 let newSession = Session(key: sessionKey, services: services)
-                
+
                 if let currentSession = self.session, !currentSession.isDirty {
-                    self.session = currentSession.isLargerScope(than: newSession) ? currentSession : newSession
+                    let sessionToSet = currentSession.isLargerScope(than: newSession) ? currentSession : newSession
+                    sessionProvider.setSession(sessionToSet, for: userId)
                 } else {
-                    self.session = newSession
+                    sessionProvider.setSession(newSession, for: userId)
                 }
             }
             
@@ -311,13 +303,12 @@ extension SessionManager: EventDelegate {
         case .sessionKeyExpired:
             // 다른 SDK가 이미 갱신한 세션이 있는지 확인
             if let currentSession = session,
-               let refreshedSession = sessionProvider.requestRefresh(current: currentSession) {
-                // 이미 갱신된 세션 사용
-                self.session = refreshedSession
+               sessionProvider.hasRefreshedSession(current: currentSession) {
+                // 이미 갱신된 세션이 provider에 저장되어 있음
                 return
             }
 
-            session = nil
+            sessionProvider.setSession(nil, for: userId)
             expirationHandler.refreshSessionKey(
                 shouldRetry: true,
                 expiresIn: expiresIn

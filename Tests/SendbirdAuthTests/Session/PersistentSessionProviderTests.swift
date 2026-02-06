@@ -221,9 +221,9 @@ final class PersistentSessionProviderTests: XCTestCase {
         XCTAssertTrue(instance1 === instance2)
     }
 
-    // MARK: - requestRefresh
+    // MARK: - hasRefreshedSession
 
-    func testRequestRefresh_whenStoredSessionDiffers_returnsStoredSession() {
+    func testHasRefreshedSession_whenStoredSessionDiffers_returnsTrue() {
         // Given
         let storedSession = Session(key: "v2", services: [.chat])
         let currentSession = Session(key: "v1", services: [.chat])
@@ -234,14 +234,13 @@ final class PersistentSessionProviderTests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
 
         // When
-        let result = sut.requestRefresh(current: currentSession)
+        let result = sut.hasRefreshedSession(current: currentSession)
 
         // Then
-        XCTAssertNotNil(result)
-        XCTAssertEqual(result?.key, "v2")
+        XCTAssertTrue(result)
     }
 
-    func testRequestRefresh_whenStoredSessionSame_returnsNil() {
+    func testHasRefreshedSession_whenStoredSessionSame_returnsFalse() {
         // Given
         let session = Session(key: "v1", services: [.chat])
         let expectation = expectation(description: "Session should be set")
@@ -251,21 +250,21 @@ final class PersistentSessionProviderTests: XCTestCase {
         wait(for: [expectation], timeout: 1.0)
 
         // When
-        let result = sut.requestRefresh(current: session)
+        let result = sut.hasRefreshedSession(current: session)
 
         // Then
-        XCTAssertNil(result)
+        XCTAssertFalse(result)
     }
 
-    func testRequestRefresh_whenNoStoredSession_returnsNil() {
+    func testHasRefreshedSession_whenNoStoredSession_returnsFalse() {
         // Given
         let currentSession = Session(key: "v1", services: [.chat])
 
         // When
-        let result = sut.requestRefresh(current: currentSession)
+        let result = sut.hasRefreshedSession(current: currentSession)
 
         // Then
-        XCTAssertNil(result)
+        XCTAssertFalse(result)
     }
 
     // MARK: - submitRefreshedSession
@@ -400,13 +399,13 @@ final class PersistentSessionProviderTests: XCTestCase {
         sut.setSession(v1Session, for: userId)
         wait(for: [setExpectation], timeout: 1.0)
 
-        // When - both SDKs call requestRefresh with v1
-        let chatResult = sut.requestRefresh(current: v1Session)
-        let deskResult = sut.requestRefresh(current: v1Session)
+        // When - both SDKs call hasRefreshedSession with v1
+        let chatResult = sut.hasRefreshedSession(current: v1Session)
+        let deskResult = sut.hasRefreshedSession(current: v1Session)
 
-        // Then - both get nil (refresh needed)
-        XCTAssertNil(chatResult)
-        XCTAssertNil(deskResult)
+        // Then - both get false (refresh needed)
+        XCTAssertFalse(chatResult)
+        XCTAssertFalse(deskResult)
 
         // When - Chat SDK refreshes and submits v2
         let v2Session = Session(key: "v2", services: [.chat])
@@ -429,12 +428,11 @@ final class PersistentSessionProviderTests: XCTestCase {
         sut.setSession(v2Session, for: userId)
         wait(for: [setExpectation], timeout: 1.0)
 
-        // When - Desk SDK calls requestRefresh with old v1
+        // When - Desk SDK calls hasRefreshedSession with old v1
         let v1Session = Session(key: "v1", services: [.chat])
-        let result = sut.requestRefresh(current: v1Session)
+        let result = sut.hasRefreshedSession(current: v1Session)
 
-        // Then - returns v2 (no refresh needed)
-        XCTAssertNotNil(result)
-        XCTAssertEqual(result?.key, "v2")
+        // Then - returns true (no refresh needed, already refreshed)
+        XCTAssertTrue(result)
     }
 }
