@@ -48,7 +48,7 @@ import Foundation
 
     @InternalAtomic @_spi(SendbirdInternal) public var eKey: String?
 
-    @_spi(SendbirdInternal) public private(set) var sessionProvider: any SessionProvider
+    private let sessionProvider: SessionProvider
 
     private let board: SBTimerBoard
     
@@ -248,6 +248,11 @@ import Foundation
 
     @_spi(SendbirdInternal) public func logout() {
         reset()
+    }
+    
+    /// Submit refreshed session to `SessionProvider`
+    func submitRefreshedSession(_ newSession: Session) -> Bool {
+        sessionProvider.submitRefreshedSession(newSession)
     }
     
     private func reset() {
