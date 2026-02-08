@@ -16,6 +16,9 @@ import Foundation
     /// Register a callback invoked when the session changes
     func onSessionChanged(_ handler: @escaping (Session?) -> Void)
 
+    /// Clear all session state (session, userId, knownKeys, UserDefaults)
+    func clear()
+
     // MARK: - Refresh Coordination
 
     /// Called on a 401 response. Returns true if another SDK already refreshed the session, false otherwise.
@@ -93,6 +96,18 @@ import Foundation
         queue.async {
             self.handlers.append(handler)
         }
+    }
+
+    @_spi(SendbirdInternal) public func clear() {
+        queue.sync {
+            session = nil
+            userId = nil
+            knownKeys.removeAll()
+            Session.clearUserDefaults()
+        }
+
+        let handlersToNotify = queue.sync { handlers }
+        handlersToNotify.forEach { $0(nil) }
     }
 
     // MARK: - Refresh Coordination
