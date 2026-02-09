@@ -103,10 +103,26 @@ jobs:
           cache-key: ${{ inputs.sha_name }}
           branch-name: ${{ inputs.branch_name }}
 
-      - name: Update fastlane
+      - name: Update fastlane to >= 2.222.0
         run: |
           cd chat-ios
+          echo "Current fastlane version:"
+          bundle exec fastlane --version || echo "Fastlane not installed yet"
+
+          echo "Updating fastlane..."
           bundle update fastlane
+
+          echo "Updated fastlane version:"
+          bundle exec fastlane --version
+
+          # Verify minimum version
+          FASTLANE_VERSION=$(bundle exec fastlane --version | head -n 1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          echo "Fastlane version: $FASTLANE_VERSION"
+          if [ "$(printf '%s\n' "2.222.0" "$FASTLANE_VERSION" | sort -V | head -n1)" != "2.222.0" ]; then
+            echo "Error: Fastlane version $FASTLANE_VERSION is below minimum required 2.222.0"
+            exit 1
+          fi
+          echo "✅ Fastlane version check passed"
 
 
       - name: Prepare test files content
