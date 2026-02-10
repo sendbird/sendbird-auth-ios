@@ -108,7 +108,9 @@ jobs:
           branch-name: ${{ inputs.branch_name }}
 
       - name: Install dependencies
-        run: bundle install
+        run: |
+          cd chat-ios
+          bundle install
 
       - name: Run test-${{ matrix.test-group }}
         id: run_tests
