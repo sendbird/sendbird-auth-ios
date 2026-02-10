@@ -7,6 +7,31 @@
 
 import Foundation
 
+extension Configuration {
+    struct HostEnvironments {
+        let apiHost: String
+        let wsHost: String
+        
+        init(
+            applicationId: String,
+            customAPIHost: String? = nil,
+            customWSHost: String? = nil
+        ) {
+            if let apiHost = customAPIHost, apiHost.hasElements {
+                self.apiHost = apiHost
+            } else {
+                self.apiHost = Configuration.apiHostURL(for: applicationId)
+            }
+            
+            if let wsHost = customWSHost, wsHost.hasElements {
+                self.wsHost = wsHost
+            } else {
+                self.wsHost = Configuration.wsHostURL(for: applicationId)
+            }
+        }
+    }
+}
+
 enum Configuration {
     // MARK: - Environment URLs (hardcoded for SPM build config)
 
@@ -32,21 +57,11 @@ enum Configuration {
     }
 
     static func apiHostURL(for appId: String) -> String {
-        let pref = SendbirdAuth.pref
-        if let customAPIHost: String = pref.value(forKey: PreferenceKey.customAPIHost) {
-            return customAPIHost
-        }
-
         let template = hostURL(for: "API_HOST_URL", default: defaultAPIHost)
         return template.replacingOccurrences(of: "@@", with: appId)
     }
 
     static func wsHostURL(for appId: String) -> String {
-        let pref = SendbirdAuth.pref
-        if let customWsHost: String = pref.value(forKey: PreferenceKey.customWsHost) {
-            return customWsHost
-        }
-
         let template = hostURL(for: "WS_HOST_URL", default: defaultWSHost)
         return template.replacingOccurrences(of: "@@", with: appId)
     }
@@ -60,6 +75,7 @@ enum Configuration {
 // MARK: - Custom Host Configuration
 
 @_spi(SendbirdInternal) public extension SendbirdAuthMain {
+    @available(*, deprecated, message: "Use updateCustomHost(apiHost:wsHost:) instead")
     enum CustomHostEnvironment {
         case nightlydev
         case nightlyrel
@@ -101,15 +117,37 @@ enum Configuration {
     /// Sets custom host URLs for API and WebSocket connections.
     /// - Note: If you want to use release environment's host,
     ///        build configuration should be set to `Release` and clear custom host after setting it.
+    @available(*, deprecated, message: "Use updateCustomHost(apiHost:wsHost:) instead")
     func setCustomHost(_ environment: CustomHostEnvironment) {
-        let pref = SendbirdAuth.pref
-        pref.set(value: environment.apiHost, forKey: PreferenceKey.customAPIHost)
-        pref.set(value: environment.wsHost, forKey: PreferenceKey.customWsHost)
+        routerConfig.updateHost(apiHost: environment.apiHost, wsHost: environment.wsHost)
     }
 
+    /// Clears custom host and reverts to default hosts based on applicationId.
     func clearCustomHost() {
-        let pref = SendbirdAuth.pref
-        pref.remove(forKey: PreferenceKey.customAPIHost)
-        pref.remove(forKey: PreferenceKey.customWsHost)
+        guard applicationId.hasElements else {
+            Logger.main.error("clearCustomHost() called before initialization")
+            return
+        }
+        let host = Configuration.HostEnvironments(applicationId: applicationId)
+        routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
+    }
+
+    /// Updates custom host URLs dynamically after initialization.
+    /// - Parameters:
+    ///   - apiHost: Custom API host URL (e.g., "https://api-no3.sendbirdtest.com")
+    ///   - wsHost: Custom WebSocket host URL (e.g., "wss://ws-no3.sendbirdtest.com")
+    /// - Note: Should be called before connect/authenticate. If already connected, operation is aborted.
+    func updateCustomHost(apiHost: String, wsHost: String) {
+        if router.connected {
+            Logger.main.error("updateCustomHost() called while already connected. Operation aborted.")
+            return
+        }
+        
+        let host = Configuration.HostEnvironments.init(
+            applicationId: self.applicationId,
+            customAPIHost: apiHost,
+            customWSHost: wsHost
+        )
+        routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
     }
 }
