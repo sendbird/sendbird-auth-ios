@@ -44,25 +44,86 @@ runs:
         echo "Release assets:"
         ls -la release-assets/
 
-    - name: Create GitHub Release
+    - name: Git - Create public repo release
+      id: create_release
       if: inputs.is_test == 'false'
       shell: bash
       env:
-        GH_TOKEN: ${{ inputs.gh_api_token }}
+        GH_API_TOKEN: ${{ inputs.gh_api_token }}
         RELEASE_VERSION: ${{ inputs.release_version }}
+        PUBLIC_REPO: ${{ inputs.github_public_repo }}
       run: |
-        cd ~/public-repo
+        result=$(python3 ~/sdk-deployment/scripts/v1.2/create_github_release.py \
+          --github_api_token $GH_API_TOKEN \
+          --repo_name $PUBLIC_REPO \
+          --tag_name "$RELEASE_VERSION" \
+          --target_commitish main \
+          --body_path "$GITHUB_WORKSPACE/CHANGELOG_DRAFT.md")
 
-        # Read changelog for release notes from private repo
-        RELEASE_NOTES=$(cat $GITHUB_WORKSPACE/CHANGELOG_DRAFT.md || echo "Release ${RELEASE_VERSION}")
+        echo $result
+        upload_url=$(echo $result | jq ".upload_url" | sed -E 's/^"|"$//g' | sed 's/\assets{.*/assets/')
+        echo "UPLOAD_URL=$upload_url" >> $GITHUB_ENV
+        echo "upload_url=$upload_url" >> $GITHUB_OUTPUT
 
-        # Create release with assets (Dynamic + Static + CocoaPods)
-        gh release create "$RELEASE_VERSION" \
-          --title "$RELEASE_VERSION" \
-          --notes "$RELEASE_NOTES" \
-          $GITHUB_WORKSPACE/release-assets/SendbirdAuthSDK.xcframework.zip \
-          $GITHUB_WORKSPACE/release-assets/SendbirdAuthSDKStatic.xcframework.zip \
-          $GITHUB_WORKSPACE/release-assets/SendbirdAuthSDK.zip
+    - name: Upload Dynamic xcframework.zip
+      if: inputs.is_test == 'false'
+      shell: bash
+      env:
+        GH_API_TOKEN: ${{ inputs.gh_api_token }}
+        UPLOAD_URL: ${{ env.UPLOAD_URL }}
+      run: |
+        set -euo pipefail
+        file="$GITHUB_WORKSPACE/release-assets/SendbirdAuthSDK.xcframework.zip"
+        if [ ! -f "$file" ]; then
+          echo "[ERROR] Missing file: $file" >&2
+          exit 1
+        fi
+        echo "Uploading $(basename "$file")"
+        curl \
+          -H "Authorization: token $GH_API_TOKEN" \
+          -H "Content-Type: $(file -b --mime-type "$file")" \
+          --data-binary @"$file" \
+          "$UPLOAD_URL?name=$(basename "$file")"
+
+    - name: Upload Static xcframework.zip
+      if: inputs.is_test == 'false'
+      shell: bash
+      env:
+        GH_API_TOKEN: ${{ inputs.gh_api_token }}
+        UPLOAD_URL: ${{ env.UPLOAD_URL }}
+      run: |
+        set -euo pipefail
+        file="$GITHUB_WORKSPACE/release-assets/SendbirdAuthSDKStatic.xcframework.zip"
+        if [ ! -f "$file" ]; then
+          echo "[ERROR] Missing file: $file" >&2
+          exit 1
+        fi
+        echo "Uploading $(basename "$file")"
+        curl \
+          -H "Authorization: token $GH_API_TOKEN" \
+          -H "Content-Type: $(file -b --mime-type "$file")" \
+          --data-binary @"$file" \
+          "$UPLOAD_URL?name=$(basename "$file")"
+
+    - name: Upload CocoaPods distribution zip
+      if: inputs.is_test == 'false'
+      shell: bash
+      env:
+        GH_API_TOKEN: ${{ inputs.gh_api_token }}
+        UPLOAD_URL: ${{ env.UPLOAD_URL }}
+      run: |
+        set -euo pipefail
+        file="$GITHUB_WORKSPACE/release-assets/SendbirdAuthSDK.zip"
+        if [ ! -f "$file" ]; then
+          echo "[ERROR] Missing file: $file" >&2
+          exit 1
+        fi
+        echo "Uploading $(basename "$file")"
+        curl \
+          -H "Authorization: token $GH_API_TOKEN" \
+          -H "Content-Type: $(file -b --mime-type "$file")" \
+          --data-binary @"$file" \
+          "$UPLOAD_URL?name=$(basename "$file")"
 
     - name: Set up .netrc with CocoaPods token
       shell: bash
