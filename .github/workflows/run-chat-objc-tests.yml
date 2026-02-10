@@ -36,6 +36,9 @@ jobs:
   run-objc-tests:
     runs-on: [self-hosted, macOS, ARM64, M1]
     timeout-minutes: 45
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
     outputs:
       machine_name: ${{ steps.run_tests.outputs.machine_name }}
     strategy:
@@ -104,10 +107,10 @@ jobs:
           cache-key: ${{ inputs.sha_name }}
           branch-name: ${{ inputs.branch_name }}
 
-      - name: Update fastlane
+      - name: Install dependencies
         run: |
           cd chat-ios
-          bundle update fastlane
+          bundle install
 
       - name: Run test-${{ matrix.test-group }}
         id: run_tests

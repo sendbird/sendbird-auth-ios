@@ -150,12 +150,13 @@ def run_test_circleci(scheme:, device:, config:)
     test_without_building: true,
     device: device,
     code_coverage: true,
-    number_of_retries: 2,
     output_remove_retry_attempts: true,
+    number_of_retries: 2,
     disable_concurrent_testing: true,
     skip_package_dependencies_resolution: true,
     skip_detect_devices: true,
     xcodebuild_formatter: "xcbeautify",
+    output_types: "",
     result_bundle: true,
     fail_build: true
   )
@@ -192,6 +193,7 @@ def run_test_only_circleci(scheme:, device:, config:, test_cases:)
     skip_package_dependencies_resolution: true,
     skip_detect_devices: true,
     xcodebuild_formatter: "xcbeautify",
+    output_types: "",
     result_bundle: true,
     fail_build: true
   )
@@ -234,6 +236,7 @@ def run_test(scheme:, device:, config:, retry_count: 1)
       skip_package_dependencies_resolution: true,
       skip_detect_devices: true,
       xcodebuild_formatter: "xcbeautify",
+      output_types: "",
       result_bundle: true,
       fail_build: true,
       buildlog_path: unique_log_dir
@@ -292,6 +295,7 @@ def run_test_only(scheme:, device:, config:, test_cases:, retry_count: 1)
         skip_package_dependencies_resolution: true,
         skip_detect_devices: true,
         xcodebuild_formatter: "xcbeautify",
+        output_types: "",
         result_bundle: true,
         fail_build: true,
         buildlog_path: unique_log_dir
