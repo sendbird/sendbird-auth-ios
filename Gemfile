@@ -2,7 +2,7 @@ source "https://rubygems.org"
 
 gem 'digest-crc', '0.5.1'
 gem 'rb-readline'
-gem 'fastlane'
+gem 'fastlane', '2.222.0'
 gem 'xcov'
 gem 'cocoapods', '1.11.3'
 gem 'slather'
