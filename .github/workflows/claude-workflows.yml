@@ -59,6 +59,7 @@ jobs:
       action_type: 'changelog'
       pr_number: ${{ github.event.issue.number }}
       repository: ${{ github.repository }}
+      additional_prompt: 'public interface 관련 내용들을 기반으로 너무 내용이 과하지 않고 핵심적인 내용이 잘 전달될 수 있도록 구성해줘'
       custom_template: |
         ## Changes
         ### New Features
@@ -95,6 +96,11 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
 
     uses: sendbird/client-workflows/.github/workflows/claude-workflows.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+      issues: read
 
     secrets: inherit
 
