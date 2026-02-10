@@ -81,7 +81,7 @@ import Foundation
         isLocalCachingEnabled: Bool,
         localCachePreference: LocalPreferences,
         config: SendbirdConfiguration,
-        sessionProvider: SessionProvider = PersistentSessionProvider()
+        sessionProvider: SessionProvider = PersistentSessionProvider.shared
     ) {
         if applicationId.isEmpty || userId.isEmpty {
             self.credential = .initialized
