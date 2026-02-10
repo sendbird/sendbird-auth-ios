@@ -34,6 +34,9 @@ on:
 jobs:
   chat-test-setup:
     runs-on: [self-hosted, macOS, ARM64, M1]
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
     outputs:
       branch_name: ${{ steps.set-branch.outputs.branch }}
       sha_name: ${{ steps.set-branch.outputs.sha }}
@@ -221,7 +224,7 @@ jobs:
             fi
           done
 
-          bundle update fastlane
+          bundle install
           bundle exec fastlane update_plugins
 
       - name: Create configuration
