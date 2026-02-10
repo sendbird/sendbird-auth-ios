@@ -41,4 +41,11 @@ import Foundation
         let emptyAppId = sdkInstance.applicationId.isEmpty
         return !emptyAppId
     }
+
+#if DEBUG
+    /// 테스트용 StatManager 접근자
+    @_spi(SendbirdInternal) public static var statManager: StatManager? {
+        sdkInstance?.statManager
+    }
+#endif
 }

@@ -150,12 +150,14 @@ import Foundation
         case allowSDKFeatureLocalCacheLogPublish = "allow_sdk_feature_local_cache_log_publish"
         case allowSDKNotiStatsLogPublish = "allow_sdk_noti_stats_log_publish"
         case sdkDeviceTokenCache = "sdk_device_token_cache"
+        case allowSDKAIAgentStatsLogPublish = "allow_sdk_ai_agent_stats_log_publish"
         
         @_spi(SendbirdInternal) public var isRelatedToStat: Bool {
             switch self {
             case .allowSDKRequestLogPublish,
                     .allowSDKFeatureLocalCacheLogPublish,
-                    .allowSDKNotiStatsLogPublish:
+                    .allowSDKNotiStatsLogPublish,
+                    .allowSDKAIAgentStatsLogPublish:
                 return true
             case .sdkDeviceTokenCache:
                 return false
