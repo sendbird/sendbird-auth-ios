@@ -107,8 +107,9 @@ jobs:
           branch-name: ${{ inputs.branch_name }}
 
       - name: Install dependencies
-        run: bundle install
-
+        run: |
+          cd chat-ios
+          bundle install
 
       - name: Prepare test files content
         id: test-files
