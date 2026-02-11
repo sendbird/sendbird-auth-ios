@@ -48,23 +48,20 @@ import AppKit
     
     private let eventDispatcher: EventDispatcher
     private let timerBoard: SBTimerBoard
-    private let instancePref: LocalPreferences
-
+    
     @_spi(SendbirdInternal) public init(
         commandRouter: CommandRouter?,
         sessionManager: SessionManager?,
         eventDispatcher: EventDispatcher,
         broadcaster: ConnectionEventBroadcaster,
         networkBroadcaster: NetworkEventBroadcaster,
-        internalBroadcaster: InternalConnectionEventBroadcaster,
-        instancePref: LocalPreferences = SendbirdAuth.pref
+        internalBroadcaster: InternalConnectionEventBroadcaster
     ) {
         self.broadcaster = broadcaster
         self.networkBroadcaster = networkBroadcaster
         self.internalBroadcaster = internalBroadcaster
         self.eventDispatcher = eventDispatcher
-        self.instancePref = instancePref
-
+        
         timerBoard = SBTimerBoard(capacity: 1)
         webSocketManager = commandRouter?.webSocketManager
         self.sessionManager = sessionManager
@@ -159,7 +156,7 @@ extension DeviceConnectionManager {
             return false
         }
         
-        let destination = host ?? Configuration.apiHostURL(for: applicationId, using: instancePref)
+        let destination = host ?? Configuration.apiHostURL(for: applicationId)
         
         let isDifferentHost = (currentHost != destination)
         

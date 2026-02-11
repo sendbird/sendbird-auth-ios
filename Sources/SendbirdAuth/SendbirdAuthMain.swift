@@ -109,6 +109,11 @@ import Foundation
 
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
+        // Create instance-specific preferences (isolated per appId + apiHostUrl)
+        let instanceKey = InstanceRegistry.createKey(appId: params.applicationId, apiHostUrl: params.customAPIHost)
+        let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)")
+        self.preference = instancePref
+
         // NOTE: apiHost/wsHost are stored in routerConfig (in-memory) and share its lifecycle.
         // They are not persisted to UserDefaults. Use setCustomHost() or connect(apiHost:wsHost:) to update after init.
         let host = Configuration.HostEnvironments.init(
@@ -116,10 +121,10 @@ import Foundation
             customAPIHost: params.customAPIHost,
             customWSHost: params.customWSHost
         )
-        
+
         let apiHost = host.apiHost
         let wsHost = host.wsHost
-        
+
         // INFO: initialize 과정에서는 service 를 고객이 설정할 수 없음. init 후 setCompletionHandlerDelegateQueue 호출되야 queue 변경 가능
         let service = QueueService()
         let dispatcher = EventDispatcher()
@@ -178,8 +183,7 @@ import Foundation
             eventDispatcher: dispatcher,
             broadcaster: ConnectionEventBroadcaster(service, mapTableValueOption: .strongMemory),
             networkBroadcaster: NetworkEventBroadcaster(service),
-            internalBroadcaster: InternalConnectionEventBroadcaster(service),
-            instancePref: instancePref
+            internalBroadcaster: InternalConnectionEventBroadcaster(service)
         )
 
         let requestQueue = RequestQueue(
