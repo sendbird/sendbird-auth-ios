@@ -33,5 +33,6 @@ __pycache__/
 
 .claude/settings.local.json
 
+.omc
 
 buildServer.json

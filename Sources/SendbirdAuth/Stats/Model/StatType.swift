@@ -19,12 +19,15 @@ import Foundation
 
     // Notification stats
     case notificationStats = "noti:stats"
+    
+    // AIAgent stats
+    case aiAgentStats = "ai_agent:stats"
 
     @_spi(SendbirdInternal) public var isExternal: Bool {
         switch self {
         case .apiResult, .webSocketConnect, .webSocketDisconnect, .featureLocalCache, .featureLocalCacheEvent:
             return false
-        case .notificationStats:
+        case .notificationStats, .aiAgentStats:
             return true
         }
     }
@@ -37,6 +40,8 @@ import Foundation
             return .allowSDKFeatureLocalCacheLogPublish
         case .notificationStats:
             return .allowSDKNotiStatsLogPublish
+        case .aiAgentStats:
+            return .allowSDKAIAgentStatsLogPublish
         }
     }
 }

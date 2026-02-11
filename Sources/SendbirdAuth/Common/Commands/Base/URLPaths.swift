@@ -25,6 +25,7 @@ import Foundation
 
     /// SDK API endpoints
     case sdkStatistics
+    case sdkAIAgentStatistics
     case notificationStatistics
     case authenticate(userId: String)
 
@@ -55,6 +56,8 @@ import Foundation
             /// SDK API Endpoints
         case .sdkStatistics:
             return ["sdk", "statistics"]
+        case .sdkAIAgentStatistics:
+            return ["sdk", "ai_agent_statistics"]
         case .notificationStatistics:
             return ["sdk", "notification_statistics"]
         case .authenticate(let userId):
