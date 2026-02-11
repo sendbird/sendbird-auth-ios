@@ -10,7 +10,7 @@ import Foundation
 @_spi(SendbirdInternal) public final class SendbirdAuth {
     @_spi(SendbirdInternal) public static let authDecoder = JSONDecoder()
 
-    @_spi(SendbirdInternal) public static var sdkVersion: String { "0.0.9" }
+    @_spi(SendbirdInternal) public static var sdkVersion: String { "0.0.10" }
 
     private static var sdkInstance: SendbirdAuthMain?
     @_spi(SendbirdInternal) public static func updateSharedSDKInstance(to newMain: SendbirdAuthMain) {
