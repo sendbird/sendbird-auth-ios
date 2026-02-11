@@ -10,7 +10,7 @@ import Foundation
 @_spi(SendbirdInternal) public final class SendbirdAuth {
     @_spi(SendbirdInternal) public static let authDecoder = JSONDecoder()
 
-    @_spi(SendbirdInternal) public static var sdkVersion: String { "0.0.9" }
+    @_spi(SendbirdInternal) public static var sdkVersion: String { "0.0.10" }
 
     private static var sdkInstance: SendbirdAuthMain?
     @_spi(SendbirdInternal) public static func updateSharedSDKInstance(to newMain: SendbirdAuthMain) {
@@ -41,4 +41,18 @@ import Foundation
         let emptyAppId = sdkInstance.applicationId.isEmpty
         return !emptyAppId
     }
+
+#if DEBUG
+    /// 테스트용 StatManager 접근자
+    @_spi(SendbirdInternal) public static var statManager: StatManager? {
+        sdkInstance?.statManager
+    }
+#endif
+    
+    @discardableResult @_spi(SendbirdInternal) public static func addSendbirdExtensions(extensions: [SendbirdSDKInfo], customData: [String: String]?) -> Bool {
+        guard let sdkInstance else { return false }
+        
+        return sdkInstance.addSendbirdExtensions(extensions: extensions, customData: customData)
+    }
 }
+

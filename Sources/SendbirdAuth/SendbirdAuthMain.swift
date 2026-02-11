@@ -103,16 +103,17 @@ import Foundation
 
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
-        let pref = SendbirdAuth.pref
-        if let customAPIHost = params.customAPIHost {
-            pref.set(value: customAPIHost, forKey: PreferenceKey.customAPIHost)
-        }
-        if let customWsHost = params.customWSHost {
-            pref.set(value: customWsHost, forKey: PreferenceKey.customWsHost)
-        }
-        let apiHost = Configuration.apiHostURL(for: params.applicationId)
-        let wsHost = Configuration.wsHostURL(for: params.applicationId)
-
+        // NOTE: apiHost/wsHost are stored in routerConfig (in-memory) and share its lifecycle.
+        // They are not persisted to UserDefaults. Use setCustomHost() or connect(apiHost:wsHost:) to update after init.
+        let host = Configuration.HostEnvironments.init(
+            applicationId: params.applicationId,
+            customAPIHost: params.customAPIHost,
+            customWSHost: params.customWSHost
+        )
+        
+        let apiHost = host.apiHost
+        let wsHost = host.wsHost
+        
         // INFO: initialize 과정에서는 service 를 고객이 설정할 수 없음. init 후 setCompletionHandlerDelegateQueue 호출되야 queue 변경 가능
         let service = QueueService()
         let dispatcher = EventDispatcher()
@@ -394,20 +395,7 @@ extension SendbirdAuthMain {
     ) {
         Logger.main.debug("applicationId: \(applicationId), userId: \(userId), useToken: \(accessToken != nil), apiHost: \(String(describing: apiHost)), wsHost: \(String(describing: wsHost))")
 
-        // INFO: Custom hosts
-        let pref = SendbirdAuth.pref
-        if let apiHost {
-            pref.set(value: apiHost, forKey: PreferenceKey.customAPIHost)
-        } else {
-            pref.remove(forKey: PreferenceKey.customAPIHost)
-        }
-        if let wsHost {
-            pref.set(value: wsHost, forKey: PreferenceKey.customWsHost)
-        } else {
-            pref.remove(forKey: PreferenceKey.customWsHost)
-        }
-
-        guard !userId.isEmpty else {
+        guard userId.hasElements else {
             service {
                 let err = AuthClientError.invalidParameter.asAuthError(
                     message: .emptyParameter("userId")
@@ -417,7 +405,7 @@ extension SendbirdAuthMain {
             return
         }
 
-        guard !applicationId.isEmpty else {
+        guard applicationId.hasElements else {
             service {
                 Logger.session.error("Error: \(AuthClientError.invalidInitialization.asAuthError)")
                 completionHandler?(nil, AuthClientError.invalidInitialization.asAuthError)
@@ -543,7 +531,17 @@ extension SendbirdAuthMain {
         completionHandler: AuthUserHandler?
     ) {
         Logger.main.debug()
-        routerConfig.updateHost(apiHost: apiHost, wsHost: wsHost)
+
+        let host = Configuration.HostEnvironments.init(
+            applicationId: self.applicationId,
+            customAPIHost: apiHost ?? routerConfig.apiHost,
+            customWSHost: wsHost ?? routerConfig.wsHost
+        )
+        
+        if routerConfig.apiHost != host.apiHost || routerConfig.wsHost != host.wsHost {
+            routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
+        }
+        
         sessionManager.connect(authToken: accessToken, sessionKey: sessionKey, loginHandler: completionHandler)
     }
 }
@@ -659,15 +657,15 @@ extension SendbirdAuthMain {
         apiHost: String?,
         completionHandler: AuthUserHandler?
     ) {
-        // INFO: Custom hosts
-        let pref = SendbirdAuth.pref
-        if let apiHost {
-            pref.set(value: apiHost, forKey: PreferenceKey.customAPIHost)
-        } else {
-            pref.remove(forKey: PreferenceKey.customAPIHost)
+        let host = Configuration.HostEnvironments.init(
+            applicationId: self.applicationId,
+            customAPIHost: apiHost ?? routerConfig.apiHost
+        )
+        
+        if routerConfig.apiHost != host.apiHost {
+            routerConfig.updateHost(apiHost: host.apiHost, wsHost: nil)
         }
 
-        routerConfig.updateHost(apiHost: apiHost, wsHost: nil)
         sessionManager.authenticate(authData: authData, loginHandler: completionHandler)
     }
 }
@@ -768,6 +766,11 @@ extension SendbirdAuthMain {
         var version = ["main_sdk_info=\(mainProduct)/\(Self.systemName.lowercased())/\(mainVersion)"]
         version.append("device_os_platform=\(Self.systemName.lowercased())")
         version.append("os_version=\(Self.systemVersion)")
+
+        // Add auth_sdk_info when main SDK is not auth (e.g., chat)
+        if let mainSDKInfo, mainSDKInfo.product != .auth {
+            version.append("auth_sdk_info=auth/\(Self.systemName.lowercased())/\(sdkVersion)")
+        }
 
         if let extensionSdkInfo = extensionSdkInfo {
             version.append("extension_sdk_info=\(extensionSdkInfo)")
@@ -889,3 +892,4 @@ extension SendbirdAuthMain {
         return sessionManager.eKey
     }
 }
+    

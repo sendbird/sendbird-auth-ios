@@ -95,6 +95,7 @@ enum CodeCodingKeys: String, CodingKey, Codable, CustomStringConvertible, Reques
     case requireAuthForProfileImage = "require_auth_for_profile_image"
     case retryAfter = "retry_after"
     case retryCount = "retry_cnt"
+    case runtimeId = "runtime_id"
     case sdkDeviceTokenCache = "sdk_device_token_cache"
     case services
     case settingsUpdatedAt = "settings_updated_at"
