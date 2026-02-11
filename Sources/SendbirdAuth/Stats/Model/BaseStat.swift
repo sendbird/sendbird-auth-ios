@@ -140,8 +140,23 @@ import Foundation
         timestamp: Int64 = Date().milliSeconds,
         statId: String? = nil,
         isUploaded: Bool = false,
+        data: [String: AnyCodable]? = nil
+    ) {
+        self.timestamp = timestamp
+        self.statType = statType
+        self.statId = statId ?? UUID().uuidString
+        self.isUploaded = isUploaded
+        self.data = data
+        self.runtimeId = nil
+    }
+
+    @_spi(SendbirdInternal) public init(
+        statType: StatType,
+        timestamp: Int64 = Date().milliSeconds,
+        statId: String? = nil,
+        isUploaded: Bool = false,
         data: [String: AnyCodable]? = nil,
-        includeRuntimeId: Bool = false
+        includeRuntimeId: Bool
     ) {
         self.timestamp = timestamp
         self.statType = statType

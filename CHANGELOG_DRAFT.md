@@ -1,7 +1,5 @@
+### Features
+- Added auth SDK info to version string
+
 ### Improvements
-
-- Support extendable URL path and code key
-
-### Bug fixes
-
-- Fix updating user crash
+- Improved stability
