@@ -60,12 +60,16 @@ import Foundation
 
     // MARK: - Mapping
 
+    @_spi(SendbirdInternal) public static func map(type: String, data: [String: Any], timestamp: Int64) -> BaseStat? {
+        return map(type: type, data: data, timestamp: timestamp, statId: nil, includeRuntimeId: false) as? BaseStat
+    }
+
     @_spi(SendbirdInternal) public static func map(
         type: String,
         data: [String: Any],
         timestamp: Int64,
-        statId: String? = nil,
-        includeRuntimeId: Bool = false
+        statId: String?,
+        includeRuntimeId: Bool
     ) -> (any BaseStatType)? {
         guard let statType = StatType(rawValue: type) else {
             Logger.external.error("Invalid stat type", type)

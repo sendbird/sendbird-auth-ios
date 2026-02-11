@@ -80,6 +80,7 @@ final class ExternalStatMapperTests: XCTestCase {
             type: "ai_agent:stats",
             data: data,
             timestamp: 1234,
+            statId: nil,
             includeRuntimeId: true
         )
 
@@ -105,6 +106,7 @@ final class ExternalStatMapperTests: XCTestCase {
             type: "ai_agent:stats",
             data: data,
             timestamp: 1234,
+            statId: nil,
             includeRuntimeId: false
         )
 
