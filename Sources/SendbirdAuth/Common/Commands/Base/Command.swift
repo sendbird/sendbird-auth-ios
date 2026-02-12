@@ -40,7 +40,8 @@ import Foundation
     case sessionExpired = "EXPR"
     
     case busy = "BUSY"  // 4.34.0
-    
+    case aiAgentEvent = "AIEV"  // [NEXT_VERSION]
+
     @_spi(SendbirdInternal) public var isAckRequired: Bool {
         switch self {
         case .userMessage, .fileMessage,
