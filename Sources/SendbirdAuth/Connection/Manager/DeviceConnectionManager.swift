@@ -34,6 +34,7 @@ import AppKit
     
     @_spi(SendbirdInternal) public private(set) var isForeground: Bool = true
     private var currentHost: String = ""
+    var hostBundle: Bundle?
     
     @_spi(SendbirdInternal) public weak var sessionManager: SessionManager?
     @_spi(SendbirdInternal) public weak var webSocketManager: WebSocketManager? {
@@ -156,7 +157,7 @@ extension DeviceConnectionManager {
             return false
         }
         
-        let destination = host ?? Configuration.apiHostURL(for: applicationId)
+        let destination = host ?? Configuration.apiHostURL(for: applicationId, bundle: hostBundle)
         
         let isDifferentHost = (currentHost != destination)
         
