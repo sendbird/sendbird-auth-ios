@@ -11,22 +11,23 @@ extension Configuration {
     struct HostEnvironments {
         let apiHost: String
         let wsHost: String
-        
+
         init(
             applicationId: String,
             customAPIHost: String? = nil,
-            customWSHost: String? = nil
+            customWSHost: String? = nil,
+            bundle: Bundle? = nil
         ) {
             if let apiHost = customAPIHost, apiHost.hasElements {
                 self.apiHost = apiHost
             } else {
-                self.apiHost = Configuration.apiHostURL(for: applicationId)
+                self.apiHost = Configuration.apiHostURL(for: applicationId, bundle: bundle)
             }
-            
+
             if let wsHost = customWSHost, wsHost.hasElements {
                 self.wsHost = wsHost
             } else {
-                self.wsHost = Configuration.wsHostURL(for: applicationId)
+                self.wsHost = Configuration.wsHostURL(for: applicationId, bundle: bundle)
             }
         }
     }
@@ -47,27 +48,28 @@ enum Configuration {
         private static let defaultBaseHost = "api-@@.sendbird.com"
     #endif
 
-    private static func hostURL(for key: String, default defaultHost: String) -> String {
-        // 1. Bundle Info.plist (xcframework)
-        if let host = Bundle(for: SendbirdAuth.self).infoDictionary?[key] as? String {
+    private static func hostURL(for key: String, default defaultHost: String, bundle: Bundle?) -> String {
+        // 1. Injected bundle's Info.plist (xcframework)
+        if let bundle = bundle,
+           let host = bundle.infoDictionary?[key] as? String {
             return host
         }
         // 2. Fallback to compile-time default
         return defaultHost
     }
 
-    static func apiHostURL(for appId: String) -> String {
-        let template = hostURL(for: "API_HOST_URL", default: defaultAPIHost)
+    static func apiHostURL(for appId: String, bundle: Bundle? = nil) -> String {
+        let template = hostURL(for: "API_HOST_URL", default: defaultAPIHost, bundle: bundle)
         return template.replacingOccurrences(of: "@@", with: appId)
     }
 
-    static func wsHostURL(for appId: String) -> String {
-        let template = hostURL(for: "WS_HOST_URL", default: defaultWSHost)
+    static func wsHostURL(for appId: String, bundle: Bundle? = nil) -> String {
+        let template = hostURL(for: "WS_HOST_URL", default: defaultWSHost, bundle: bundle)
         return template.replacingOccurrences(of: "@@", with: appId)
     }
 
-    static func baseHostURL(for appId: String) -> String? {
-        let template = hostURL(for: "BASE_HOST_URL", default: defaultBaseHost)
+    static func baseHostURL(for appId: String, bundle: Bundle? = nil) -> String? {
+        let template = hostURL(for: "BASE_HOST_URL", default: defaultBaseHost, bundle: bundle)
         return template.replacingOccurrences(of: "@@", with: appId)
     }
 }
@@ -128,7 +130,7 @@ enum Configuration {
             Logger.main.error("clearCustomHost() called before initialization")
             return
         }
-        let host = Configuration.HostEnvironments(applicationId: applicationId)
+        let host = Configuration.HostEnvironments(applicationId: applicationId, bundle: hostBundle)
         routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
     }
 
@@ -142,11 +144,12 @@ enum Configuration {
             Logger.main.error("updateCustomHost() called while already connected. Operation aborted.")
             return
         }
-        
+
         let host = Configuration.HostEnvironments.init(
             applicationId: self.applicationId,
             customAPIHost: apiHost,
-            customWSHost: wsHost
+            customWSHost: wsHost,
+            bundle: hostBundle
         )
         routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
     }
