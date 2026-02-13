@@ -64,6 +64,8 @@ protocol CommandRouterInterface {
     @_spi(SendbirdInternal) public var connected: Bool { webSocketManager.connectionState == .open }
     
     @_spi(SendbirdInternal) public var parsingStrategy: ((String) -> (Command?))?
+
+    private let externalParsingStrategies = SafeDictionary<String, [String: (String) -> Command?]>()
     
     @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
     
@@ -134,8 +136,41 @@ protocol CommandRouterInterface {
         websocketManagerEventTask?.cancel()
     }
     
+    func addExternalParsingStrategy(
+        for cmdType: String,
+        identifier: String,
+        strategy: @escaping (String) -> Command?
+    ) {
+        var strategies = externalParsingStrategies[cmdType] ?? [:]
+        strategies[identifier] = strategy
+        externalParsingStrategies[cmdType] = strategies
+    }
+
+    func removeExternalParsingStrategy(
+        for cmdType: String,
+        identifier: String
+    ) {
+        var strategies = externalParsingStrategies[cmdType] ?? [:]
+        strategies.removeValue(forKey: identifier)
+        if strategies.isEmpty {
+            externalParsingStrategies.remove(forKey: cmdType)
+        } else {
+            externalParsingStrategies[cmdType] = strategies
+        }
+    }
+
     private func didReceiveMessage(_ message: String) {
         Logger.socket.debug("[WS Recv] \(message)")
+
+        // External parsing strategies: broadcast to registered handlers first
+        let cmdString = String(message.prefix(4))
+        if let strategies = externalParsingStrategies[cmdString], !strategies.isEmpty {
+            for (_, strategy) in strategies {
+                _ = strategy(message)
+            }
+        }
+
+        // Existing parsingStrategy path (always executed)
         guard let command = self.parsingStrategy?(message) else {
             return
         }
