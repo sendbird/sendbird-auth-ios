@@ -377,6 +377,10 @@ extension CommandRouter {
     @_spi(SendbirdInternal) public func getRequestHeaderDict<R: APIRequestable>(request: R) -> [String: String] {
         return self.createAPIHeaders(for: request)
     }
+
+    @_spi(SendbirdInternal) public func simulateDidReceiveMessage(_ message: String) {
+        self.didReceiveMessage(message)
+    }
 }
 #endif
 
