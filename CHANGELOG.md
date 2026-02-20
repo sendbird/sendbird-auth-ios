@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.0.11](https://github.com/sendbird/sendbird-auth-ios/releases/tag/0.0.11) (Feb 20, 2026)
+### Changes
+- Add bundle injection (#91)
+
 ## [0.0.10](https://github.com/sendbird/sendbird-auth-ios/releases/tag/0.0.10) (Feb 11, 2026)
 ### Features
 - Added auth SDK info to version string

@@ -1,7 +1,7 @@
 
 Pod::Spec.new do |s|
   s.name         = 'SendbirdAuthSDK'
-  s.version      = "0.0.10"
+  s.version      = "0.0.11"
   s.summary      = 'Sendbird Auth iOS Framework'
   s.description  = 'Authentication module for Sendbird iOS SDK'
   s.homepage     = 'https://sendbird.com'
@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
     'Young Hwang' => 'young.hwang@sendbird.com',
     'Kai Lee' => 'kai.lee@sendbird.com'
   }
-  s.source       = { :http => "https://github.com/sendbird/sendbird-auth-ios/releases/download/0.0.10/SendbirdAuthSDK.zip", :sha1 => "fbaca18a4690b8e573c5c5c31fe97b8fd0c424a7" }
+  s.source       = { :http => "https://github.com/sendbird/sendbird-auth-ios/releases/download/0.0.11/SendbirdAuthSDK.zip", :sha1 => "b3a8ca531d9817c5d0f164656aebc11d20cd6452" }
   s.requires_arc = true
   s.platform = :ios, '13.0'
   s.documentation_url = 'https://sendbird.com/docs/chat'
