@@ -58,9 +58,9 @@ import Foundation
     case useNativeWS = "KEY_USE_NATIVE_WS"
     case configApiTs = "KEY_CONFIG_API_TS"
     
-    @available(*, deprecated, message: "This case value has been deprecated since [NEXT_VERSION]")
+    @available(*, deprecated, message: "This case value has been deprecated since 0.0.10")
     case customAPIHost = "KEY_CUSTOM_API_HOST"
-    @available(*, deprecated, message: "This case value has been deprecated since [NEXT_VERSION]")
+    @available(*, deprecated, message: "This case value has been deprecated since 0.0.10")
     case customWsHost = "KEY_CUSTOM_WS_HOST"
 }
 
