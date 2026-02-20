@@ -11,7 +11,7 @@ import Foundation
  Operation object that is used to sequentialize asynchronous tasks in a blocking manner.
  No two tasks are run at the same time, and the order of tasks inserted to a `OperationQueue` is guaranteed.
  */
-@_spi(SendbirdInternal) public class BlockingOperation: Operation {
+@_spi(SendbirdInternal) public class BlockingOperation: Operation, @unchecked Sendable {
     @_spi(SendbirdInternal) public let identifier: String
     
     @_spi(SendbirdInternal) public enum State: String {

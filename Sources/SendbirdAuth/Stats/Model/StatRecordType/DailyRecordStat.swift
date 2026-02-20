@@ -33,8 +33,10 @@ import Foundation
         
         for (key, newValue) in new {
             if let existingValue = result[key],
-               let existingDict = convertToCodableDictionary(from: existingValue.value),
-               let newDict = convertToCodableDictionary(from: newValue.value) {
+               let existingRawValue = existingValue.value,
+               let existingDict = convertToCodableDictionary(from: existingRawValue),
+               let newRawValue = newValue.value,
+               let newDict = convertToCodableDictionary(from: newRawValue) {
                 
                 result[key] = AnyCodable(mergeNestedData(existing: existingDict, new: newDict))
             } else if newValue.value != nil {

@@ -8,7 +8,7 @@
 import Foundation
 
 /// Sendbird error class.
-@_spi(SendbirdInternal) public final class AuthError: NSError {
+@_spi(SendbirdInternal) public final class AuthError: NSError, @unchecked Sendable {
     convenience init?(dictionary: [String: Any]) {
         guard let errorMessage = dictionary["message"] as? String,
               let errorCode = dictionary["code"] as? Int,
