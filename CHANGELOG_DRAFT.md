@@ -1,5 +1,2 @@
-### Features
-- Added auth SDK info to version string
-
-### Improvements
-- Improved stability
+### Changes
+- Add bundle injection (#91)
