@@ -1,2 +1,2 @@
-### Changes
-- Add bundle injection (#91)
+### Improvements
+- Improve stability
