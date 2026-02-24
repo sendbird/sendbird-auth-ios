@@ -132,6 +132,12 @@ import Foundation
             dictionary.forEach(body)
         }
     }
+
+    @_spi(SendbirdInternal) public func mutate(forKey key: Key, _ transform: (Value?) -> Value?) {
+        queue.sync {
+            dictionary[key] = transform(dictionary[key])
+        }
+    }
 }
 
 extension SafeDictionary: CustomStringConvertible {
