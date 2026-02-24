@@ -45,6 +45,7 @@ import Foundation
 
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
+    let hostBundle: Bundle?
 
     /// Instance-specific preferences (isolated per appId + apiHostUrl)
     @_spi(SendbirdInternal) public let preference: LocalPreferences
@@ -103,6 +104,7 @@ import Foundation
     ) {
         Logger.setSDKVersion(SendbirdAuth.sdkVersion)
         mainSDKInfo = params.mainSDKInfo
+        hostBundle = params.hostBundle
 
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
@@ -111,14 +113,17 @@ import Foundation
         let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)")
         self.preference = instancePref
 
-        if let customAPIHost = params.customAPIHost {
-            instancePref.set(value: customAPIHost, forKey: PreferenceKey.customAPIHost)
-        }
-        if let customWsHost = params.customWSHost {
-            instancePref.set(value: customWsHost, forKey: PreferenceKey.customWsHost)
-        }
-        let apiHost = Configuration.apiHostURL(for: params.applicationId, using: instancePref)
-        let wsHost = Configuration.wsHostURL(for: params.applicationId, using: instancePref)
+        // NOTE: apiHost/wsHost are stored in routerConfig (in-memory) and share its lifecycle.
+        // They are not persisted to UserDefaults. Use setCustomHost() or connect(apiHost:wsHost:) to update after init.
+        let host = Configuration.HostEnvironments.init(
+            applicationId: params.applicationId,
+            customAPIHost: params.customAPIHost,
+            customWSHost: params.customWSHost,
+            bundle: params.hostBundle
+        )
+
+        let apiHost = host.apiHost
+        let wsHost = host.wsHost
 
         // INFO: initialize 과정에서는 service 를 고객이 설정할 수 없음. init 후 setCompletionHandlerDelegateQueue 호출되야 queue 변경 가능
         let service = QueueService()
@@ -180,6 +185,7 @@ import Foundation
             internalBroadcaster: InternalConnectionEventBroadcaster(service),
             instancePref: instancePref
         )
+        deviceConnectionManager.hostBundle = params.hostBundle
 
         let requestQueue = RequestQueue(
             commandRouter: router,
@@ -415,19 +421,7 @@ extension SendbirdAuthMain {
     ) {
         Logger.main.debug("applicationId: \(applicationId), userId: \(userId), useToken: \(accessToken != nil), apiHost: \(String(describing: apiHost)), wsHost: \(String(describing: wsHost))")
 
-        // INFO: Custom hosts
-        if let apiHost {
-            preference.set(value: apiHost, forKey: PreferenceKey.customAPIHost)
-        } else {
-            preference.remove(forKey: PreferenceKey.customAPIHost)
-        }
-        if let wsHost {
-            preference.set(value: wsHost, forKey: PreferenceKey.customWsHost)
-        } else {
-            preference.remove(forKey: PreferenceKey.customWsHost)
-        }
-
-        guard !userId.isEmpty else {
+        guard userId.hasElements else {
             service {
                 let err = AuthClientError.invalidParameter.asAuthError(
                     message: .emptyParameter("userId")
@@ -437,7 +431,7 @@ extension SendbirdAuthMain {
             return
         }
 
-        guard !applicationId.isEmpty else {
+        guard applicationId.hasElements else {
             service {
                 Logger.session.error("Error: \(AuthClientError.invalidInitialization.asAuthError)")
                 completionHandler?(nil, AuthClientError.invalidInitialization.asAuthError)
@@ -563,7 +557,18 @@ extension SendbirdAuthMain {
         completionHandler: AuthUserHandler?
     ) {
         Logger.main.debug()
-        routerConfig.updateHost(apiHost: apiHost, wsHost: wsHost)
+
+        let host = Configuration.HostEnvironments.init(
+            applicationId: self.applicationId,
+            customAPIHost: apiHost ?? routerConfig.apiHost,
+            customWSHost: wsHost ?? routerConfig.wsHost,
+            bundle: hostBundle
+        )
+        
+        if routerConfig.apiHost != host.apiHost || routerConfig.wsHost != host.wsHost {
+            routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
+        }
+        
         sessionManager.connect(authToken: accessToken, sessionKey: sessionKey, loginHandler: completionHandler)
     }
 }
@@ -679,14 +684,16 @@ extension SendbirdAuthMain {
         apiHost: String?,
         completionHandler: AuthUserHandler?
     ) {
-        // INFO: Custom hosts
-        if let apiHost {
-            preference.set(value: apiHost, forKey: PreferenceKey.customAPIHost)
-        } else {
-            preference.remove(forKey: PreferenceKey.customAPIHost)
+        let host = Configuration.HostEnvironments.init(
+            applicationId: self.applicationId,
+            customAPIHost: apiHost ?? routerConfig.apiHost,
+            bundle: hostBundle
+        )
+
+        if routerConfig.apiHost != host.apiHost {
+            routerConfig.updateHost(apiHost: host.apiHost, wsHost: nil)
         }
 
-        routerConfig.updateHost(apiHost: apiHost, wsHost: nil)
         sessionManager.authenticate(authData: authData, loginHandler: completionHandler)
     }
 }
@@ -787,6 +794,11 @@ extension SendbirdAuthMain {
         var version = ["main_sdk_info=\(mainProduct)/\(Self.systemName.lowercased())/\(mainVersion)"]
         version.append("device_os_platform=\(Self.systemName.lowercased())")
         version.append("os_version=\(Self.systemVersion)")
+
+        // Add auth_sdk_info when main SDK is not auth (e.g., chat)
+        if let mainSDKInfo, mainSDKInfo.product != .auth {
+            version.append("auth_sdk_info=auth/\(Self.systemName.lowercased())/\(sdkVersion)")
+        }
 
         if let extensionSdkInfo = extensionSdkInfo {
             version.append("extension_sdk_info=\(extensionSdkInfo)")
@@ -908,3 +920,4 @@ extension SendbirdAuthMain {
         return sessionManager.eKey
     }
 }
+    

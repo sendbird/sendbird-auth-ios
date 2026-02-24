@@ -10,7 +10,7 @@ import Foundation
 @_spi(SendbirdInternal) public final class SendbirdAuth {
     @_spi(SendbirdInternal) public static let authDecoder = JSONDecoder()
 
-    @_spi(SendbirdInternal) public static var sdkVersion: String { "0.0.5" }
+    @_spi(SendbirdInternal) public static var sdkVersion: String { "0.0.11" }
 
     // MARK: - Multi-instance Support
 
@@ -99,4 +99,18 @@ import Foundation
         }
         return !sdkInstance.applicationId.isEmpty
     }
+
+#if DEBUG
+    /// 테스트용 StatManager 접근자
+    @_spi(SendbirdInternal) public static var statManager: StatManager? {
+        sdkInstance?.statManager
+    }
+#endif
+    
+    @discardableResult @_spi(SendbirdInternal) public static func addSendbirdExtensions(extensions: [SendbirdSDKInfo], customData: [String: String]?) -> Bool {
+        guard let sdkInstance else { return false }
+        
+        return sdkInstance.addSendbirdExtensions(extensions: extensions, customData: customData)
+    }
 }
+

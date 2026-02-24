@@ -23,6 +23,8 @@ import Foundation
     @_spi(SendbirdInternal) public var customAPIHost: String?
     @_spi(SendbirdInternal) public var customWSHost: String?
 
+    @_spi(SendbirdInternal) public var hostBundle: Bundle?
+
     @_spi(SendbirdInternal) public var mainSDKInfo: SendbirdSDKInfo?
 
     /// Custom exception parser for API error responses.
