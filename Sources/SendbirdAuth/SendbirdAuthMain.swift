@@ -45,6 +45,7 @@ import Foundation
 
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
+    let hostBundle: Bundle?
 
     #if DEBUG
         private var websocketEngine: (any ChatWebSocketEngine)? // For test
@@ -100,6 +101,7 @@ import Foundation
     ) {
         Logger.setSDKVersion(SendbirdAuth.sdkVersion)
         mainSDKInfo = params.mainSDKInfo
+        hostBundle = params.hostBundle
 
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
@@ -108,7 +110,8 @@ import Foundation
         let host = Configuration.HostEnvironments.init(
             applicationId: params.applicationId,
             customAPIHost: params.customAPIHost,
-            customWSHost: params.customWSHost
+            customWSHost: params.customWSHost,
+            bundle: params.hostBundle
         )
         
         let apiHost = host.apiHost
@@ -172,6 +175,7 @@ import Foundation
             networkBroadcaster: NetworkEventBroadcaster(service),
             internalBroadcaster: InternalConnectionEventBroadcaster(service)
         )
+        deviceConnectionManager.hostBundle = params.hostBundle
 
         let requestQueue = RequestQueue(
             commandRouter: router,
@@ -556,7 +560,8 @@ extension SendbirdAuthMain {
         let host = Configuration.HostEnvironments.init(
             applicationId: self.applicationId,
             customAPIHost: apiHost ?? routerConfig.apiHost,
-            customWSHost: wsHost ?? routerConfig.wsHost
+            customWSHost: wsHost ?? routerConfig.wsHost,
+            bundle: hostBundle
         )
         
         if routerConfig.apiHost != host.apiHost || routerConfig.wsHost != host.wsHost {
@@ -680,7 +685,8 @@ extension SendbirdAuthMain {
     ) {
         let host = Configuration.HostEnvironments.init(
             applicationId: self.applicationId,
-            customAPIHost: apiHost ?? routerConfig.apiHost
+            customAPIHost: apiHost ?? routerConfig.apiHost,
+            bundle: hostBundle
         )
         
         if routerConfig.apiHost != host.apiHost {
