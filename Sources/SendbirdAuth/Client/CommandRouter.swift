@@ -141,21 +141,21 @@ protocol CommandRouterInterface {
         identifier: String,
         strategy: @escaping (String) -> Command?
     ) {
-        var strategies = externalParsingStrategies[cmdType] ?? [:]
-        strategies[identifier] = strategy
-        externalParsingStrategies[cmdType] = strategies
+        externalParsingStrategies.mutate(forKey: cmdType) { existing in
+            var strategies = existing ?? [:]
+            strategies[identifier] = strategy
+            return strategies
+        }
     }
 
     func removeExternalParsingStrategy(
         for cmdType: String,
         identifier: String
     ) {
-        var strategies = externalParsingStrategies[cmdType] ?? [:]
-        strategies.removeValue(forKey: identifier)
-        if strategies.isEmpty {
-            externalParsingStrategies.remove(forKey: cmdType)
-        } else {
-            externalParsingStrategies[cmdType] = strategies
+        externalParsingStrategies.mutate(forKey: cmdType) { existing in
+            var strategies = existing ?? [:]
+            strategies.removeValue(forKey: identifier)
+            return strategies.isEmpty ? nil : strategies
         }
     }
 
