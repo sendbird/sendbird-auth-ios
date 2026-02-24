@@ -8,16 +8,25 @@
 import Foundation
 
 @_spi(SendbirdInternal) public final class LocalPreferences {
-    
+
     private let suiteName: String
     private let userDefault: UserDefaults?
-    
+    private let _decoder: JSONDecoder?
+
     @_spi(SendbirdInternal) public init(suiteName: String) {
         self.suiteName = suiteName
         self.userDefault = UserDefaults(suiteName: suiteName)
+        self._decoder = nil
         assert(userDefault != nil, "UserDefaults(suiteName: \(suiteName)) must not be nil")
     }
-    
+
+    @_spi(SendbirdInternal) public init(suiteName: String, decoder: JSONDecoder) {
+        self.suiteName = suiteName
+        self.userDefault = UserDefaults(suiteName: suiteName)
+        self._decoder = decoder
+        assert(userDefault != nil, "UserDefaults(suiteName: \(suiteName)) must not be nil")
+    }
+
     @_spi(SendbirdInternal) public func set<T: Encodable>(value: T?, forKey key: CustomStringConvertible) {
         if let encoded = try? JSONEncoder().encode(value) {
             userDefault?.set(encoded, forKey: key.description)
@@ -25,10 +34,11 @@ import Foundation
             userDefault?.set(value, forKey: key.description)
         }
     }
-    
+
     @_spi(SendbirdInternal) public func value<T: Decodable>(forKey key: CustomStringConvertible) -> T? {
+        let effectiveDecoder = _decoder ?? SendbirdAuth.authDecoder
         if let result = userDefault?.data(forKey: key.description),
-           let decoded = try? SendbirdAuth.authDecoder.decode(T.self, from: result) {
+           let decoded = try? effectiveDecoder.decode(T.self, from: result) {
             return decoded
         } else {
             return userDefault?.value(forKey: key.description) as? T

@@ -164,7 +164,7 @@ import Foundation
             
             switch httpURLResponse.statusCode {
             case 200..<300:
-                let result = request.decodeResult(from: data, decoder: SendbirdAuth.authDecoder)
+                let result = request.decodeResult(from: data, decoder: self.dependency?.decoder ?? SendbirdAuth.authDecoder)
                 switch result {
                 case .success(let value):
                     completionHandler?(value, nil)
@@ -276,7 +276,7 @@ import Foundation
 
                 let result = request.decodeResult(
                     from: data,
-                    decoder: SendbirdAuth.authDecoder
+                    decoder: self.dependency?.decoder ?? SendbirdAuth.authDecoder
                 )
                 
                 switch result {

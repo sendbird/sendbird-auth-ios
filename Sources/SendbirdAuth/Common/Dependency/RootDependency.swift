@@ -11,10 +11,12 @@ import Foundation
     var service: QueueService { get }
     var config: SendbirdConfiguration { get }
     var stateData: ConnectionStateData { get }
-    
+
     var requestQueue: RequestQueue { get }
     var deviceConnectionManager: DeviceConnectionManager { get }
     var statManager: StatManager { get }
 
     var commonSharedData: CommonSharedData { get }
+
+    var decoder: JSONDecoder { get }
 }

@@ -327,7 +327,7 @@ extension AuthUser: NSCopying {
     /// - Returns: `User` instance
     @objc
     open func copy(with zone: NSZone? = nil) -> Any {
-        return self.makeCodableCopy(decoder: SendbirdAuth.authDecoder)
+        return self.makeCodableCopy(decoder: dependency?.decoder ?? SendbirdAuth.authDecoder)
     }
 }
 

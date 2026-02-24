@@ -43,6 +43,8 @@ import Foundation
     @_spi(SendbirdInternal) public let routerConfig: CommandRouterConfiguration
     @_spi(SendbirdInternal) public let sessionHandler: SessionEventBroadcaster
 
+    @_spi(SendbirdInternal) public let decoder: JSONDecoder = JSONDecoder()
+
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
     let hostBundle: Bundle?
@@ -113,7 +115,7 @@ import Foundation
 
         // Create instance-specific preferences (isolated per appId + apiHostUrl)
         let instanceKey = InstanceRegistry.createKey(appId: params.applicationId, apiHostUrl: params.customAPIHost)
-        let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)")
+        let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)", decoder: decoder)
         self.preference = instancePref
 
         // NOTE: apiHost/wsHost are stored in routerConfig (in-memory) and share its lifecycle.
@@ -132,7 +134,7 @@ import Foundation
         let service = QueueService()
         let dispatcher = EventDispatcher()
 
-        let localCachePreference = LocalPreferences(suiteName: "com.sendbird.sdk.messaging.local_cache_preference")
+        let localCachePreference = LocalPreferences(suiteName: "com.sendbird.sdk.messaging.local_cache_preference", decoder: decoder)
 
         commonSharedData = CommonSharedData(eKey: nil)
 
@@ -227,7 +229,7 @@ import Foundation
 
         Logger.setLoggerLevel(logLevel)
 
-        SendbirdAuth.authDecoder.updateAuthDependency(self)
+        decoder.updateAuthDependency(self)
 
         sessionManager.resolve(with: self)
         sessionManager.delegate = self
