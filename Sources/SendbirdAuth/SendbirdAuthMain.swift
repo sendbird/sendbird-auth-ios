@@ -199,7 +199,7 @@ import Foundation
         self.requestQueue = requestQueue
 
         let statManager = StatManager(
-            apiClient: statAPIClient ?? StatAPIClient(requestQueue: requestQueue),
+            apiClient: statAPIClient ?? StatAPIClient(requestQueue: requestQueue, decoder: decoder),
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             configuration: config
         )

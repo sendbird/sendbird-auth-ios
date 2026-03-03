@@ -19,6 +19,8 @@ import Foundation
     /// Runtime ID (앱 실행 중 유지되는 고유 ID)
     var runtimeId: String? { get }
 
+    var decoder: JSONDecoder { get }
+
     func markAsUploaded()
     func copy(with zone: NSZone?) -> Any
 }
@@ -27,9 +29,11 @@ import Foundation
     func markAsUploaded() {
         isUploaded = true
     }
-    
+
+    var decoder: JSONDecoder { JSONDecoder() }
+
     func copy(with zone: NSZone? = nil) -> Any {
-        return makeCodableCopy(decoder: SendbirdAuth.authDecoder)
+        return makeCodableCopy(decoder: decoder)
     }
     
     func nestedEncodeContainer<NestedKey>(

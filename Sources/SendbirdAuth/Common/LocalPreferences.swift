@@ -36,7 +36,7 @@ import Foundation
     }
 
     @_spi(SendbirdInternal) public func value<T: Decodable>(forKey key: CustomStringConvertible) -> T? {
-        let effectiveDecoder = _decoder ?? SendbirdAuth.authDecoder
+        let effectiveDecoder = _decoder ?? JSONDecoder()
         if let result = userDefault?.data(forKey: key.description),
            let decoded = try? effectiveDecoder.decode(T.self, from: result) {
             return decoded
