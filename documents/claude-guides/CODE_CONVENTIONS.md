@@ -198,11 +198,25 @@ public init(from decoder: Decoder) throws { ... }
 /// - Parameter encoder: `Encoder` instance
 public func encode(to encoder: Encoder) throws { ... }
 
-/// - Since: 0.0.10
+/// - Since: [NEXT_VERSION]
 @_spi(SendbirdInternal) public var newProperty: String
 ```
 
-### 6.2 인라인 주석
+### 6.2 버전 표기
+
+새로운 public API 추가 또는 deprecated 처리 시 **구체적 버전 번호 대신 `[NEXT_VERSION]`을 사용**한다. 릴리즈 시점에 실제 버전으로 일괄 치환한다.
+
+```swift
+// 새 API 추가 시
+/// - Since: [NEXT_VERSION]
+@_spi(SendbirdInternal) public func newFeature() { }
+
+// Deprecated 처리 시
+@available(*, deprecated, message: "Use newMethod() instead") // [NEXT_VERSION]
+@_spi(SendbirdInternal) public func oldMethod() { }
+```
+
+### 6.3 인라인 주석
 
 ```swift
 // TODO: 향후 처리 필요한 항목
