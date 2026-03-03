@@ -1,2 +1,5 @@
 - 배포 플로우에 대한 변경이 있을 땐 /script 안의 파일과 .claude/ 안의 skills.md 파일을 같이 수정할 것.
 - co-author에 claude code를 등록하지 않을 것
+- 코드 작성/수정 시 `documents/claude-guides/CODE_CONVENTIONS.md` 의 컨벤션을 따를 것.
+- 코드 컨벤션에 맞지 않는 패턴을 발견하면 기존 코드베이스 패턴에 맞게 수정할 것.
+- 코드 작업 중 기존 컨벤션 문서에 없는 새로운 패턴이나 규칙을 발견하면, `documents/claude-guides/CODE_CONVENTIONS.md`에 해당 내용을 자동으로 추가/업데이트할 것. 별도 요청 없이도 컨벤션 문서를 최신 상태로 유지할 것.
