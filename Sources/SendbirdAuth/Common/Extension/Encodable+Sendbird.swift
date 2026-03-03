@@ -38,12 +38,16 @@ import Foundation
 
 extension JSONDecoder {
     func updateAuthDependency(_ dependency: Dependency?) {
-        self.userInfo[DecoderInfoKey.dependency] = dependency
+        if let dependency = dependency {
+            self.userInfo[DecoderInfoKey.dependency] = WeakReference<AnyObject>(value: dependency)
+        } else {
+            self.userInfo[DecoderInfoKey.dependency] = nil
+        }
     }
 }
 
 extension Decoder {
     func extractDependency() -> Dependency? {
-        return self.userInfo[DecoderInfoKey.dependency] as? Dependency
+        return (self.userInfo[DecoderInfoKey.dependency] as? WeakReference<AnyObject>)?.value as? Dependency
     }
 }
