@@ -115,7 +115,7 @@ import Foundation
 
         // Create instance-specific preferences (isolated per appId + apiHostUrl)
         let instanceKey = InstanceRegistry.createKey(appId: params.applicationId, apiHostUrl: params.customAPIHost)
-        let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)", decoder: decoder)
+        let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)")
         self.preference = instancePref
 
         // NOTE: apiHost/wsHost are stored in routerConfig (in-memory) and share its lifecycle.
@@ -134,7 +134,7 @@ import Foundation
         let service = QueueService()
         let dispatcher = EventDispatcher()
 
-        let localCachePreference = LocalPreferences(suiteName: "com.sendbird.sdk.messaging.local_cache_preference", decoder: decoder)
+        let localCachePreference = LocalPreferences(suiteName: "com.sendbird.sdk.messaging.local_cache_preference")
 
         commonSharedData = CommonSharedData(eKey: nil)
 

@@ -11,19 +11,11 @@ import Foundation
 
     private let suiteName: String
     private let userDefault: UserDefaults?
-    private let _decoder: JSONDecoder?
+    private let decoder = JSONDecoder()
 
     @_spi(SendbirdInternal) public init(suiteName: String) {
         self.suiteName = suiteName
         self.userDefault = UserDefaults(suiteName: suiteName)
-        self._decoder = nil
-        assert(userDefault != nil, "UserDefaults(suiteName: \(suiteName)) must not be nil")
-    }
-
-    @_spi(SendbirdInternal) public init(suiteName: String, decoder: JSONDecoder) {
-        self.suiteName = suiteName
-        self.userDefault = UserDefaults(suiteName: suiteName)
-        self._decoder = decoder
         assert(userDefault != nil, "UserDefaults(suiteName: \(suiteName)) must not be nil")
     }
 
@@ -36,9 +28,8 @@ import Foundation
     }
 
     @_spi(SendbirdInternal) public func value<T: Decodable>(forKey key: CustomStringConvertible) -> T? {
-        let effectiveDecoder = _decoder ?? JSONDecoder()
         if let result = userDefault?.data(forKey: key.description),
-           let decoded = try? effectiveDecoder.decode(T.self, from: result) {
+           let decoded = try? decoder.decode(T.self, from: result) {
             return decoded
         } else {
             return userDefault?.value(forKey: key.description) as? T
