@@ -250,6 +250,27 @@ import Foundation
 
     /// Modules that use the `Auth` object can resolve all the modules that
     /// need to be newly resolved within their own module at once.
+    @_spi(SendbirdInternal)
+    public func addExternalParsingStrategy(
+        for cmdType: String,
+        identifier: String,
+        strategy: @escaping (String) -> Command?
+    ) {
+        router.addExternalParsingStrategy(
+            for: cmdType, identifier: identifier, strategy: strategy
+        )
+    }
+
+    @_spi(SendbirdInternal)
+    public func removeExternalParsingStrategy(
+        for cmdType: String,
+        identifier: String
+    ) {
+        router.removeExternalParsingStrategy(
+            for: cmdType, identifier: identifier
+        )
+    }
+
     @_spi(SendbirdInternal) public func resolveDependency(with dependency: some Dependency) {
         Logger.main.debug("Resolving dependency with \(String(describing: dependency))")
 

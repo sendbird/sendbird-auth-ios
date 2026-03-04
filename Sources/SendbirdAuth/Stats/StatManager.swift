@@ -701,7 +701,7 @@ extension StatManager: EventDelegate {
             } else {
                 disable()
             }
-        case let command as BusyEvent:
+        case is BusyEvent:
             self.hasReceivedBUSYatLeastOnce = true 
         default: break
         }

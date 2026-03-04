@@ -10,7 +10,7 @@ import Foundation
 @_spi(SendbirdInternal) public final class SendbirdAuth {
     @_spi(SendbirdInternal) public static let authDecoder = JSONDecoder()
 
-    @_spi(SendbirdInternal) public static var sdkVersion: String { "0.0.10" }
+    @_spi(SendbirdInternal) public static var sdkVersion: String { "0.0.11" }
 
     // MARK: - Multi-instance Support
 
@@ -111,6 +111,19 @@ import Foundation
         guard let sdkInstance = registry.first() else { return false }
         
         return sdkInstance.addSendbirdExtensions(extensions: extensions, customData: customData)
+    }
+
+    /// Returns the shared `SendbirdAuthMain` instance if it matches the given `appId`.
+    ///
+    /// Multi-instance aware accessor. Currently returns the single shared instance
+    /// when the `appId` matches; returns `nil` otherwise.
+    @_spi(SendbirdInternal) public static func get(
+        appId: String,
+        apiHost: String? = nil
+    ) -> SendbirdAuthMain? {
+        guard let instance = sdkInstance,
+              instance.applicationId == appId else { return nil }
+        return instance
     }
 }
 

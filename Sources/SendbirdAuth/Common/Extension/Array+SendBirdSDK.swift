@@ -40,7 +40,7 @@ import Foundation
 }
 
 @_spi(SendbirdInternal) extension Array where Element == AnyCodable {
-    @_spi(SendbirdInternal) public var anyValue: [Any] { map { $0.anyValue } }
+    @_spi(SendbirdInternal) public var anyValue: [Any] { map { $0.anyValue as Any } }
 }
 
 extension Array where Element == Any {
