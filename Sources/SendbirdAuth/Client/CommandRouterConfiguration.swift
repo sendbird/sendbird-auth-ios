@@ -60,6 +60,28 @@ import Foundation
         syncHostToAppGroup()
     }
 
+    // NOTE: Reads the latest host from AppGroup UserDefaults that was saved by the main app.
+    // Used by NotificationExtension to restore the main app's host for API calls (e.g., push delivery).
+    @_spi(SendbirdInternal) public func loadHostFromAppGroup(
+        appGroup: String?,
+        applicationId: String?
+    ) {
+        guard let appGroup, appGroup.hasElements else { return }
+        guard let applicationId, applicationId.hasElements else { return}
+        
+        let preferences = LocalPreferences(suiteName: appGroup)
+        let apiHost: String? = preferences.value(forKey: "\(PreferenceKey.latestAPIHost)_\(applicationId)")
+        let wsHost: String? = preferences.value(forKey: "\(PreferenceKey.latestWSHost)_\(applicationId)")
+        
+        if let apiHost, apiHost.hasElements {
+            self.apiHost = apiHost
+            
+        }
+        if let wsHost, wsHost.hasElements {
+            self.wsHost = wsHost
+        }
+    }
+
     // TODO: PushDeviceInfoCacheStorage also uses UserDefaults(suiteName: appGroup) for push token.
     // Consider sharing a single AppGroup UserDefaults instance across host sync and push token storage.
     private func syncHostToAppGroup() {
