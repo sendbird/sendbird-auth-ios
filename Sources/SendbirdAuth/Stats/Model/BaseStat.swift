@@ -28,9 +28,7 @@ import Foundation
 @_spi(SendbirdInternal) public extension BaseStatType {
     func markAsUploaded() {
         isUploaded = true
-    }
-
-    var decoder: JSONDecoder { JSONDecoder() }
+    } 
 
     func copy(with zone: NSZone? = nil) -> Any {
         return makeCodableCopy(decoder: decoder)
@@ -138,6 +136,8 @@ import Foundation
     /// When using Stat internally, it is used by inheriting BaseStat, and values ​​under `data` are directly mapped,
     /// so there is no need to save them in the form of a json dictionary.
     @_spi(SendbirdInternal) public let data: [String: AnyCodable]?
+
+    @_spi(SendbirdInternal) public var decoder: JSONDecoder { JSONDecoder() }
 
     @_spi(SendbirdInternal) public init(
         statType: StatType,

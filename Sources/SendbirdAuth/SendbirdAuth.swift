@@ -122,8 +122,9 @@ import Foundation
         appId: String,
         apiHost: String? = nil
     ) -> SendbirdAuthMain? {
-        guard let instance = sdkInstance,
-              instance.applicationId == appId else { return nil }
+        guard let instance = registry.get(appId: appId, apiHostUrl: apiHost) else {
+            return nil
+        }
         return instance
     }
 }
