@@ -13,6 +13,12 @@ import Foundation
 
     @_spi(SendbirdInternal) public var apiHost: String
     @_spi(SendbirdInternal) public var wsHost: String
+
+    // NOTE: When set, the latest host is persisted to AppGroup UserDefaults
+    // so that NotificationExtension can reuse the main app's host for API calls (e.g., push delivery).
+    // The applicationId is used to scope the keys so multiple SDK instances don't overwrite each other.
+    private var appGroup: String?
+    private var applicationId: String?
     
     @_spi(SendbirdInternal) public init(
         useNativeSocket: Bool? = nil,
@@ -36,6 +42,14 @@ import Foundation
         wsHost: ""
     )
     
+    // NOTE: Enables host persistence to AppGroup UserDefaults
+    // so that NotificationExtension can reuse the main app's host for API calls (e.g., push delivery).
+    @_spi(SendbirdInternal) public func setAppGroup(_ appGroup: String, applicationId: String) {
+        self.appGroup = appGroup
+        self.applicationId = applicationId
+        syncHostToAppGroup()
+    }
+
     @_spi(SendbirdInternal) public func updateHost(apiHost: String?, wsHost: String?) {
         if let apiHost {
             self.apiHost = apiHost
@@ -43,5 +57,15 @@ import Foundation
         if let wsHost {
             self.wsHost = wsHost
         }
+        syncHostToAppGroup()
+    }
+
+    // TODO: PushDeviceInfoCacheStorage also uses UserDefaults(suiteName: appGroup) for push token.
+    // Consider sharing a single AppGroup UserDefaults instance across host sync and push token storage.
+    private func syncHostToAppGroup() {
+        guard let applicationId, let appGroup else { return }
+        let preferences = LocalPreferences(suiteName: appGroup)
+        preferences.set(value: apiHost, forKey: "\(PreferenceKey.latestAPIHost)_\(applicationId)")
+        preferences.set(value: wsHost, forKey: "\(PreferenceKey.latestWSHost)_\(applicationId)")
     }
 }
