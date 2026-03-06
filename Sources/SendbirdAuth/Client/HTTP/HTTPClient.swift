@@ -122,11 +122,12 @@ import Foundation
         let requestAt = Date().milliSeconds
         let requestId = UUID().uuidString
         let dataTask = urlSession.safeCancellableDataTask(with: urlRequest) { [weak self] data, response, error in
-            guard let self = self else {
+            guard let self = self,
+                  let decoder = self.dependency?.decoder else {
                 completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
                 return
             }
-            
+
             self.cancellableTasks.remove(forKey: requestId)
             
             Logger.http.info("[Sendbird] Finish HTTP session: \(NSDate().timeIntervalSince1970)")
@@ -164,7 +165,7 @@ import Foundation
             
             switch httpURLResponse.statusCode {
             case 200..<300:
-                let result = request.decodeResult(from: data, decoder: self.dependency?.decoder ?? JSONDecoder())
+                let result = request.decodeResult(from: data, decoder: decoder)
                 switch result {
                 case .success(let value):
                     completionHandler?(value, nil)
