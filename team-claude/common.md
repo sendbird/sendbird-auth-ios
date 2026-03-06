@@ -9,6 +9,8 @@
 ### Core Rules
 
 - **ABI 절대 금지**: public/open API 시그니처, 타입, 프로토콜 적합성 변경/삭제 금지. deprecated 전환만 허용.
+- **Deprecated bridge 우선**: public API 변경 시 in-place 수정 대신 deprecated wrapper, renamed API, backward-compatible 경로를 유지한다.
+- **기존 public spelling 유지**: 이미 노출된 public API 이름/철자는 변경하지 않는다.
 - **Co-Authored-By 금지**: 커밋 메시지에 절대 추가하지 않는다.
 - **Package.swift 수정 금지**: `scripts/Package.swift.template` 편집.
 - **`.xcodeproj` 직접 편집 금지**: `project.yml` 또는 `XcodeGen/*.yml` 수정 후 재생성.

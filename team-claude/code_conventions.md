@@ -81,8 +81,39 @@ Sources/SendbirdAuth/
 | **변수/프로퍼티** | lowerCamelCase | `applicationId`, `sessionKey`, `webSocketClient` |
 | **Boolean** | `is`/`has`/`should` 접두사 | `isConnected`, `hasError`, `shouldRevokeSession` |
 | **상수** | `static let` in `Constants` struct. lowerCamelCase | `Constants.defaultDedupIntervalMs` |
+| **Boolean negation** | `== false` 사용, `!` 연산자 금지 | `if isConnected == false` (O), `if !isConnected` (X) |
 
-### 3.3 파일 이름
+### 3.3 약어 & 두문자어 (Abbreviations & Acronyms)
+
+알려진 약어/두문자어는 **항상 전체 대문자**로 표기한다.
+
+| 약어 | O | X |
+|------|---|---|
+| API | `APICall`, `handleAPIResponse` | `ApiCall`, `handleApiResponse` |
+| URL | `channelURL`, `imageURL` | `channelUrl`, `imageUrl` |
+| ID | `userID`, `messageID` | `userId`, `messageId` |
+| HTTP | `HTTPClient`, `HTTPError` | `HttpClient`, `HttpError` |
+| JSON | `JSONParser`, `toJSON` | `JsonParser`, `toJson` |
+| SDK | `SDKVersion`, `initSDK` | `SdkVersion`, `initSdk` |
+| UI | `UIConfig`, `updateUI` | `UiConfig`, `updateUi` |
+| WS | `WSConnection` | `WsConnection` |
+
+**Snake_case → camelCase 변환 규칙** (테스트 메서드 등):
+
+```
+// Before (snake_case)
+test_8_auth_networkdisconnect_apicall
+
+// After (camelCase with acronyms)
+test_8_authNetworkDisconnectAPICall
+```
+
+**규칙 요약:**
+1. 약어가 단어 시작 위치(non-leading)이면 전체 대문자: `handleAPIResponse`, `channelURL`
+2. 약어가 이름 맨 앞이면 전체 대문자 유지: `APICall`, `URLSession`
+3. 변수/파라미터 맨 앞의 약어는 전체 소문자: `let url = ...`, `let apiKey = ...`
+
+### 3.4 파일 이름
 
 | 패턴 | 규칙 | 예시 |
 |------|------|------|
