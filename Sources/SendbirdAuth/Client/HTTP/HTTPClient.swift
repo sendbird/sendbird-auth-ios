@@ -269,17 +269,20 @@ import Foundation
             requestId: requestId,
             backgroundTask: task,
             transferTimeout: config?.transferTimeout ?? SendbirdConfiguration.transferTimeoutDefault,
-            progressTask: progressHandler) { (data, error) in
+            progressTask: progressHandler) { [weak self] (data, error) in
+                guard let self = self,
+                      let decoder = self.dependency?.decoder else {
+                    completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
+                    return
+                }
+
                 guard let data = data, error == nil else {
                     completionHandler?(nil, error)
                     return
                 }
 
-                let result = request.decodeResult(
-                    from: data,
-                    decoder: self.dependency?.decoder ?? JSONDecoder()
-                )
-                
+                let result = request.decodeResult(from: data, decoder: decoder)
+
                 switch result {
                 case .success(let value):
                     completionHandler?(value, nil)
