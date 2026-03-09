@@ -84,7 +84,7 @@ import Foundation
             if let session = session {
                 Session.saveToUserDefaults(session: session, userId: userId)
             } else {
-                Session.clearUserDefaults()
+                Session.clearUserDefaults(for: userId)
             }
         }
 
@@ -100,10 +100,11 @@ import Foundation
 
     @_spi(SendbirdInternal) public func clear() {
         queue.sync {
+            let currentUserId = userId
             session = nil
             userId = nil
             knownKeys.removeAll()
-            Session.clearUserDefaults()
+            Session.clearUserDefaults(for: currentUserId)
         }
 
         let handlersToNotify = queue.sync { handlers }
