@@ -717,7 +717,7 @@ extension SendbirdAuthMain {
             customAPIHost: apiHost ?? routerConfig.apiHost,
             bundle: hostBundle
         )
-        
+
         if routerConfig.apiHost != host.apiHost {
             routerConfig.updateHost(apiHost: host.apiHost, wsHost: nil)
         }
