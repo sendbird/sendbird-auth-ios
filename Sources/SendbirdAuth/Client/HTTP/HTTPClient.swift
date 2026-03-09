@@ -122,8 +122,7 @@ import Foundation
         let requestAt = Date().milliSeconds
         let requestId = UUID().uuidString
         let dataTask = urlSession.safeCancellableDataTask(with: urlRequest) { [weak self] data, response, error in
-            guard let self = self,
-                  let decoder = self.dependency?.decoder else {
+            guard let self = self else {
                 completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
                 return
             }
@@ -165,6 +164,10 @@ import Foundation
             
             switch httpURLResponse.statusCode {
             case 200..<300:
+                guard let decoder = self.dependency?.decoder else {
+                    completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
+                    return
+                }
                 let result = request.decodeResult(from: data, decoder: decoder)
                 switch result {
                 case .success(let value):

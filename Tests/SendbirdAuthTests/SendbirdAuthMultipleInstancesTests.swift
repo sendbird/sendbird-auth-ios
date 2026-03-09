@@ -66,7 +66,7 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         let created = SendbirdAuth.getOrCreate(params: params)
 
         // When
-        let retrieved = SendbirdAuth.getInstance(appId: appId)
+        let retrieved = SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: appId))
 
         // Then
         XCTAssertNotNil(retrieved)
@@ -75,7 +75,7 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
 
     func testGetInstance_nonExistingInstance_returnsNil() {
         // When
-        let retrieved = SendbirdAuth.getInstance(appId: "NON_EXISTING_APP_ID")
+        let retrieved = SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: "NON_EXISTING_APP_ID"))
 
         // Then
         XCTAssertNil(retrieved)
@@ -88,8 +88,8 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         let created = SendbirdAuth.getOrCreate(params: params)
 
         // When
-        let withHost = SendbirdAuth.getInstance(appId: appId, apiHostUrl: apiHost)
-        let withoutHost = SendbirdAuth.getInstance(appId: appId)
+        let withHost = SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: appId, apiHostUrl: apiHost))
+        let withoutHost = SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: appId))
 
         // Then
         XCTAssertNotNil(withHost)
@@ -102,27 +102,28 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
     func testRemoveInstance_removesFromMap() {
         // Given
         let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
-        _ = SendbirdAuth.getOrCreate(params: params)
-        XCTAssertNotNil(SendbirdAuth.getInstance(appId: appId))
+        let instance = SendbirdAuth.getOrCreate(params: params)
+        XCTAssertNotNil(SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: appId)))
 
         // When
-        SendbirdAuth.removeInstance(appId: appId)
+        SendbirdAuth.removeInstance(AuthInstanceIdentifier(appId: appId))
 
         // Then
-        XCTAssertNil(SendbirdAuth.getInstance(appId: appId))
+        XCTAssertNil(SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: appId)))
+        _ = instance // prevent deallocation before assertions
     }
-    
+
     func testRemoveInstance_withSelfInstance() {
         // Given
         let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
         let instance = SendbirdAuth.getOrCreate(params: params)
-        XCTAssertNotNil(SendbirdAuth.getInstance(appId: appId))
-        
+        XCTAssertNotNil(SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: appId)))
+
         // When
         SendbirdAuth.removeInstance(instance)
-        
+
         // Then
-        XCTAssertNil(SendbirdAuth.getInstance(appId: appId))
+        XCTAssertNil(SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: appId)))
     }        
 
     // MARK: - clearAllInstances Tests
@@ -131,15 +132,16 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
         // Given
         let params1 = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
         let params2 = InternalInitParams(applicationId: anotherAppId, isLocalCachingEnabled: false)
-        _ = SendbirdAuth.getOrCreate(params: params1)
-        _ = SendbirdAuth.getOrCreate(params: params2)
+        let instance1 = SendbirdAuth.getOrCreate(params: params1)
+        let instance2 = SendbirdAuth.getOrCreate(params: params2)
 
         // When
         SendbirdAuth.clearAllInstances()
 
         // Then
-        XCTAssertNil(SendbirdAuth.getInstance(appId: appId))
-        XCTAssertNil(SendbirdAuth.getInstance(appId: anotherAppId))
+        XCTAssertNil(SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: appId)))
+        XCTAssertNil(SendbirdAuth.getInstance(AuthInstanceIdentifier(appId: anotherAppId)))
+        _ = (instance1, instance2) // prevent deallocation before assertions
     }
 
     // MARK: - isInitialized Tests
@@ -147,11 +149,12 @@ final class SendbirdAuthMultipleInstancesTests: XCTestCase {
     func testIsInitialized_withInstance_returnsTrue() {
         // Given
         let params = InternalInitParams(applicationId: appId, isLocalCachingEnabled: false)
-        _ = SendbirdAuth.getOrCreate(params: params)
+        let instance = SendbirdAuth.getOrCreate(params: params)
 
         // Then
         XCTAssertTrue(SendbirdAuth.isInitialized)
         XCTAssertTrue(SendbirdAuth.isInitialized(appId: appId))
+        _ = instance // prevent deallocation before assertions
     }
 
     func testIsInitialized_withoutInstance_returnsFalse() {
