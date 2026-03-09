@@ -7,7 +7,7 @@
 
 import Foundation
 
-@_spi(SendbirdInternal) public class SessionManager: Injectable {
+@_spi(SendbirdInternal) public class SessionManager: Injectable, SessionObserver {
     @_spi(SendbirdInternal) public enum SessionState {
         case connected
         case refreshing
@@ -109,10 +109,13 @@ import Foundation
         self.authenticateQueue = DispatchQueue(label: queueLabel)
 
         self.sessionProvider = sessionProvider
-        sessionProvider.onSessionChanged { [weak self] newSession in
-            guard let self else { return }
-            delegate?.sessionKeyChanged(newSession?.key)
-        }
+        sessionProvider.addSessionObserver(self)
+    }
+
+    // MARK: - SessionObserver
+
+    @_spi(SendbirdInternal) public func sessionDidChange(_ session: Session?) {
+        delegate?.sessionKeyChanged(session?.key)
     }
 
     @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?

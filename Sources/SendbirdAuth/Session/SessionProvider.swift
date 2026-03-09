@@ -7,14 +7,22 @@
 
 import Foundation
 
+/// Observer protocol for session changes
+@_spi(SendbirdInternal) public protocol SessionObserver: AnyObject {
+    func sessionDidChange(_ session: Session?)
+}
+
 /// Protocol for session sharing
 /// Only one session is active at a time
 @_spi(SendbirdInternal) public protocol SessionProvider {
     func setSession(_ session: Session?, for userId: String)
     func loadSession(for userId: String) -> Session?
 
-    /// Register a callback invoked when the session changes
-    func onSessionChanged(_ handler: @escaping (Session?) -> Void)
+    /// Register an observer for session changes (weak reference, auto-cleaned on dealloc)
+    func addSessionObserver(_ observer: SessionObserver)
+
+    /// Remove a session observer
+    func removeSessionObserver(_ observer: SessionObserver)
 
     /// Clear all session state (session, userId, knownKeys, UserDefaults)
     func clear()
@@ -33,7 +41,7 @@ import Foundation
     @_spi(SendbirdInternal) public static let shared = PersistentSessionProvider()
 
     private let queue = SafeSerialQueue(label: "com.sendbird.session.provider")
-    private var handlers: [(Session?) -> Void] = []
+    private var observers: [WeakReference<AnyObject>] = []
 
     /// Track already-used session keys (prevent rollback)
     private var knownKeys: Set<String> = []
@@ -88,13 +96,22 @@ import Foundation
             }
         }
 
-        let handlersToNotify = queue.sync { handlers }
-        handlersToNotify.forEach { $0(session) }
+        notifyObservers(session: session)
     }
 
-    @_spi(SendbirdInternal) public func onSessionChanged(_ handler: @escaping (Session?) -> Void) {
+    @_spi(SendbirdInternal) public func addSessionObserver(_ observer: SessionObserver) {
         queue.async {
-            self.handlers.append(handler)
+            // Prevent duplicate registration
+            let alreadyRegistered = self.observers.contains { $0.value === observer }
+            if !alreadyRegistered {
+                self.observers.append(WeakReference(value: observer))
+            }
+        }
+    }
+
+    @_spi(SendbirdInternal) public func removeSessionObserver(_ observer: SessionObserver) {
+        queue.async {
+            self.observers.removeAll { $0.value === observer || $0.value == nil }
         }
     }
 
@@ -107,8 +124,7 @@ import Foundation
             Session.clearUserDefaults(for: currentUserId)
         }
 
-        let handlersToNotify = queue.sync { handlers }
-        handlersToNotify.forEach { $0(nil) }
+        notifyObservers(session: nil)
     }
 
     // MARK: - Refresh Coordination
@@ -141,10 +157,19 @@ import Foundation
         }
 
         if accepted {
-            let handlersToNotify = queue.sync { handlers }
-            handlersToNotify.forEach { $0(newSession) }
+            notifyObservers(session: newSession)
         }
 
         return accepted
+    }
+
+    // MARK: - Private
+
+    private func notifyObservers(session: Session?) {
+        let liveObservers: [SessionObserver] = queue.sync {
+            observers.removeAll { $0.value == nil }
+            return observers.compactMap { $0.value as? SessionObserver }
+        }
+        liveObservers.forEach { $0.sessionDidChange(session) }
     }
 }
