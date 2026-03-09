@@ -46,19 +46,19 @@ import Foundation
     @discardableResult
     @_spi(SendbirdInternal) public func loadSession(for userId: String) -> Session? {
         queue.sync {
-            if let session {
+            if let session, self.userId == userId {
                 return session
-            } else {
-                guard let savedSession = Session.buildFromUserDefaults(for: userId) else {
-                    return nil
-                }
-
-                self.session = savedSession
-                self.userId = userId
-                
-                knownKeys.insert(savedSession.key)
-                return savedSession
             }
+
+            guard let savedSession = Session.buildFromUserDefaults(for: userId) else {
+                return nil
+            }
+
+            self.session = savedSession
+            self.userId = userId
+
+            knownKeys.insert(savedSession.key)
+            return savedSession
         }
     }
 
