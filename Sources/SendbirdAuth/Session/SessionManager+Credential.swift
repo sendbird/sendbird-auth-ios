@@ -16,19 +16,19 @@ extension SessionManager {
         case initialized
         case active(applicationId: String, userId: String)
 
-        var applicationId: String {
+        var applicationId: String? {
             switch self {
             case .initialized:
-                return ""
+                return nil
             case .active(let applicationId, _):
                 return applicationId
             }
         }
 
-        var userId: String {
+        var userId: String? {
             switch self {
             case .initialized:
-                return ""
+                return nil
             case .active(_, let userId):
                 return userId
             }

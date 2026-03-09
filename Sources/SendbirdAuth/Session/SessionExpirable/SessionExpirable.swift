@@ -76,11 +76,13 @@ extension SessionManager: InternalSessionDelegate {
                     // retry with API.
                     guard let self = self else { return }
                     
-                    var headers = ["App-Id": self.applicationId]
+                    var headers: [String: String] = [:]
+                    if let appId = self.applicationId { headers["App-Id"] = appId }
                     if let authToken { headers["Access-Token"] = authToken }
-                    
+
+                    guard let userId = self.userId else { return }
                     self.requestQueue?.post(
-                        path: URLPaths.usersSessionKey(userId: self.userId),
+                        path: URLPaths.usersSessionKey(userId: userId),
                         body: .param([.expiringSession: expiringSession]),
                         header: headers,
                         isSessionRequired: false,
@@ -99,9 +101,11 @@ extension SessionManager: InternalSessionDelegate {
             }
 
         default:
-            var headers = ["App-Id": applicationId]
+            var headers: [String: String] = [:]
+            if let appId = applicationId { headers["App-Id"] = appId }
             if let authToken { headers["Access-Token"] = authToken }
-            
+
+            guard let userId else { return }
             requestQueue?.post(
                 path: URLPaths.usersSessionKey(userId: userId),
                 body: .param([.expiringSession: expiringSession]),

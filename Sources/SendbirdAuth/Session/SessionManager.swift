@@ -43,8 +43,8 @@ import Foundation
 
     @_spi(SendbirdInternal) public private(set) var credential: Credential
 
-    @_spi(SendbirdInternal) public var applicationId: String { credential.applicationId }
-    @_spi(SendbirdInternal) public var userId: String { credential.userId }
+    @_spi(SendbirdInternal) public var applicationId: String? { credential.applicationId }
+    @_spi(SendbirdInternal) public var userId: String? { credential.userId }
 
     @InternalAtomic @_spi(SendbirdInternal) public var eKey: String?
 

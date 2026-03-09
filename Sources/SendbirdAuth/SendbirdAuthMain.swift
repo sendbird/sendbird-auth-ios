@@ -513,7 +513,7 @@ extension SendbirdAuthMain {
 
         let cachedUser: AuthUser? = localCachePreference.value(forKey: LocalCachePreferenceKey.currentUser)
 
-        if sessionManager.userId.isEmpty ||
+        if sessionManager.userId?.isEmpty != false ||
             userId == cachedUser?.userId
         {
             userConnectionQueue.async {
@@ -681,7 +681,7 @@ extension SendbirdAuthMain {
             return
         }
 
-        if sessionManager.userId.hasElements {
+        if sessionManager.userId?.hasElements == true {
             disconnect { [weak self] in
                 self?.userConnectionQueue.async {
                     self?.resetConnectionState(userId: userId)
