@@ -43,6 +43,8 @@ import Foundation
     @_spi(SendbirdInternal) public let routerConfig: CommandRouterConfiguration
     @_spi(SendbirdInternal) public let sessionHandler: SessionEventBroadcaster
 
+    @_spi(SendbirdInternal) public let decoder: JSONDecoder = JSONDecoder()
+
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
     let hostBundle: Bundle?
@@ -197,7 +199,7 @@ import Foundation
         self.requestQueue = requestQueue
 
         let statManager = StatManager(
-            apiClient: statAPIClient ?? StatAPIClient(requestQueue: requestQueue),
+            apiClient: statAPIClient ?? StatAPIClient(requestQueue: requestQueue, decoder: decoder),
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             configuration: config
         )
@@ -227,7 +229,7 @@ import Foundation
 
         Logger.setLoggerLevel(logLevel)
 
-        SendbirdAuth.authDecoder.updateAuthDependency(self)
+        decoder.updateAuthDependency(self)
 
         sessionManager.resolve(with: self)
         sessionManager.delegate = self

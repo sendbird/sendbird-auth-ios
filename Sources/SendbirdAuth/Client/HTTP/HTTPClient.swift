@@ -126,7 +126,7 @@ import Foundation
                 completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
                 return
             }
-            
+
             self.cancellableTasks.remove(forKey: requestId)
             
             Logger.http.info("[Sendbird] Finish HTTP session: \(NSDate().timeIntervalSince1970)")
@@ -164,7 +164,11 @@ import Foundation
             
             switch httpURLResponse.statusCode {
             case 200..<300:
-                let result = request.decodeResult(from: data, decoder: SendbirdAuth.authDecoder)
+                guard let decoder = self.dependency?.decoder else {
+                    completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
+                    return
+                }
+                let result = request.decodeResult(from: data, decoder: decoder)
                 switch result {
                 case .success(let value):
                     completionHandler?(value, nil)
@@ -268,17 +272,20 @@ import Foundation
             requestId: requestId,
             backgroundTask: task,
             transferTimeout: config?.transferTimeout ?? SendbirdConfiguration.transferTimeoutDefault,
-            progressTask: progressHandler) { (data, error) in
+            progressTask: progressHandler) { [weak self] (data, error) in
+                guard let self = self,
+                      let decoder = self.dependency?.decoder else {
+                    completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
+                    return
+                }
+
                 guard let data = data, error == nil else {
                     completionHandler?(nil, error)
                     return
                 }
 
-                let result = request.decodeResult(
-                    from: data,
-                    decoder: SendbirdAuth.authDecoder
-                )
-                
+                let result = request.decodeResult(from: data, decoder: decoder)
+
                 switch result {
                 case .success(let value):
                     completionHandler?(value, nil)

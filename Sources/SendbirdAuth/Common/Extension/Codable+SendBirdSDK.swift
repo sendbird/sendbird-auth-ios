@@ -45,10 +45,6 @@ extension Encodable {
 
 // Internal method for chat
 @_spi(SendbirdInternal) public extension Decodable {
-    static func _make(_ json: [AnyHashable: Any]) -> Self? {
-        return Self._make(from: json, decoder: SendbirdAuth.authDecoder)
-    }
-    
     static func _make(from json: [AnyHashable: Any], decoder: JSONDecoder) -> Self? {
         do {
             let data = try JSONSerialization.data(withJSONObject: json, options: [])

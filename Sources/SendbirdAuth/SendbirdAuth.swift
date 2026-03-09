@@ -8,6 +8,7 @@
 import Foundation
 
 @_spi(SendbirdInternal) public final class SendbirdAuth {
+    @available(*, deprecated, message: "Use SendbirdAuthMain.decoder instead")
     @_spi(SendbirdInternal) public static let authDecoder = JSONDecoder()
 
     @_spi(SendbirdInternal) public static var sdkVersion: String { "0.0.11" }
@@ -36,14 +37,14 @@ import Foundation
         )
     }
 
-    /// Gets an existing instance by appId and apiHostUrl
-    @_spi(SendbirdInternal) public static func getInstance(appId: String, apiHostUrl: String? = nil) -> SendbirdAuthMain? {
-        registry.get(appId: appId, apiHostUrl: apiHostUrl)
+    /// Gets an existing instance by identifier
+    @_spi(SendbirdInternal) public static func getInstance(_ identifier: AuthInstanceIdentifier) -> SendbirdAuthMain? {
+        registry.get(appId: identifier.appId, apiHostUrl: identifier.apiHostUrl)
     }
 
     /// Removes an instance from the map
-    @_spi(SendbirdInternal) public static func removeInstance(appId: String, apiHostUrl: String? = nil) {
-        registry.remove(appId: appId, apiHostUrl: apiHostUrl)
+    @_spi(SendbirdInternal) public static func removeInstance(_ identifier: AuthInstanceIdentifier) {
+        registry.remove(appId: identifier.appId, apiHostUrl: identifier.apiHostUrl)
     }
 
     @_spi(SendbirdInternal) public static func removeInstance(_ instance: SendbirdAuthMain) {
@@ -72,7 +73,7 @@ import Foundation
 
     /// Check if a specific instance is initialized
     @_spi(SendbirdInternal) public static func isInitialized(appId: String, apiHostUrl: String? = nil) -> Bool {
-        guard let instance = getInstance(appId: appId, apiHostUrl: apiHostUrl) else {
+        guard let instance = getInstance(AuthInstanceIdentifier(appId: appId, apiHostUrl: apiHostUrl)) else {
             return false
         }
         return !instance.applicationId.isEmpty
@@ -121,8 +122,9 @@ import Foundation
         appId: String,
         apiHost: String? = nil
     ) -> SendbirdAuthMain? {
-        guard let instance = sdkInstance,
-              instance.applicationId == appId else { return nil }
+        guard let instance = registry.get(appId: appId, apiHostUrl: apiHost) else {
+            return nil
+        }
         return instance
     }
 }
