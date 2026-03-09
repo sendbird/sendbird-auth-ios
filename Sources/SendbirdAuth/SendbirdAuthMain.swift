@@ -43,9 +43,14 @@ import Foundation
     @_spi(SendbirdInternal) public let routerConfig: CommandRouterConfiguration
     @_spi(SendbirdInternal) public let sessionHandler: SessionEventBroadcaster
 
+    @_spi(SendbirdInternal) public let decoder: JSONDecoder = JSONDecoder()
+
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
     let hostBundle: Bundle?
+
+    /// Session provider for sharing session across multiple SDK instances.
+    @_spi(SendbirdInternal) public private(set) var sessionProvider: SessionProvider
 
     /// Instance-specific preferences (isolated per appId + apiHostUrl)
     @_spi(SendbirdInternal) public let preference: LocalPreferences
@@ -108,7 +113,7 @@ import Foundation
 
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
-        // Create instance-specific preferences
+        // Create instance-specific preferences (isolated per appId + apiHostUrl)
         let instanceKey = InstanceRegistry.createKey(appId: params.applicationId, apiHostUrl: params.customAPIHost)
         let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)")
         self.preference = instancePref
@@ -172,7 +177,8 @@ import Foundation
             sessionHandler: sessionHandler,
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             localCachePreference: localCachePreference,
-            config: config
+            config: config,
+            sessionProvider: params.sessionProvider ?? PersistentSessionProvider.shared
         )
         sessionManager = placeHolderSessionManager
 
@@ -182,8 +188,7 @@ import Foundation
             eventDispatcher: dispatcher,
             broadcaster: ConnectionEventBroadcaster(service, mapTableValueOption: .strongMemory),
             networkBroadcaster: NetworkEventBroadcaster(service),
-            internalBroadcaster: InternalConnectionEventBroadcaster(service),
-            instancePref: instancePref
+            internalBroadcaster: InternalConnectionEventBroadcaster(service)
         )
         deviceConnectionManager.hostBundle = params.hostBundle
 
@@ -194,7 +199,7 @@ import Foundation
         self.requestQueue = requestQueue
 
         let statManager = StatManager(
-            apiClient: statAPIClient ?? StatAPIClient(requestQueue: requestQueue),
+            apiClient: statAPIClient ?? StatAPIClient(requestQueue: requestQueue, decoder: decoder),
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             configuration: config
         )
@@ -214,6 +219,7 @@ import Foundation
         appVersion = params.appVersion
         self.routerConfig = routerConfig
         isLocalCachingEnabled = params.isLocalCachingEnabled
+        self.sessionProvider = params.sessionProvider ?? PersistentSessionProvider.shared
 
         self.sessionHandler = sessionHandler
 
@@ -223,7 +229,7 @@ import Foundation
 
         Logger.setLoggerLevel(logLevel)
 
-        SendbirdAuth.authDecoder.updateAuthDependency(self)
+        decoder.updateAuthDependency(self)
 
         sessionManager.resolve(with: self)
         sessionManager.delegate = self
@@ -507,7 +513,7 @@ extension SendbirdAuthMain {
 
         let cachedUser: AuthUser? = localCachePreference.value(forKey: LocalCachePreferenceKey.currentUser)
 
-        if sessionManager.userId.isEmpty ||
+        if sessionManager.userId?.isEmpty != false ||
             userId == cachedUser?.userId
         {
             userConnectionQueue.async {
@@ -534,7 +540,8 @@ extension SendbirdAuthMain {
             sessionHandler: sessionHandler,
             isLocalCachingEnabled: isLocalCachingEnabled,
             localCachePreference: localCachePreference,
-            config: config
+            config: config,
+            sessionProvider: self.sessionProvider
         )
 
         self.sessionManager = sessionManager
@@ -674,7 +681,7 @@ extension SendbirdAuthMain {
             return
         }
 
-        if sessionManager.userId.hasElements {
+        if sessionManager.userId?.hasElements == true {
             disconnect { [weak self] in
                 self?.userConnectionQueue.async {
                     self?.resetConnectionState(userId: userId)

@@ -30,18 +30,23 @@ extension SessionManager: InternalSessionDelegate {
     }
     
     @_spi(SendbirdInternal) public func didSessionKeyRefresh(key: Session, requireReconnect: Bool) {
+        // Submit the new session to `SessionProvider` (rollback prevention validation)
+        // `submitRefreshedSession` updates the provider's session and calls `onSessionChanged`
+        guard submitRefreshedSession(key) else {
+            // Rejected if the key was already used - use the currently stored session
+            return
+        }
+
         stateData?.update(with: key.key)
-        session = key
-        
+        sessionHandler.wasRefreshed()
+
         // Update connection state ONLY when session key was refreshed via API.
         // If refreshed via WS, connection state should remain Connected.
         if requireReconnect {
             delegate?.sessionReconnectRequired()
         }
-        
+
         sessionHandler.didHaveError(AuthClientError.sessionKeyRefreshSucceeded.asAuthError)
-        sessionHandler.wasRefreshed()
-        
         router.eventDispatcher.dispatch(command: SessionExpirationEvent.Refreshed())
     }
     
@@ -71,11 +76,13 @@ extension SessionManager: InternalSessionDelegate {
                     // retry with API.
                     guard let self = self else { return }
                     
-                    var headers = ["App-Id": self.applicationId]
+                    var headers: [String: String] = [:]
+                    if let appId = self.applicationId { headers["App-Id"] = appId }
                     if let authToken { headers["Access-Token"] = authToken }
-                    
+
+                    guard let userId = self.userId else { return }
                     self.requestQueue?.post(
-                        path: URLPaths.usersSessionKey(userId: self.userId),
+                        path: URLPaths.usersSessionKey(userId: userId),
                         body: .param([.expiringSession: expiringSession]),
                         header: headers,
                         isSessionRequired: false,
@@ -94,9 +101,11 @@ extension SessionManager: InternalSessionDelegate {
             }
 
         default:
-            var headers = ["App-Id": applicationId]
+            var headers: [String: String] = [:]
+            if let appId = applicationId { headers["App-Id"] = appId }
             if let authToken { headers["Access-Token"] = authToken }
-            
+
+            guard let userId else { return }
             requestQueue?.post(
                 path: URLPaths.usersSessionKey(userId: userId),
                 body: .param([.expiringSession: expiringSession]),

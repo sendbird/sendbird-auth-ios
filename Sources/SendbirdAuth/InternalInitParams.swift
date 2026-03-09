@@ -31,13 +31,17 @@ import Foundation
     /// Default is `DefaultExceptionParser` which parses Chat API format.
     @_spi(SendbirdInternal) public var exceptionParser: ApiExceptionParser = DefaultExceptionParser()
 
+    /// Session provider for sharing session across multiple SDK instances.
+    @_spi(SendbirdInternal) public var sessionProvider: SessionProvider?
+
     @_spi(SendbirdInternal) public init(
         applicationId: String,
         isLocalCachingEnabled: Bool,
         logLevel: AuthLogLevel = .none,
         appVersion: String? = nil,
         mainSDKInfo: SendbirdSDKInfo? = nil,
-        exceptionParser: ApiExceptionParser = DefaultExceptionParser()
+        exceptionParser: ApiExceptionParser = DefaultExceptionParser(),
+        sessionProvider: SessionProvider? = nil
     ) {
         self.applicationId = applicationId
         self.isLocalCachingEnabled = isLocalCachingEnabled
@@ -45,6 +49,7 @@ import Foundation
         self.appVersion = appVersion
         self.mainSDKInfo = mainSDKInfo
         self.exceptionParser = exceptionParser
+        self.sessionProvider = sessionProvider
     }
     
     @_spi(SendbirdInternal) public override func isEqual(_ object: Any?) -> Bool {

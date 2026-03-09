@@ -7,13 +7,13 @@
 
 import Foundation
 
-@_spi(SendbirdInternal) public class SessionManager: Injectable {
+@_spi(SendbirdInternal) public class SessionManager: Injectable, SessionObserver {
     @_spi(SendbirdInternal) public enum SessionState {
         case connected
         case refreshing
         case none
     }
-    
+
     @_spi(SendbirdInternal) public var state: SessionState {
         if expirationHandler.isRefreshingSession {
             return .refreshing
@@ -26,40 +26,29 @@ import Foundation
     
     @_spi(SendbirdInternal) public static let minimumExpiresInForWSRefresh = 5
     
-    @InternalAtomic @_spi(SendbirdInternal) public var internalSession: Session?
-    
     @_spi(SendbirdInternal) public var session: Session? {
         get {
-            let defaultKey = Session.buildFromUserDefaults()
-            if internalSession == nil {
-                internalSession = defaultKey
-            } else if let sessionKey = internalSession,
-                      sessionKey != defaultKey {
-                if let userId = stateData?.currentUser?.userId {
-                    Session.saveToUserDefaults(session: sessionKey, userId: userId)
-                } else {
-                    Session.clearUserDefaults()
-                }
+            guard case .active(_, let userId) = credential else {
+                return nil
             }
-            return internalSession
+            return sessionProvider.loadSession(for: userId)
         }
-        
         set {
-            internalSession = newValue
-            delegate?.sessionKeyChanged(newValue?.key)
-            if let sessionKey = newValue, let userId = stateData?.currentUser?.userId {
-                Session.saveToUserDefaults(session: sessionKey, userId: userId)
-            } else {
-                Session.clearUserDefaults()
+            guard case .active(_, let userId) = credential else {
+                return
             }
-
+            sessionProvider.setSession(newValue, for: userId)
         }
     }
-    
-    @_spi(SendbirdInternal) public let applicationId: String
+
+    @_spi(SendbirdInternal) public private(set) var credential: Credential
+
+    @_spi(SendbirdInternal) public var applicationId: String? { credential.applicationId }
+    @_spi(SendbirdInternal) public var userId: String? { credential.userId }
+
     @InternalAtomic @_spi(SendbirdInternal) public var eKey: String?
 
-    @_spi(SendbirdInternal) public private(set) var userId: String
+    private let sessionProvider: SessionProvider
 
     private let board: SBTimerBoard
     
@@ -91,20 +80,42 @@ import Foundation
         sessionHandler: SessionEventBroadcaster,
         isLocalCachingEnabled: Bool,
         localCachePreference: LocalPreferences,
-        config: SendbirdConfiguration
+        config: SendbirdConfiguration,
+        sessionProvider: SessionProvider = PersistentSessionProvider.shared
     ) {
+        if applicationId.isEmpty || userId.isEmpty {
+            self.credential = .initialized
+        } else {
+            self.credential = .active(applicationId: applicationId, userId: userId)
+        }
+
         self.sessionHandler = sessionHandler
-        
+
         self.router = router
         self.board = SBTimerBoard(capacity: 1)
-        
-        self.applicationId = applicationId
-        self.userId = userId
+
         self.expirationHandler = GuestSessionExpirationHandler(expiringSession: false)
-        
+
         self.localCachePreference = localCachePreference
         self.isLocalCachingEnabled = isLocalCachingEnabled
-        self.authenticateQueue = DispatchQueue(label: "com.sendbird.chat.session.authenticate.\(userId)")
+
+        let queueLabel: String
+        switch credential {
+        case .initialized:
+            queueLabel = "com.sendbird.chat.session.authenticate.uninitialized"
+        case .active(_, let userId):
+            queueLabel = "com.sendbird.chat.session.authenticate.\(userId)"
+        }
+        self.authenticateQueue = DispatchQueue(label: queueLabel)
+
+        self.sessionProvider = sessionProvider
+        sessionProvider.addSessionObserver(self)
+    }
+
+    // MARK: - SessionObserver
+
+    @_spi(SendbirdInternal) public func sessionDidChange(_ session: Session?) {
+        delegate?.sessionKeyChanged(session?.key)
     }
 
     @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
@@ -166,9 +177,16 @@ import Foundation
                 useExpiringSession = true // Always requst expiring session for guest
             }
             self.expirationHandler.delegate = self
-            
+
+            guard case .active(_, let userId) = self.credential else {
+                self.isAuthenticating = false
+                let error = AuthClientError.notResolved.asAuthError
+                loginHandler?(nil, error)
+                return
+            }
+
             let authenticateRequest = AuthenticateRequest(
-                userId: self.userId,
+                userId: userId,
                 applicationId: stateData.applicationId,
                 authToken: authData?.authToken,
                 expiringSession: useExpiringSession,
@@ -235,9 +253,15 @@ import Foundation
         reset()
     }
     
+    /// Submit refreshed session to `SessionProvider`
+    func submitRefreshedSession(_ newSession: Session) -> Bool {
+        sessionProvider.submitRefreshedSession(newSession)
+    }
+    
     private func reset() {
-        userId = ""
-        session = nil
+        self.session = nil
+        self.credential = .initialized
+        sessionProvider.clear()
         stateData?.clear()
     }
     
@@ -254,7 +278,8 @@ extension SessionManager: EventDelegate {
         switch command {
         case let event as SessionRefreshedEvent:
             if let sessionKey = event.sessionKey {
-                self.session = Session(key: sessionKey, services: self.session?.services ?? [.chat, .feed])
+                let newSession = Session(key: sessionKey, services: self.session?.services ?? [.chat, .feed])
+                self.session = newSession
             }
         case let event as SessionExpiredEvent:
             Logger.session.info("EXPR payload: \(String(describing: event.reason))")
@@ -274,9 +299,10 @@ extension SessionManager: EventDelegate {
             if let sessionKey = event.loginEvent.sessionKey,
                let services = event.loginEvent.services {
                 let newSession = Session(key: sessionKey, services: services)
-                
+
                 if let currentSession = self.session, !currentSession.isDirty {
-                    self.session = currentSession.isLargerScope(than: newSession) ? currentSession : newSession
+                    let sessionToSet = currentSession.isLargerScope(than: newSession) ? currentSession : newSession
+                    self.session = sessionToSet
                 } else {
                     self.session = newSession
                 }
@@ -311,9 +337,16 @@ extension SessionManager: EventDelegate {
         switch error?.errorCode {
         case .accessTokenNotValid:
             expirationHandler.refreshSessionToken()
-            
+
         case .sessionKeyExpired:
-            session = nil
+            // Check whether another SDK has already refreshed the session
+            if let currentSession = session,
+               sessionProvider.hasRefreshedSession(current: currentSession) {
+                // The refreshed session is already stored in the provider
+                return
+            }
+
+            self.session = nil
             expirationHandler.refreshSessionKey(
                 shouldRetry: true,
                 expiresIn: expiresIn
@@ -321,10 +354,10 @@ extension SessionManager: EventDelegate {
 
         case .sessionTokenRevoked:
             sessionHandler.wasClosed()
-            
+
         case .userDeactivated, .userNotExist:
             sessionHandler.wasClosed()
-            
+
         default: break
         }
     }
