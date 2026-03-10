@@ -34,6 +34,9 @@ import Foundation
     /// Session provider for sharing session across multiple SDK instances.
     @_spi(SendbirdInternal) public var sessionProvider: SessionProvider?
 
+    /// Header interceptor for overriding header names and injecting additional headers.
+    @_spi(SendbirdInternal) public var headerInterceptor: APIHeaderInterceptor?
+
     @_spi(SendbirdInternal) public init(
         applicationId: String,
         isLocalCachingEnabled: Bool,

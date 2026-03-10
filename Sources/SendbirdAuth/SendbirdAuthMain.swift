@@ -168,6 +168,7 @@ import Foundation
             httpClient: httpClientForRouter,
             eventDispatcher: dispatcher
         )
+        router.headerInterceptor = params.headerInterceptor
 
         let sessionHandler = SessionEventBroadcaster(service, mapTableValueOption: .strongMemory)
         let placeHolderSessionManager = SessionManager(

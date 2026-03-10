@@ -68,6 +68,7 @@ protocol CommandRouterInterface {
     private let externalParsingStrategies = SafeDictionary<String, [String: (String) -> Command?]>()
     
     @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
+    @_spi(SendbirdInternal) public var headerInterceptor: APIHeaderInterceptor?
     
     // api send (maxConcurrent: 1)
     private let apiOperationQueue: OperationQueue
@@ -212,24 +213,24 @@ protocol CommandRouterInterface {
         await disconnect()
     }
     
-    @_spi(SendbirdInternal) public func createAPIHeaders<R: APIRequestable>(for request: R) -> [String: String] {
-        let paramsBuilder = RequestHeadersBuilder()
-        
-        paramsBuilder.append(key: "Accept", value: "application/json")
-        paramsBuilder.append(key: "Connection", value: "Keep-Alive")
-        paramsBuilder.append(key: "Request-Sent-Timestamp", value: String(Date().milliSeconds))
+    @_spi(SendbirdInternal) public func createAPIHeaders<R: APIRequestable>(for request: R) -> [APIHeaderKey: String] {
+        var headers: [APIHeaderKey: String] = [
+            .accept: "application/json",
+            .connection: "Keep-Alive",
+            .requestSentTimestamp: String(Date().milliSeconds)
+        ]
 
         guard let requestHeaderContext = requestHeaderDataSource?.requestHeaderContext else {
             Logger.socket.info("requestHeaderContext must not be nil")
-            return paramsBuilder.buildDictionary()
+            return headers
         }
 
-        paramsBuilder.append(key: "SendBird", value: requestHeaderContext.sendbirdHeader)
-        paramsBuilder.append(key: "User-Agent", value: requestHeaderContext.userAgent)
-        paramsBuilder.append(key: "SB-User-Agent", value: requestHeaderContext.sbUserAgent)
-        paramsBuilder.append(key: "SB-SDK-User-Agent", value: requestHeaderContext.sbSdkUserAgent)
+        headers[.sendbird] = requestHeaderContext.sendbirdHeader
+        headers[.userAgent] = requestHeaderContext.userAgent
+        headers[.sbUserAgent] = requestHeaderContext.sbUserAgent
+        headers[.sbSdkUserAgent] = requestHeaderContext.sbSdkUserAgent
 
-        return paramsBuilder.buildDictionary()
+        return headers
     }
     
     @_spi(SendbirdInternal) public func send<R: APIRequestable>(
@@ -239,9 +240,16 @@ protocol CommandRouterInterface {
         progressHandler: MultiProgressHandler? = nil,
         completion: R.CommandHandler?
     ) {
-        var headers = createAPIHeaders(for: request)
+        var typedHeaders = createAPIHeaders(for: request)
         if request.isSessionRequired {
-            headers["Session-Key"] = sessionKey
+            typedHeaders[.sessionKey] = sessionKey
+        }
+
+        let headers: [String: String]
+        if let interceptor = headerInterceptor {
+            headers = interceptor.intercept(headers: typedHeaders, for: request)
+        } else {
+            headers = typedHeaders.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
         }
         
         apiOperationQueue.addOperation { [weak self] in
@@ -375,7 +383,7 @@ extension CommandRouter {
     } 
     
     @_spi(SendbirdInternal) public func getRequestHeaderDict<R: APIRequestable>(request: R) -> [String: String] {
-        return self.createAPIHeaders(for: request)
+        return self.createAPIHeaders(for: request).reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
     }
 
     @_spi(SendbirdInternal) public func simulateDidReceiveMessage(_ message: String) {
