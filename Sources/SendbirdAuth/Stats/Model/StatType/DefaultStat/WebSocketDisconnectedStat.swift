@@ -63,7 +63,7 @@ import Foundation
 }
 
 @_spi(SendbirdInternal) public extension WebSocketDisconnectedStat {
-    @_spi(SendbirdInternal) public enum DisconnectedReason: CustomStringConvertible {
+    @_spi(SendbirdInternal) enum DisconnectedReason: CustomStringConvertible {
         case background
         case sessionExpired
         case networkDisconnected

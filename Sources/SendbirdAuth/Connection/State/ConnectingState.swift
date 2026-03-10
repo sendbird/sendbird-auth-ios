@@ -89,7 +89,7 @@ import Foundation
     }
     
     @_spi(SendbirdInternal) public func didSocketOpen(context: ConnectionContext) {
-        Logger.session.debug("socket opened. waiting for LOGI \(context.configForWebSocket?.websocketTimeout)")
+        Logger.session.debug("socket opened. waiting for LOGI \(context.configForWebSocket?.websocketTimeout as Any)")
         
          _ = SBTimer(
             timeInterval: context.configForWebSocket?.websocketTimeout ?? SendbirdConfiguration.webSocketTimoutDefault,
