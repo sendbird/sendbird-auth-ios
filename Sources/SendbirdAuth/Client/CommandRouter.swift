@@ -213,11 +213,11 @@ protocol CommandRouterInterface {
         await disconnect()
     }
     
-    @_spi(SendbirdInternal) public func createAPIHeaders<R: APIRequestable>(for request: R) -> [APIHeaderKey: String] {
-        var headers: [APIHeaderKey: String] = [
-            .accept: "application/json",
-            .connection: "Keep-Alive",
-            .requestSentTimestamp: String(Date().milliSeconds)
+    @_spi(SendbirdInternal) public func createAPIHeaders<R: APIRequestable>(for request: R) -> [String: String] {
+        var headers: [String: String] = [
+            APIHeaderKey.accept.rawValue: "application/json",
+            APIHeaderKey.connection.rawValue: "Keep-Alive",
+            APIHeaderKey.requestSentTimestamp.rawValue: String(Date().milliSeconds)
         ]
 
         guard let requestHeaderContext = requestHeaderDataSource?.requestHeaderContext else {
@@ -225,10 +225,10 @@ protocol CommandRouterInterface {
             return headers
         }
 
-        headers[.sendbird] = requestHeaderContext.sendbirdHeader
-        headers[.userAgent] = requestHeaderContext.userAgent
-        headers[.sbUserAgent] = requestHeaderContext.sbUserAgent
-        headers[.sbSdkUserAgent] = requestHeaderContext.sbSdkUserAgent
+        headers[APIHeaderKey.sendbird.rawValue] = requestHeaderContext.sendbirdHeader
+        headers[APIHeaderKey.userAgent.rawValue] = requestHeaderContext.userAgent
+        headers[APIHeaderKey.sbUserAgent.rawValue] = requestHeaderContext.sbUserAgent
+        headers[APIHeaderKey.sbSdkUserAgent.rawValue] = requestHeaderContext.sbSdkUserAgent
 
         return headers
     }
@@ -240,16 +240,13 @@ protocol CommandRouterInterface {
         progressHandler: MultiProgressHandler? = nil,
         completion: R.CommandHandler?
     ) {
-        var typedHeaders = createAPIHeaders(for: request)
+        var headers = createAPIHeaders(for: request)
         if request.isSessionRequired {
-            typedHeaders[.sessionKey] = sessionKey
+            headers[APIHeaderKey.sessionKey.rawValue] = sessionKey
         }
 
-        let headers: [String: String]
         if let interceptor = headerInterceptor {
-            headers = interceptor.intercept(headers: typedHeaders, for: request)
-        } else {
-            headers = typedHeaders.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
+            headers = interceptor.intercept(headers: headers, for: request)
         }
         
         apiOperationQueue.addOperation { [weak self] in
@@ -383,7 +380,7 @@ extension CommandRouter {
     } 
     
     @_spi(SendbirdInternal) public func getRequestHeaderDict<R: APIRequestable>(request: R) -> [String: String] {
-        return self.createAPIHeaders(for: request).reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
+        return self.createAPIHeaders(for: request)
     }
 
     @_spi(SendbirdInternal) public func simulateDidReceiveMessage(_ message: String) {

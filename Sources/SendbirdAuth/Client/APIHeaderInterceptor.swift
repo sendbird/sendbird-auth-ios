@@ -10,8 +10,8 @@ import Foundation
 @_spi(SendbirdInternal) public protocol APIHeaderInterceptor {
     /// Intercepts the complete headers dictionary, allowing arbitrary transformation.
     /// - Parameters:
-    ///   - headers: The fully-constructed default headers keyed by ``APIHeaderKey``.
+    ///   - headers: The fully-constructed default headers (including Session-Key if applicable).
     ///   - request: The API request that these headers will be sent with.
     /// - Returns: The final headers dictionary to use for the request.
-    func intercept(headers: [APIHeaderKey: String], for request: any APIRequestable) -> [String: String]
+    func intercept(headers: [String: String], for request: any APIRequestable) -> [String: String]
 }
