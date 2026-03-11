@@ -48,6 +48,12 @@ import Foundation
 
     @InternalAtomic @_spi(SendbirdInternal) public var eKey: String?
 
+    /// Whether this SDK instance can refresh sessions.
+    /// Set to `false` for SDKs (e.g. Desk) that cannot refresh on their own.
+    @_spi(SendbirdInternal) public let canRefreshSession: Bool
+
+    @InternalAtomic private var pendingRefreshCompletion: ((Session?) -> Void)?
+
     private let sessionProvider: SessionProvider
 
     private let board: SBTimerBoard
@@ -81,6 +87,7 @@ import Foundation
         isLocalCachingEnabled: Bool,
         localCachePreference: LocalPreferences,
         config: SendbirdConfiguration,
+        canRefreshSession: Bool = true,
         sessionProvider: SessionProvider = PersistentSessionProvider.shared
     ) {
         if applicationId.isEmpty || userId.isEmpty {
@@ -89,6 +96,7 @@ import Foundation
             self.credential = .active(applicationId: applicationId, userId: userId)
         }
 
+        self.canRefreshSession = canRefreshSession
         self.sessionHandler = sessionHandler
 
         self.router = router
@@ -116,6 +124,20 @@ import Foundation
 
     @_spi(SendbirdInternal) public func sessionDidChange(_ session: Session?) {
         delegate?.sessionKeyChanged(session?.key)
+
+        // Wake pending external refresh wait if a new session arrived
+        if let session, let handler = pendingRefreshCompletion {
+            board.stopAll()
+            pendingRefreshCompletion = nil
+            handler(session)
+        }
+    }
+
+    @_spi(SendbirdInternal) public func sessionRefreshRequested(for session: Session) {
+        guard canRefreshSession else { return }
+        guard expirationHandler.isRefreshingSession == false else { return }
+        if sessionProvider.hasRefreshedSession(current: session) { return }
+        expirationHandler.refreshSessionKey(shouldRetry: true, expiresIn: nil)
     }
 
     @_spi(SendbirdInternal) public weak var requestHeaderDataSource: RequestHeaderDataSource?
@@ -177,6 +199,7 @@ import Foundation
                 useExpiringSession = true // Always requst expiring session for guest
             }
             self.expirationHandler.delegate = self
+            self.logDebugContext(event: "authenticate.configure", error: nil, expiresIn: nil)
 
             guard case .active(_, let userId) = self.credential else {
                 self.isAuthenticating = false
@@ -240,6 +263,7 @@ import Foundation
             loginKey = .none
         }
         self.expirationHandler.delegate = self
+        self.logDebugContext(event: "connect.configure", error: nil, expiresIn: nil)
         
         router.webSocketManager.connect(loginKey: loginKey, sessionKey: sessionKey, completionHandler: loginHandler)
     }
@@ -259,10 +283,44 @@ import Foundation
     }
     
     private func reset() {
+        board.stopAll()
+        pendingRefreshCompletion = nil
         self.session = nil
         self.credential = .initialized
         sessionProvider.clear()
         stateData?.clear()
+    }
+
+    /// Called when a non-refreshable SDK fails to refresh — broadcasts to refreshable SDKs and waits.
+    func delegateRefreshToExternalSDK(error: AuthClientError) {
+        if let expiredSession = sessionProvider.loadSession(for: userId ?? "") ?? session {
+            sessionProvider.requestSessionRefresh(for: expiredSession)
+        }
+
+        waitForExternalRefresh(timeout: 10.0) { [weak self] refreshedSession in
+            guard let self else { return }
+            if let refreshedSession {
+                self.didSessionKeyRefresh(key: refreshedSession, requireReconnect: true)
+            } else {
+                self.sessionHandler.didHaveError(error.asAuthError)
+                self.router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
+            }
+        }
+    }
+
+    private func waitForExternalRefresh(timeout: TimeInterval, completion: @escaping (Session?) -> Void) {
+        pendingRefreshCompletion = completion
+        _ = SBTimer(
+            timeInterval: timeout,
+            userInfo: nil,
+            onBoard: board,
+            expirationHandler: { [weak self] in
+                guard let self else { return }
+                let handler = self.pendingRefreshCompletion
+                self.pendingRefreshCompletion = nil
+                handler?(nil)
+            }
+        )
     }
     
     // MARK: Injectable
@@ -336,12 +394,15 @@ extension SessionManager: EventDelegate {
     @_spi(SendbirdInternal) public func consumeError(_ error: AuthError?, expiresIn: Int64? = nil) {
         switch error?.errorCode {
         case .accessTokenNotValid:
+            logDebugContext(event: "consumeError.accessTokenNotValid", error: error, expiresIn: expiresIn)
             expirationHandler.refreshSessionToken()
 
         case .sessionKeyExpired:
+            logDebugContext(event: "consumeError.sessionKeyExpired", error: error, expiresIn: expiresIn)
             // Check whether another SDK has already refreshed the session
             if let currentSession = session,
                sessionProvider.hasRefreshedSession(current: currentSession) {
+                logDebugContext(event: "consumeError.sessionKeyExpired.skipAlreadyRefreshed", error: error, expiresIn: expiresIn)
                 // The refreshed session is already stored in the provider
                 return
             }
@@ -353,13 +414,60 @@ extension SessionManager: EventDelegate {
             )
 
         case .sessionTokenRevoked:
+            logDebugContext(event: "consumeError.sessionTokenRevoked", error: error, expiresIn: expiresIn)
             sessionHandler.wasClosed()
 
         case .userDeactivated, .userNotExist:
+            logDebugContext(event: "consumeError.userClosed", error: error, expiresIn: expiresIn)
             sessionHandler.wasClosed()
 
         default: break
         }
+    }
+}
+
+private extension SessionManager {
+    var authDebugSource: String {
+        guard let authMain = requestHeaderDataSource as? SendbirdAuthMain else {
+            return "unknown-auth"
+        }
+
+        if let product = authMain.mainSDKInfo?.product {
+            return product == .chat ? "chat-auth" : "\(product.rawValue)-auth"
+        }
+
+        let interceptorType = authMain.router.headerInterceptor.map {
+            String(describing: type(of: $0))
+        } ?? ""
+        let apiHost = authMain.routerConfig.apiHost
+
+        if interceptorType.localizedCaseInsensitiveContains("desk")
+            || apiHost.localizedCaseInsensitiveContains("desk") {
+            return "desk-auth"
+        }
+
+        return "standalone-auth"
+    }
+
+    func logDebugContext(event: String, error: AuthError?, expiresIn: Int64?) {
+        let authMain = requestHeaderDataSource as? SendbirdAuthMain
+        let product = authMain?.mainSDKInfo?.product.rawValue ?? "nil"
+        let interceptorType = authMain?.router.headerInterceptor.map {
+            String(describing: type(of: $0))
+        } ?? "nil"
+        let apiHost = authMain?.routerConfig.apiHost ?? router.routerConfig.apiHost
+        let expiresInValue = expiresIn.map { String($0) } ?? "nil"
+        let errorCode = error.map { String($0.code) } ?? "nil"
+        let handlerType = String(describing: type(of: expirationHandler))
+
+        Logger.session.info(
+            """
+            [SessionDebug] event=\(event) source=\(authDebugSource) product=\(product) \
+            appId=\(applicationId ?? "nil") userId=\(userId ?? "nil") apiHost=\(apiHost) \
+            headerInterceptor=\(interceptorType) handler=\(handlerType) \
+            wsState=\(router.webSocketConnectionState) expiresIn=\(expiresInValue) errorCode=\(errorCode)
+            """
+        )
     }
 }
 

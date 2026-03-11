@@ -37,6 +37,10 @@ import Foundation
     /// Header interceptor for overriding header names and injecting additional headers.
     @_spi(SendbirdInternal) public var headerInterceptor: APIHeaderInterceptor?
 
+    /// Whether this SDK instance can refresh sessions on its own.
+    /// Set to `false` for SDKs (e.g. Desk) that delegate refresh to another SDK.
+    @_spi(SendbirdInternal) public var canRefreshSession: Bool = true
+
     @_spi(SendbirdInternal) public init(
         applicationId: String,
         isLocalCachingEnabled: Bool,
@@ -44,7 +48,8 @@ import Foundation
         appVersion: String? = nil,
         mainSDKInfo: SendbirdSDKInfo? = nil,
         exceptionParser: ApiExceptionParser = DefaultExceptionParser(),
-        sessionProvider: SessionProvider? = nil
+        sessionProvider: SessionProvider? = nil,
+        canRefreshSession: Bool = true
     ) {
         self.applicationId = applicationId
         self.isLocalCachingEnabled = isLocalCachingEnabled
@@ -53,6 +58,7 @@ import Foundation
         self.mainSDKInfo = mainSDKInfo
         self.exceptionParser = exceptionParser
         self.sessionProvider = sessionProvider
+        self.canRefreshSession = canRefreshSession
     }
     
     @_spi(SendbirdInternal) public override func isEqual(_ object: Any?) -> Bool {

@@ -10,6 +10,14 @@ import Foundation
 /// Observer protocol for session changes
 @_spi(SendbirdInternal) public protocol SessionObserver: AnyObject {
     func sessionDidChange(_ session: Session?)
+
+    /// Called when the provider broadcasts a session refresh request.
+    /// Observers with `canRefreshSession == true` should perform the actual refresh.
+    func sessionRefreshRequested(for session: Session)
+}
+
+extension SessionObserver {
+    @_spi(SendbirdInternal) public func sessionRefreshRequested(for session: Session) {}
 }
 
 /// Protocol for session sharing
@@ -34,6 +42,10 @@ import Foundation
 
     /// Called after the token refresh API responds. Returns whether to accept the new session (reject if the key was already used).
     func submitRefreshedSession(_ newSession: Session) -> Bool
+
+    /// Broadcast a session refresh request to all observers.
+    /// Used when a non-refreshable SDK needs a refreshable SDK to perform the refresh.
+    func requestSessionRefresh(for session: Session)
 }
 
 /// Session sharing implementation with UserDefaults persistence
@@ -161,6 +173,14 @@ import Foundation
         }
 
         return accepted
+    }
+
+    @_spi(SendbirdInternal) public func requestSessionRefresh(for session: Session) {
+        let liveObservers: [SessionObserver] = queue.sync {
+            observers.removeAll { $0.value == nil }
+            return observers.compactMap { $0.value as? SessionObserver }
+        }
+        liveObservers.forEach { $0.sessionRefreshRequested(for: session) }
     }
 
     // MARK: - Private
