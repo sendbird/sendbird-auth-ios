@@ -39,11 +39,25 @@ extension SessionManager: InternalSessionDelegate {
     @_spi(SendbirdInternal) public func didSessionKeyRefresh(key: Session, requireReconnect: Bool) {
         // Submit the new session to `SessionProvider` (rollback prevention validation)
         // `submitRefreshedSession` updates the provider's session and calls `onSessionChanged`
-        guard submitRefreshedSession(key) else {
-            // Rejected if the key was already used - use the currently stored session
+        if submitRefreshedSession(key) {
+            // Success
+        } else if session?.key == key.key {
+            // Another SDK already stored the refreshed session in the shared provider.
+        } else {
             return
         }
 
+        applyRefreshedSession(key, requireReconnect: requireReconnect)
+    }
+
+    /// Applies a refreshed session that was already submitted by an external SDK,
+    /// skipping `submitRefreshedSession` to avoid rejection and RequestQueue hang.
+    func applyExternallyRefreshedSession(_ session: Session) {
+        self.session = session
+        applyRefreshedSession(session, requireReconnect: false)
+    }
+
+    private func applyRefreshedSession(_ key: Session, requireReconnect: Bool) {
         stateData?.update(with: key.key)
         sessionHandler.wasRefreshed()
 

@@ -54,6 +54,10 @@ import Foundation
 
     @InternalAtomic private var pendingRefreshCompletion: ((Session?) -> Void)?
 
+    /// Holds the last expired session so `delegateRefreshToExternalSDK` can broadcast it
+    /// after `consumeError` sets `session = nil`.
+    private var lastExpiredSession: Session?
+
     private let sessionProvider: SessionProvider
 
     private let board: SBTimerBoard
@@ -87,8 +91,8 @@ import Foundation
         isLocalCachingEnabled: Bool,
         localCachePreference: LocalPreferences,
         config: SendbirdConfiguration,
-        canRefreshSession: Bool = true,
-        sessionProvider: SessionProvider = PersistentSessionProvider.shared
+        sessionProvider: SessionProvider = PersistentSessionProvider.shared,
+        canRefreshSession: Bool = true
     ) {
         if applicationId.isEmpty || userId.isEmpty {
             self.credential = .initialized
@@ -124,6 +128,10 @@ import Foundation
 
     @_spi(SendbirdInternal) public func sessionDidChange(_ session: Session?) {
         delegate?.sessionKeyChanged(session?.key)
+
+        if session != nil {
+            lastExpiredSession = nil
+        }
 
         // Wake pending external refresh wait if a new session arrived
         if let session, let handler = pendingRefreshCompletion {
@@ -285,6 +293,7 @@ import Foundation
     private func reset() {
         board.stopAll()
         pendingRefreshCompletion = nil
+        lastExpiredSession = nil
         self.session = nil
         self.credential = .initialized
         sessionProvider.clear()
@@ -293,14 +302,16 @@ import Foundation
 
     /// Called when a non-refreshable SDK fails to refresh — broadcasts to refreshable SDKs and waits.
     func delegateRefreshToExternalSDK(error: AuthClientError) {
-        if let expiredSession = sessionProvider.loadSession(for: userId ?? "") ?? session {
+        let expiredSession = sessionProvider.loadSession(for: userId ?? "") ?? session ?? lastExpiredSession
+        lastExpiredSession = nil
+        if let expiredSession {
             sessionProvider.requestSessionRefresh(for: expiredSession)
         }
 
         waitForExternalRefresh(timeout: 10.0) { [weak self] refreshedSession in
             guard let self else { return }
             if let refreshedSession {
-                self.didSessionKeyRefresh(key: refreshedSession, requireReconnect: true)
+                self.applyExternallyRefreshedSession(refreshedSession)
             } else {
                 self.sessionHandler.didHaveError(error.asAuthError)
                 self.router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
@@ -407,6 +418,9 @@ extension SessionManager: EventDelegate {
                 return
             }
 
+            if let session {
+                self.lastExpiredSession = session
+            }
             self.session = nil
             expirationHandler.refreshSessionKey(
                 shouldRetry: true,
