@@ -54,8 +54,9 @@ import Foundation
 
     @InternalAtomic private var pendingRefreshCompletion: ((Session?) -> Void)?
 
-    /// Holds the last expired session so `delegateRefreshToExternalSDK` can broadcast it
-    /// after `consumeError` sets `session = nil`.
+    /// Temporarily holds the expired session after `consumeError` sets `session = nil`,
+    /// so that `delegateRefreshToExternalSDK` can still broadcast it to refreshable SDKs.
+    /// Cleared when a new session arrives via `sessionDidChange`.
     private var lastExpiredSession: Session?
 
     private let sessionProvider: SessionProvider
