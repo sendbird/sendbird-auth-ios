@@ -25,6 +25,8 @@ extension SessionManager: InternalSessionDelegate {
     }
     
     @_spi(SendbirdInternal) public func didSessionKeyFailToRefresh(error: AuthClientError) {
+        Logger.session.info("didSessionKeyFailToRefresh - error: \(error), canRefreshSession: \(canRefreshSession)")
+        
         guard canRefreshSession == false else {
             // This SDK is the refresh owner and it failed — real failure
             sessionHandler.didHaveError(error.asAuthError)
