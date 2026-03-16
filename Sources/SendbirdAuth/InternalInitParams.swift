@@ -29,7 +29,7 @@ import Foundation
 
     /// Custom exception parser for API error responses.
     /// Default is `DefaultExceptionParser` which parses Chat API format.
-    @_spi(SendbirdInternal) public var exceptionParser: ApiExceptionParser = DefaultExceptionParser()
+    @_spi(SendbirdInternal) public var exceptionParser: APIExceptionParser = DefaultExceptionParser()
 
     /// Session provider for sharing session across multiple SDK instances.
     @_spi(SendbirdInternal) public var sessionProvider: SessionProvider?
@@ -47,7 +47,7 @@ import Foundation
         logLevel: AuthLogLevel = .none,
         appVersion: String? = nil,
         mainSDKInfo: SendbirdSDKInfo? = nil,
-        exceptionParser: ApiExceptionParser = DefaultExceptionParser(),
+        exceptionParser: APIExceptionParser = DefaultExceptionParser(),
         sessionProvider: SessionProvider? = nil,
         canRefreshSession: Bool = true
     ) {
