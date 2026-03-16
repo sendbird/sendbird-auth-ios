@@ -128,7 +128,7 @@ extension SessionObserver {
     }
 
     @_spi(SendbirdInternal) public func addSessionObserver(_ observer: SessionObserver) {
-        queue.async {
+        queue.sync {
             // Prevent duplicate registration
             let alreadyRegistered = self.observers.contains { $0.value === observer }
             if !alreadyRegistered {
@@ -138,7 +138,7 @@ extension SessionObserver {
     }
 
     @_spi(SendbirdInternal) public func removeSessionObserver(_ observer: SessionObserver) {
-        queue.async {
+        queue.sync {
             self.observers.removeAll { $0.value === observer || $0.value == nil }
         }
     }
