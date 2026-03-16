@@ -198,13 +198,14 @@ extension SessionObserver {
             return observers.compactMap { $0.value as? SessionObserver }
         }
 
+        var handled = false
         for observer in liveObservers {
             if observer.canRefreshSession {
                 observer.sessionRefreshRequested(for: session)
-                return true
+                handled = true
             }
         }
-        return false
+        return handled
     }
 
     @_spi(SendbirdInternal) public func notifySessionRefreshFailed() {
