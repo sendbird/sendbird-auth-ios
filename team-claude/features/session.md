@@ -212,25 +212,31 @@
 - **왜**: Desk Auth는 세션 갱신 불가 (API 호스트가 다름). 401 시 Chat Auth에 위임 필요.
 - **결정**: `SessionProvider`를 중앙 코디네이터로 활용
 - **핵심 구성요소**:
+  - `SessionObserver.canRefreshSession: Bool` — observer의 갱신 가능 여부 (protocol, default: true)
   - `SessionObserver.sessionRefreshRequested(for:)` — 갱신 요청 수신 (default no-op)
-  - `SessionProvider.requestSessionRefresh(for:)` — 모든 observer에 브로드캐스트
-  - `SessionManager.canRefreshSession: Bool` — 갱신 가능 여부 (default: true)
+  - `SessionProvider.requestSessionRefresh(for:)` — 모든 observer에 브로드캐스트, `canRefreshSession == true`인 observer 존재 시 `true` 반환
+  - `SessionManager.canRefreshSession: Bool` — 인스턴스별 갱신 가능 여부 (let, protocol 충족)
   - `InternalInitParams.canRefreshSession` — 초기화 시 설정
-- **흐름** (Desk 401):
+- **흐름** (Desk 401, atomic flag 기반):
   ```
   Desk 401 → validateResponse false → request re-queued
   → consumeError → refreshSessionKey → Desk 호스트로 갱신 시도 → 실패
   → didSessionKeyFailToRefresh
-     → canRefreshSession == false
+     → canRefreshSession == false → delegateRefreshToExternalSDK(error:)
+     → isWaitingForExternalRefresh = true (atomic flag)
      → sessionProvider.requestSessionRefresh(for: expiredSession)
         → Chat의 sessionRefreshRequested 호출 → Chat 갱신 시작
-     → waitForExternalRefresh(10초)
+     → accepted == true이면 대기:
         → Chat 갱신 성공 → submitRefreshedSession → sessionDidChange
-        → Desk의 sessionDidChange에서 pendingRefreshCompletion 호출
-        → didSessionKeyRefresh → SessionExpirationEvent.Refreshed
+        → Desk의 sessionDidChange → claimExternalRefreshWait() → applyExternallyRefreshedSession
         → processQueuedRequests → 대기 중인 Desk request 재실행
+     → accepted == false이면 즉시 실패 (isWaitingForExternalRefresh 리셋 → handleRefreshFailure)
   ```
-- **Edge cases**: Chat 미등록 시 10초 타임아웃 실패, 동시 401은 isRefreshingSession 가드로 중복 방지
+- **Edge cases**:
+  - Chat 미등록 또는 모든 observer가 `canRefreshSession == false` → `requestSessionRefresh`가 `false` 반환 → 즉시 실패
+  - Chat 갱신 실패 → `broadcastSessionRefreshFailed()` → `sessionRefreshFailed()` → `claimExternalRefreshWait()` → `handleRefreshFailure`
+  - 동시 401은 `isRefreshingSession` 가드로 중복 방지
+  - `claimExternalRefreshWait()`의 atomic swap으로 `sessionDidChange`/`sessionRefreshFailed` 중 하나만 처리
 - **수정 파일**: SessionProvider.swift, SessionManager.swift, SessionExpirable.swift, InternalInitParams.swift, SendbirdAuthMain.swift
 
 ### EventDelegate 통합 — 2026-03-06

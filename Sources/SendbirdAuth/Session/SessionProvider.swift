@@ -9,6 +9,10 @@ import Foundation
 
 /// Observer protocol for session changes
 @_spi(SendbirdInternal) public protocol SessionObserver: AnyObject {
+    /// Whether this observer can perform session refresh.
+    /// Used by `requestSessionRefresh` to determine if any observer can handle the refresh.
+    var canRefreshSession: Bool { get }
+
     func sessionDidChange(_ session: Session?)
 
     /// Called when the provider broadcasts a session refresh request.
@@ -21,6 +25,7 @@ import Foundation
 }
 
 extension SessionObserver {
+    @_spi(SendbirdInternal) public var canRefreshSession: Bool { true }
     @_spi(SendbirdInternal) public func sessionRefreshRequested(for session: Session) {}
     @_spi(SendbirdInternal) public func sessionRefreshFailed() {}
 }
@@ -192,9 +197,14 @@ extension SessionObserver {
             observers.removeAll { $0.value == nil }
             return observers.compactMap { $0.value as? SessionObserver }
         }
-        liveObservers.forEach { $0.sessionRefreshRequested(for: session) }
-        // If there are multiple observers, at least one other SDK may handle the refresh
-        return liveObservers.count > 1
+
+        for observer in liveObservers {
+            if observer.canRefreshSession {
+                observer.sessionRefreshRequested(for: session)
+                return true
+            }
+        }
+        return false
     }
 
     @_spi(SendbirdInternal) public func notifySessionRefreshFailed() {
