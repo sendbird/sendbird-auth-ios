@@ -52,7 +52,12 @@ import Foundation
     /// Set to `false` for SDKs (e.g. Desk) that cannot refresh on their own.
     @_spi(SendbirdInternal) public let canRefreshSession: Bool
 
-    @InternalAtomic private var pendingRefreshCompletion: ((Session?) -> Void)?
+    /// Atomic flag for cross-SDK session refresh coordination.
+    /// Set to `true` when waiting for an external SDK to refresh, consumed via atomic swap.
+    @InternalAtomic private var isWaitingForExternalRefresh: Bool = false
+
+    /// Stores the error from the original refresh failure, used when external refresh also fails.
+    private var pendingDelegationError: AuthClientError?
 
     /// Temporarily holds the expired session after `consumeError` sets `session = nil`,
     /// so that `delegateRefreshToExternalSDK` can still broadcast it to refreshable SDKs.
@@ -136,12 +141,28 @@ import Foundation
             lastExpiredSession = nil
         }
 
-        // Wake pending external refresh wait if a new session arrived
-        if let session, let handler = pendingRefreshCompletion {
-            board.stopAll()
-            pendingRefreshCompletion = nil
-            handler(session)
+        // These guards must stay separate: if session is nil, we must not consume
+        // the atomic flag — otherwise a later valid session would miss the waiting state.
+        guard let session else { 
+            return 
         }
+
+        guard claimExternalRefreshWait() else { 
+            return 
+        }
+
+        pendingDelegationError = nil
+        applyExternallyRefreshedSession(session)
+    }
+
+    @_spi(SendbirdInternal) public func sessionRefreshFailed() {
+        guard claimExternalRefreshWait() else { 
+            return 
+        }
+
+        let error = pendingDelegationError ?? AuthClientError.unknownError
+        pendingDelegationError = nil
+        handleRefreshFailure(error: error)
     }
 
     @_spi(SendbirdInternal) public func sessionRefreshRequested(for session: Session) {
@@ -297,10 +318,21 @@ import Foundation
     func submitRefreshedSession(_ newSession: Session) -> Bool {
         sessionProvider.submitRefreshedSession(newSession)
     }
+
+    /// Broadcast session refresh failure to all observers via `SessionProvider`
+    func broadcastSessionRefreshFailed() {
+        sessionProvider.notifySessionRefreshFailed()
+    }
     
+    func handleRefreshFailure(error: AuthClientError) {
+        sessionHandler.didHaveError(error.asAuthError)
+        router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
+    }
+
     private func reset() {
         board.stopAll()
-        pendingRefreshCompletion = nil
+        isWaitingForExternalRefresh = false
+        pendingDelegationError = nil
         lastExpiredSession = nil
         self.session = nil
         self.credential = .initialized
@@ -308,39 +340,29 @@ import Foundation
         stateData?.clear()
     }
 
-    /// Called when a non-refreshable SDK fails to refresh — broadcasts to refreshable SDKs and waits.
+    /// Called when a non-refreshable SDK fails to refresh — broadcasts to refreshable SDKs.
+    /// Uses atomic `isWaitingForExternalRefresh` flag instead of timer to avoid race conditions.
     func delegateRefreshToExternalSDK(error: AuthClientError) {
         Logger.session.info("delegateRefreshToExternalSDK - error: \(error), userId: \(userId ?? "nil")")
         let expiredSession = sessionProvider.loadSession(for: userId ?? "") ?? session ?? lastExpiredSession
         lastExpiredSession = nil
-        if let expiredSession {
-            sessionProvider.requestSessionRefresh(for: expiredSession)
+
+        guard let expiredSession else {
+            handleRefreshFailure(error: error)
+            return
         }
 
-        waitForExternalRefresh(timeout: 10.0) { [weak self] refreshedSession in
-            guard let self else { return }
-            if let refreshedSession {
-                self.applyExternallyRefreshedSession(refreshedSession)
-            } else {
-                self.sessionHandler.didHaveError(error.asAuthError)
-                self.router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
-            }
-        }
-    }
+        isWaitingForExternalRefresh = true
+        pendingDelegationError = error
+        let accepted = sessionProvider.requestSessionRefresh(for: expiredSession)
 
-    private func waitForExternalRefresh(timeout: TimeInterval, completion: @escaping (Session?) -> Void) {
-        pendingRefreshCompletion = completion
-        _ = SBTimer(
-            timeInterval: timeout,
-            userInfo: nil,
-            onBoard: board,
-            expirationHandler: { [weak self] in
-                guard let self else { return }
-                let handler = self.pendingRefreshCompletion
-                self.pendingRefreshCompletion = nil
-                handler?(nil)
-            }
-        )
+        if !accepted {
+            // No refreshable SDK available — fail immediately
+            isWaitingForExternalRefresh = false
+            pendingDelegationError = nil
+            handleRefreshFailure(error: error)
+        }
+        // If accepted, wait for sessionDidChange (success) or sessionRefreshFailed (failure)
     }
     
     // MARK: Injectable

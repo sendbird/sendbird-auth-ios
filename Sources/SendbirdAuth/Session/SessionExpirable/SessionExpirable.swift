@@ -20,17 +20,16 @@ extension SessionManager: InternalSessionDelegate {
     @_spi(SendbirdInternal) public func didSessionTokenFailToRefresh(error: AuthClientError) {
         logout()
         delegate?.sessionRefreshFailed()
-        sessionHandler.didHaveError(error.asAuthError)
-        router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
+        handleRefreshFailure(error: error)
     }
     
     @_spi(SendbirdInternal) public func didSessionKeyFailToRefresh(error: AuthClientError) {
         Logger.session.info("didSessionKeyFailToRefresh - error: \(error), canRefreshSession: \(canRefreshSession)")
-        
+
         guard canRefreshSession == false else {
-            // This SDK is the refresh owner and it failed — real failure
-            sessionHandler.didHaveError(error.asAuthError)
-            router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
+            // This SDK is the refresh owner and it failed — notify waiting SDKs
+            broadcastSessionRefreshFailed()
+            handleRefreshFailure(error: error)
             return
         }
 

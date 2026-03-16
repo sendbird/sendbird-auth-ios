@@ -14,10 +14,15 @@ import Foundation
     /// Called when the provider broadcasts a session refresh request.
     /// Observers with `canRefreshSession == true` should perform the actual refresh.
     func sessionRefreshRequested(for session: Session)
+
+    /// Called when a refreshable SDK fails to refresh the session.
+    /// Non-refreshable SDKs waiting for external refresh should handle the failure.
+    func sessionRefreshFailed()
 }
 
 extension SessionObserver {
     @_spi(SendbirdInternal) public func sessionRefreshRequested(for session: Session) {}
+    @_spi(SendbirdInternal) public func sessionRefreshFailed() {}
 }
 
 /// Protocol for session sharing
@@ -45,7 +50,13 @@ extension SessionObserver {
 
     /// Broadcast a session refresh request to all observers.
     /// Used when a non-refreshable SDK needs a refreshable SDK to perform the refresh.
-    func requestSessionRefresh(for session: Session)
+    /// Returns `true` if there are other observers that may handle the refresh.
+    @discardableResult
+    func requestSessionRefresh(for session: Session) -> Bool
+
+    /// Broadcast session refresh failure to all observers.
+    /// Called when a refreshable SDK fails to refresh, notifying non-refreshable SDKs.
+    func notifySessionRefreshFailed()
 }
 
 /// Session sharing implementation with UserDefaults persistence
@@ -175,12 +186,23 @@ extension SessionObserver {
         return accepted
     }
 
-    @_spi(SendbirdInternal) public func requestSessionRefresh(for session: Session) {
+    @discardableResult
+    @_spi(SendbirdInternal) public func requestSessionRefresh(for session: Session) -> Bool {
         let liveObservers: [SessionObserver] = queue.sync {
             observers.removeAll { $0.value == nil }
             return observers.compactMap { $0.value as? SessionObserver }
         }
         liveObservers.forEach { $0.sessionRefreshRequested(for: session) }
+        // If there are multiple observers, at least one other SDK may handle the refresh
+        return liveObservers.count > 1
+    }
+
+    @_spi(SendbirdInternal) public func notifySessionRefreshFailed() {
+        let liveObservers: [SessionObserver] = queue.sync {
+            observers.removeAll { $0.value == nil }
+            return observers.compactMap { $0.value as? SessionObserver }
+        }
+        liveObservers.forEach { $0.sessionRefreshFailed() }
     }
 
     // MARK: - Private
