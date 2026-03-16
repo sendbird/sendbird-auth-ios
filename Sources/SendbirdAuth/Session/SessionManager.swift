@@ -329,6 +329,17 @@ import Foundation
         router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
     }
 
+    /// Atomically checks and clears `isWaitingForExternalRefresh`.
+    /// Returns `true` if the flag was set (i.e., we were waiting), `false` otherwise.
+    private func claimExternalRefreshWait() -> Bool {
+        var wasWaiting = false
+        $isWaitingForExternalRefresh.atomicMutate { value in
+            wasWaiting = value
+            value = false
+        }
+        return wasWaiting
+    }
+
     private func reset() {
         board.stopAll()
         isWaitingForExternalRefresh = false
