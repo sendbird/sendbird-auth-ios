@@ -1,2 +1,2 @@
-### Improvements
-- Improve stability
+### Changes
+- Internal improvements only
