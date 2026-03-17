@@ -9,7 +9,25 @@ import Foundation
 
 /// Observer protocol for session changes
 @_spi(SendbirdInternal) public protocol SessionObserver: AnyObject {
+    /// Whether this observer can perform session refresh.
+    /// Used by `requestSessionRefresh` to determine if any observer can handle the refresh.
+    var canRefreshSession: Bool { get }
+
     func sessionDidChange(_ session: Session?)
+
+    /// Called when the provider broadcasts a session refresh request.
+    /// Observers with `canRefreshSession == true` should perform the actual refresh.
+    func sessionRefreshRequested(for session: Session)
+
+    /// Called when a refreshable SDK fails to refresh the session.
+    /// Non-refreshable SDKs waiting for external refresh should handle the failure.
+    func sessionRefreshFailed()
+}
+
+extension SessionObserver {
+    @_spi(SendbirdInternal) public var canRefreshSession: Bool { true }
+    @_spi(SendbirdInternal) public func sessionRefreshRequested(for session: Session) {}
+    @_spi(SendbirdInternal) public func sessionRefreshFailed() {}
 }
 
 /// Protocol for session sharing
@@ -34,6 +52,16 @@ import Foundation
 
     /// Called after the token refresh API responds. Returns whether to accept the new session (reject if the key was already used).
     func submitRefreshedSession(_ newSession: Session) -> Bool
+
+    /// Broadcast a session refresh request to all observers.
+    /// Used when a non-refreshable SDK needs a refreshable SDK to perform the refresh.
+    /// Returns `true` if there are other observers that may handle the refresh.
+    @discardableResult
+    func requestSessionRefresh(for session: Session) -> Bool
+
+    /// Broadcast session refresh failure to all observers.
+    /// Called when a refreshable SDK fails to refresh, notifying non-refreshable SDKs.
+    func notifySessionRefreshFailed()
 }
 
 /// Session sharing implementation with UserDefaults persistence
@@ -100,7 +128,7 @@ import Foundation
     }
 
     @_spi(SendbirdInternal) public func addSessionObserver(_ observer: SessionObserver) {
-        queue.async {
+        queue.sync {
             // Prevent duplicate registration
             let alreadyRegistered = self.observers.contains { $0.value === observer }
             if !alreadyRegistered {
@@ -110,7 +138,7 @@ import Foundation
     }
 
     @_spi(SendbirdInternal) public func removeSessionObserver(_ observer: SessionObserver) {
-        queue.async {
+        queue.sync {
             self.observers.removeAll { $0.value === observer || $0.value == nil }
         }
     }
@@ -161,6 +189,31 @@ import Foundation
         }
 
         return accepted
+    }
+
+    @discardableResult
+    @_spi(SendbirdInternal) public func requestSessionRefresh(for session: Session) -> Bool {
+        let liveObservers: [SessionObserver] = queue.sync {
+            observers.removeAll { $0.value == nil }
+            return observers.compactMap { $0.value as? SessionObserver }
+        }
+
+        var handled = false
+        for observer in liveObservers {
+            if observer.canRefreshSession {
+                observer.sessionRefreshRequested(for: session)
+                handled = true
+            }
+        }
+        return handled
+    }
+
+    @_spi(SendbirdInternal) public func notifySessionRefreshFailed() {
+        let liveObservers: [SessionObserver] = queue.sync {
+            observers.removeAll { $0.value == nil }
+            return observers.compactMap { $0.value as? SessionObserver }
+        }
+        liveObservers.forEach { $0.sessionRefreshFailed() }
     }
 
     // MARK: - Private

@@ -274,7 +274,7 @@ final class HTTPClientExceptionParserTests: XCTestCase {
 
 // MARK: - Test Helpers
 
-private class MockExceptionParser: ApiExceptionParser {
+private class MockExceptionParser: APIExceptionParser {
     private(set) var parseCallCount = 0
     private(set) var lastParsedData: Data?
     var mockResult: AuthError?

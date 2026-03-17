@@ -20,23 +20,45 @@ extension SessionManager: InternalSessionDelegate {
     @_spi(SendbirdInternal) public func didSessionTokenFailToRefresh(error: AuthClientError) {
         logout()
         delegate?.sessionRefreshFailed()
-        sessionHandler.didHaveError(error.asAuthError)
-        router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
+        handleRefreshFailure(error: error)
     }
     
     @_spi(SendbirdInternal) public func didSessionKeyFailToRefresh(error: AuthClientError) {
-        sessionHandler.didHaveError(error.asAuthError)
-        router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
+        Logger.session.info("didSessionKeyFailToRefresh - error: \(error), canRefreshSession: \(canRefreshSession)")
+
+        guard canRefreshSession == false else {
+            // This SDK is the refresh owner and it failed — notify waiting SDKs
+            broadcastSessionRefreshFailed()
+            handleRefreshFailure(error: error)
+            return
+        }
+
+        // Non-refreshable SDK — delegate to a refreshable SDK via SessionProvider
+        delegateRefreshToExternalSDK(error: error)
     }
     
     @_spi(SendbirdInternal) public func didSessionKeyRefresh(key: Session, requireReconnect: Bool) {
         // Submit the new session to `SessionProvider` (rollback prevention validation)
         // `submitRefreshedSession` updates the provider's session and calls `onSessionChanged`
-        guard submitRefreshedSession(key) else {
-            // Rejected if the key was already used - use the currently stored session
+        if submitRefreshedSession(key) {
+            // Success
+        } else if session?.key == key.key {
+            // Another SDK already stored the refreshed session in the shared provider.
+        } else {
             return
         }
 
+        applyRefreshedSession(key, requireReconnect: requireReconnect)
+    }
+
+    /// Applies a refreshed session that was already submitted by an external SDK,
+    /// skipping `submitRefreshedSession` to avoid rejection and RequestQueue hang.
+    func applyExternallyRefreshedSession(_ session: Session) {
+        self.session = session
+        applyRefreshedSession(session, requireReconnect: false)
+    }
+
+    private func applyRefreshedSession(_ key: Session, requireReconnect: Bool) {
         stateData?.update(with: key.key)
         sessionHandler.wasRefreshed()
 

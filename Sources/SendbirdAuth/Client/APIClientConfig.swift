@@ -1,5 +1,5 @@
 //
-//  ApiClientConfig.swift
+//  APIClientConfig.swift
 //  SendbirdAuth
 //
 //  Created by Kai Lee on 12/28/25.
@@ -9,7 +9,7 @@ import Foundation
 
 /// Protocol for parsing API error responses into AuthError.
 /// Implement this protocol to provide custom error parsing for different API formats.
-@_spi(SendbirdInternal) public protocol ApiExceptionParser {
+@_spi(SendbirdInternal) public protocol APIExceptionParser {
     func parse(data: Data) -> AuthError?
 }
 
@@ -20,7 +20,7 @@ import Foundation
 ///
 /// This is the default parser used by Auth SDK. Other SDKs (e.g., Desk) can provide
 /// their own parser implementation via `InternalInitParams.exceptionParser`.
-@_spi(SendbirdInternal) public struct DefaultExceptionParser: ApiExceptionParser {
+@_spi(SendbirdInternal) public struct DefaultExceptionParser: APIExceptionParser {
     @_spi(SendbirdInternal) public init() {}
 
     @_spi(SendbirdInternal) public func parse(data: Data) -> AuthError? {

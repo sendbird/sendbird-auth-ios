@@ -13,14 +13,14 @@ import Foundation
 
     @_spi(SendbirdInternal) public var apiHost: String
     @_spi(SendbirdInternal) public var wsHost: String
-    @_spi(SendbirdInternal) public var exceptionParser: ApiExceptionParser
+    @_spi(SendbirdInternal) public var exceptionParser: APIExceptionParser
 
     @_spi(SendbirdInternal) public init(
         useNativeSocket: Bool? = nil,
         cachePolicy: NSURLRequest.CachePolicy,
         apiHost: String,
         wsHost: String,
-        exceptionParser: ApiExceptionParser = DefaultExceptionParser()
+        exceptionParser: APIExceptionParser = DefaultExceptionParser()
     ) {
         self.cachePolicy = cachePolicy
         self.useNativeSocket = useNativeSocket

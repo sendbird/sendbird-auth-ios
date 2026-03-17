@@ -52,6 +52,9 @@ import Foundation
     /// Session provider for sharing session across multiple SDK instances.
     @_spi(SendbirdInternal) public private(set) var sessionProvider: SessionProvider
 
+    /// Whether this SDK instance can refresh sessions on its own.
+    private let canRefreshSession: Bool
+
     /// Instance-specific preferences (isolated per appId + apiHostUrl)
     @_spi(SendbirdInternal) public let preference: LocalPreferences
 
@@ -168,6 +171,7 @@ import Foundation
             httpClient: httpClientForRouter,
             eventDispatcher: dispatcher
         )
+        router.headerInterceptor = params.headerInterceptor
 
         let sessionHandler = SessionEventBroadcaster(service, mapTableValueOption: .strongMemory)
         let placeHolderSessionManager = SessionManager(
@@ -178,7 +182,8 @@ import Foundation
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             localCachePreference: localCachePreference,
             config: config,
-            sessionProvider: params.sessionProvider ?? PersistentSessionProvider.shared
+            sessionProvider: params.sessionProvider ?? PersistentSessionProvider.shared,
+            canRefreshSession: params.canRefreshSession
         )
         sessionManager = placeHolderSessionManager
 
@@ -220,6 +225,7 @@ import Foundation
         self.routerConfig = routerConfig
         isLocalCachingEnabled = params.isLocalCachingEnabled
         self.sessionProvider = params.sessionProvider ?? PersistentSessionProvider.shared
+        self.canRefreshSession = params.canRefreshSession
 
         self.sessionHandler = sessionHandler
 
@@ -541,13 +547,16 @@ extension SendbirdAuthMain {
             isLocalCachingEnabled: isLocalCachingEnabled,
             localCachePreference: localCachePreference,
             config: config,
-            sessionProvider: self.sessionProvider
+            sessionProvider: self.sessionProvider,
+            canRefreshSession: canRefreshSession
         )
 
         self.sessionManager = sessionManager
         self.sessionManager.delegate = self
         self.sessionManager.resolve(with: self)
         self.sessionManager.requestHeaderDataSource = self
+        // API-only consumers can refresh sessions without going through connect/authenticate.
+        self.sessionManager.expirationHandler.delegate = self.sessionManager
         requestQueue.sessionValidator = sessionManager
 
         // Create new websocket

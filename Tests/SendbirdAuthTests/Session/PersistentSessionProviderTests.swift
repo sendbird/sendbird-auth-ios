@@ -504,14 +504,153 @@ final class PersistentSessionProviderTests: XCTestCase {
         // Then - returns true (no refresh needed, already refreshed)
         XCTAssertTrue(result)
     }
+
+    // MARK: - requestSessionRefresh
+
+    func testRequestSessionRefresh_broadcastsToAllObservers() {
+        // Given
+        let expectation1 = expectation(description: "Observer 1 receives refresh request")
+        let expectation2 = expectation(description: "Observer 2 receives refresh request")
+        let session = Session(key: "v1", services: [.chat])
+
+        let observer1 = MockSessionObserver()
+        observer1.onSessionRefreshRequested = { receivedSession in
+            XCTAssertEqual(receivedSession.key, "v1")
+            expectation1.fulfill()
+        }
+        let observer2 = MockSessionObserver()
+        observer2.onSessionRefreshRequested = { receivedSession in
+            XCTAssertEqual(receivedSession.key, "v1")
+            expectation2.fulfill()
+        }
+
+        sut.addSessionObserver(observer1)
+        sut.addSessionObserver(observer2)
+
+        // Small delay for async addSessionObserver
+        let addDelay = expectation(description: "Add delay")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { addDelay.fulfill() }
+        wait(for: [addDelay], timeout: 1.0)
+
+        // When
+        sut.requestSessionRefresh(for: session)
+
+        // Then
+        wait(for: [expectation1, expectation2], timeout: 1.0)
+    }
+
+    func testRequestSessionRefresh_withNoObservers_doesNotCrash() {
+        // When/Then — should not crash
+        let session = Session(key: "v1", services: [.chat])
+        sut.requestSessionRefresh(for: session)
+    }
+
+    func testRequestSessionRefresh_withDeallocatedObserver_skipsIt() {
+        // Given
+        let expectation1 = expectation(description: "Live observer receives refresh request")
+        let session = Session(key: "v1", services: [.chat])
+
+        var deallocatedObserver: MockSessionObserver? = MockSessionObserver()
+        deallocatedObserver?.onSessionRefreshRequested = { _ in
+            XCTFail("Deallocated observer should not receive refresh request")
+        }
+        sut.addSessionObserver(deallocatedObserver!)
+
+        let liveObserver = MockSessionObserver()
+        liveObserver.onSessionRefreshRequested = { _ in
+            expectation1.fulfill()
+        }
+        sut.addSessionObserver(liveObserver)
+
+        // Small delay for async addSessionObserver
+        let addDelay = expectation(description: "Add delay")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { addDelay.fulfill() }
+        wait(for: [addDelay], timeout: 1.0)
+
+        // Deallocate one observer
+        deallocatedObserver = nil
+
+        // When
+        sut.requestSessionRefresh(for: session)
+
+        // Then — only live observer called
+        wait(for: [expectation1], timeout: 1.0)
+    }
+
+    // MARK: - Cross-SDK Refresh Scenario
+
+    func testScenario_crossSDKRefresh_deskRequestsChatRefreshes() {
+        // Simulates: Desk (canRefreshSession=false) triggers requestSessionRefresh,
+        // Chat (canRefreshSession=true) receives it and submits refreshed session,
+        // Desk receives sessionDidChange with new session.
+
+        // Given
+        let expiredSession = Session(key: "v1", services: [.chat])
+        let refreshedSession = Session(key: "v2", services: [.chat])
+
+        // Set initial session so provider has a userId
+        let setupObserver = MockSessionObserver()
+        let setupExpectation = expectation(description: "Initial session set")
+        setupObserver.onSessionChange = { _ in setupExpectation.fulfill() }
+        sut.addSessionObserver(setupObserver)
+        sut.setSession(expiredSession, for: userId)
+        wait(for: [setupExpectation], timeout: 1.0)
+        sut.removeSessionObserver(setupObserver)
+
+        // Small delay for async removeSessionObserver
+        let removeDelay = expectation(description: "Remove delay")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { removeDelay.fulfill() }
+        wait(for: [removeDelay], timeout: 1.0)
+
+        let chatObserver = MockSessionObserver()
+        let deskObserver = MockSessionObserver()
+
+        let chatRefreshRequestExpectation = expectation(description: "Chat receives refresh request")
+        let deskSessionChangeExpectation = expectation(description: "Desk receives new session via sessionDidChange")
+
+        // Chat observer: simulates performing refresh when requested
+        chatObserver.onSessionRefreshRequested = { [weak self] session in
+            XCTAssertEqual(session.key, "v1")
+            chatRefreshRequestExpectation.fulfill()
+            // Simulate Chat completing refresh
+            self?.sut.submitRefreshedSession(refreshedSession)
+        }
+
+        // Desk observer: waits for sessionDidChange with refreshed session
+        deskObserver.onSessionChange = { session in
+            if session?.key == "v2" {
+                deskSessionChangeExpectation.fulfill()
+            }
+        }
+
+        sut.addSessionObserver(chatObserver)
+        sut.addSessionObserver(deskObserver)
+
+        // Small delay for async addSessionObserver
+        let addDelay = expectation(description: "Add delay")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { addDelay.fulfill() }
+        wait(for: [addDelay], timeout: 1.0)
+
+        // When — Desk triggers refresh request
+        sut.requestSessionRefresh(for: expiredSession)
+
+        // Then — Chat receives request, performs refresh, Desk gets sessionDidChange
+        wait(for: [chatRefreshRequestExpectation, deskSessionChangeExpectation], timeout: 2.0)
+        XCTAssertEqual(sut.loadSession(for: userId)?.key, "v2")
+    }
 }
 
 // MARK: - Mock
 
 private class MockSessionObserver: SessionObserver {
     var onSessionChange: ((Session?) -> Void)?
+    var onSessionRefreshRequested: ((Session) -> Void)?
 
     func sessionDidChange(_ session: Session?) {
         onSessionChange?(session)
+    }
+
+    func sessionRefreshRequested(for session: Session) {
+        onSessionRefreshRequested?(session)
     }
 }
