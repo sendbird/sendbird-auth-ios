@@ -51,13 +51,19 @@ jobs:
 
     steps:
       - name: Debug - Print all inputs
+        env:
+          INPUT_IPHONE_DEVICE: ${{ inputs.iphone_device }}
+          INPUT_XCODE_VERSION: ${{ inputs.xcode_version }}
+          INPUT_CONFIGURATION: ${{ inputs.configuration }}
+          INPUT_RELEASE_TICKET_KEY: ${{ inputs.release_ticket_key }}
+          INPUT_IS_TEST: ${{ inputs.is_test }}
         run: |
           echo "=== Release Workflow Inputs ==="
-          echo "iphone_device: ${{ inputs.iphone_device }}"
-          echo "xcode_version: ${{ inputs.xcode_version }}"
-          echo "configuration: ${{ inputs.configuration }}"
-          echo "release_ticket_key: ${{ inputs.release_ticket_key }}"
-          echo "is_test: ${{ inputs.is_test }}"
+          echo "iphone_device: \"$INPUT_IPHONE_DEVICE\""
+          echo "xcode_version: \"$INPUT_XCODE_VERSION\""
+          echo "configuration: \"$INPUT_CONFIGURATION\""
+          echo "release_ticket_key: \"$INPUT_RELEASE_TICKET_KEY\""
+          echo "is_test: \"$INPUT_IS_TEST\""
           echo "==============================="
         shell: bash
 

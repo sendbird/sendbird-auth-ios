@@ -32,7 +32,7 @@ import Foundation
 ///   - strategy: The strategy for processing requests (e.g., zero-gap or debounced).
 ///   - sendHandler: A closure to handle the dispatching of WebSocket requests.
 @_spi(SendbirdInternal) public actor BatchedRequestBucket {
-    @_spi(SendbirdInternal) public nonisolated let commandType: CommandType
+    @_spi(SendbirdInternal) public let commandType: CommandType
     @_spi(SendbirdInternal) public var pendingRequestsCount: Int {
         requestIdStack.count
     }
