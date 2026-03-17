@@ -19,7 +19,8 @@ import Foundation
     // The applicationId is used to scope the keys so multiple SDK instances don't overwrite each other.
     private var appGroup: String?
     private var applicationId: String?
-    
+    private var appGroupPreferences: LocalPreferences?
+
     @_spi(SendbirdInternal) public init(
         useNativeSocket: Bool? = nil,
         cachePolicy: NSURLRequest.CachePolicy,
@@ -47,6 +48,7 @@ import Foundation
     @_spi(SendbirdInternal) public func setAppGroup(_ appGroup: String, applicationId: String) {
         self.appGroup = appGroup
         self.applicationId = applicationId
+        self.appGroupPreferences = LocalPreferences(suiteName: appGroup)
         syncHostToAppGroup()
     }
 
@@ -62,31 +64,31 @@ import Foundation
 
     // NOTE: Reads the latest host from AppGroup UserDefaults that was saved by the main app.
     // Used by NotificationExtension to restore the main app's host for API calls (e.g., push delivery).
-    @_spi(SendbirdInternal) public func loadHostFromAppGroup(
-        appGroup: String?,
-        applicationId: String?
-    ) {
-        guard let appGroup, appGroup.hasElements else { return }
-        guard let applicationId, applicationId.hasElements else { return}
-        
-        let preferences = LocalPreferences(suiteName: appGroup)
+    @_spi(SendbirdInternal) @discardableResult
+    public func loadHostFromAppGroup(
+        appGroup: String,
+        applicationId: String
+    ) -> Bool {
+        let preferences = appGroupPreferences ?? LocalPreferences(suiteName: appGroup)
         let apiHost: String? = preferences.value(forKey: "\(PreferenceKey.latestAPIHost)_\(applicationId)")
         let wsHost: String? = preferences.value(forKey: "\(PreferenceKey.latestWSHost)_\(applicationId)")
-        
+
+        var loaded = false
         if let apiHost, apiHost.hasElements {
             self.apiHost = apiHost
-            
+            loaded = true
         }
         if let wsHost, wsHost.hasElements {
             self.wsHost = wsHost
+            loaded = true
         }
+        return loaded
     }
 
     // TODO: PushDeviceInfoCacheStorage also uses UserDefaults(suiteName: appGroup) for push token.
     // Consider sharing a single AppGroup UserDefaults instance across host sync and push token storage.
     private func syncHostToAppGroup() {
-        guard let applicationId, let appGroup else { return }
-        let preferences = LocalPreferences(suiteName: appGroup)
+        guard let applicationId, let preferences = appGroupPreferences else { return }
         preferences.set(value: apiHost, forKey: "\(PreferenceKey.latestAPIHost)_\(applicationId)")
         preferences.set(value: wsHost, forKey: "\(PreferenceKey.latestWSHost)_\(applicationId)")
     }
