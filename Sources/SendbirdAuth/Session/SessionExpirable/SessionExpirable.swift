@@ -20,28 +20,55 @@ extension SessionManager: InternalSessionDelegate {
     @_spi(SendbirdInternal) public func didSessionTokenFailToRefresh(error: AuthClientError) {
         logout()
         delegate?.sessionRefreshFailed()
-        sessionHandler.didHaveError(error.asAuthError)
-        router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
+        handleRefreshFailure(error: error)
     }
     
     @_spi(SendbirdInternal) public func didSessionKeyFailToRefresh(error: AuthClientError) {
-        sessionHandler.didHaveError(error.asAuthError)
-        router.eventDispatcher.dispatch(command: SessionExpirationEvent.RefreshFailed())
+        Logger.session.info("didSessionKeyFailToRefresh - error: \(error), canRefreshSession: \(canRefreshSession)")
+
+        guard canRefreshSession == false else {
+            // This SDK is the refresh owner and it failed — notify waiting SDKs
+            broadcastSessionRefreshFailed()
+            handleRefreshFailure(error: error)
+            return
+        }
+
+        // Non-refreshable SDK — delegate to a refreshable SDK via SessionProvider
+        delegateRefreshToExternalSDK(error: error)
     }
     
     @_spi(SendbirdInternal) public func didSessionKeyRefresh(key: Session, requireReconnect: Bool) {
+        // Submit the new session to `SessionProvider` (rollback prevention validation)
+        // `submitRefreshedSession` updates the provider's session and calls `onSessionChanged`
+        if submitRefreshedSession(key) {
+            // Success
+        } else if session?.key == key.key {
+            // Another SDK already stored the refreshed session in the shared provider.
+        } else {
+            return
+        }
+
+        applyRefreshedSession(key, requireReconnect: requireReconnect)
+    }
+
+    /// Applies a refreshed session that was already submitted by an external SDK,
+    /// skipping `submitRefreshedSession` to avoid rejection and RequestQueue hang.
+    func applyExternallyRefreshedSession(_ session: Session) {
+        self.session = session
+        applyRefreshedSession(session, requireReconnect: false)
+    }
+
+    private func applyRefreshedSession(_ key: Session, requireReconnect: Bool) {
         stateData?.update(with: key.key)
-        session = key
-        
+        sessionHandler.wasRefreshed()
+
         // Update connection state ONLY when session key was refreshed via API.
         // If refreshed via WS, connection state should remain Connected.
         if requireReconnect {
             delegate?.sessionReconnectRequired()
         }
-        
+
         sessionHandler.didHaveError(AuthClientError.sessionKeyRefreshSucceeded.asAuthError)
-        sessionHandler.wasRefreshed()
-        
         router.eventDispatcher.dispatch(command: SessionExpirationEvent.Refreshed())
     }
     
@@ -71,11 +98,13 @@ extension SessionManager: InternalSessionDelegate {
                     // retry with API.
                     guard let self = self else { return }
                     
-                    var headers = ["App-Id": self.applicationId]
+                    var headers: [String: String] = [:]
+                    if let appId = self.applicationId { headers["App-Id"] = appId }
                     if let authToken { headers["Access-Token"] = authToken }
-                    
+
+                    guard let userId = self.userId else { return }
                     self.requestQueue?.post(
-                        path: URLPaths.usersSessionKey(userId: self.userId),
+                        path: URLPaths.usersSessionKey(userId: userId),
                         body: .param([.expiringSession: expiringSession]),
                         header: headers,
                         isSessionRequired: false,
@@ -94,9 +123,11 @@ extension SessionManager: InternalSessionDelegate {
             }
 
         default:
-            var headers = ["App-Id": applicationId]
+            var headers: [String: String] = [:]
+            if let appId = applicationId { headers["App-Id"] = appId }
             if let authToken { headers["Access-Token"] = authToken }
-            
+
+            guard let userId else { return }
             requestQueue?.post(
                 path: URLPaths.usersSessionKey(userId: userId),
                 body: .param([.expiringSession: expiringSession]),

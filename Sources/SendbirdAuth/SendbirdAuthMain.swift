@@ -25,7 +25,7 @@ import Foundation
     }
 
     @_spi(SendbirdInternal) public var configTs: Int64? {
-        SendbirdAuth.pref.value(forKey: PreferenceKey.configApiTs)
+        preference.value(forKey: PreferenceKey.configApiTs)
     }
 
     @_spi(SendbirdInternal) public var sessionManager: SessionManager
@@ -43,9 +43,20 @@ import Foundation
     @_spi(SendbirdInternal) public let routerConfig: CommandRouterConfiguration
     @_spi(SendbirdInternal) public let sessionHandler: SessionEventBroadcaster
 
+    @_spi(SendbirdInternal) public let decoder: JSONDecoder = JSONDecoder()
+
     @_spi(SendbirdInternal) public let isLocalCachingEnabled: Bool
     @_spi(SendbirdInternal) public let applicationId: String
     let hostBundle: Bundle?
+
+    /// Session provider for sharing session across multiple SDK instances.
+    @_spi(SendbirdInternal) public private(set) var sessionProvider: SessionProvider
+
+    /// Whether this SDK instance can refresh sessions on its own.
+    private let canRefreshSession: Bool
+
+    /// Instance-specific preferences (isolated per appId + apiHostUrl)
+    @_spi(SendbirdInternal) public let preference: LocalPreferences
 
     #if DEBUG
         private var websocketEngine: (any ChatWebSocketEngine)? // For test
@@ -105,6 +116,11 @@ import Foundation
 
         let config = customSendbirdConfig ?? SendbirdConfiguration()
 
+        // Create instance-specific preferences (isolated per appId + apiHostUrl)
+        let instanceKey = InstanceRegistry.createKey(appId: params.applicationId, apiHostUrl: params.customAPIHost)
+        let instancePref = LocalPreferences(suiteName: "com.sendbird.sdk.ios.\(instanceKey)")
+        self.preference = instancePref
+
         // NOTE: apiHost/wsHost are stored in routerConfig (in-memory) and share its lifecycle.
         // They are not persisted to UserDefaults. Use setCustomHost() or connect(apiHost:wsHost:) to update after init.
         let host = Configuration.HostEnvironments.init(
@@ -113,10 +129,10 @@ import Foundation
             customWSHost: params.customWSHost,
             bundle: params.hostBundle
         )
-        
+
         let apiHost = host.apiHost
         let wsHost = host.wsHost
-        
+
         // INFO: initialize 과정에서는 service 를 고객이 설정할 수 없음. init 후 setCompletionHandlerDelegateQueue 호출되야 queue 변경 가능
         let service = QueueService()
         let dispatcher = EventDispatcher()
@@ -129,12 +145,13 @@ import Foundation
             applicationId: params.applicationId
         )
 
-        let useNativeSocket: Bool = SendbirdAuth.pref.value(forKey: PreferenceKey.useNativeWS) ?? true
+        let useNativeSocket: Bool = instancePref.value(forKey: PreferenceKey.useNativeWS) ?? true
         let routerConfig = customRouterConfig ?? CommandRouterConfiguration(
             useNativeSocket: useNativeSocket,
             cachePolicy: .useProtocolCachePolicy,
             apiHost: apiHost, // only api/ws needs
-            wsHost: wsHost
+            wsHost: wsHost,
+            exceptionParser: params.exceptionParser
         )
 
         let placeHolderWebSocketManager = WebSocketManager(
@@ -154,6 +171,7 @@ import Foundation
             httpClient: httpClientForRouter,
             eventDispatcher: dispatcher
         )
+        router.headerInterceptor = params.headerInterceptor
 
         let sessionHandler = SessionEventBroadcaster(service, mapTableValueOption: .strongMemory)
         let placeHolderSessionManager = SessionManager(
@@ -163,7 +181,9 @@ import Foundation
             sessionHandler: sessionHandler,
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             localCachePreference: localCachePreference,
-            config: config
+            config: config,
+            sessionProvider: params.sessionProvider ?? PersistentSessionProvider.shared,
+            canRefreshSession: params.canRefreshSession
         )
         sessionManager = placeHolderSessionManager
 
@@ -184,7 +204,7 @@ import Foundation
         self.requestQueue = requestQueue
 
         let statManager = StatManager(
-            apiClient: statAPIClient ?? StatAPIClient(requestQueue: requestQueue),
+            apiClient: statAPIClient ?? StatAPIClient(requestQueue: requestQueue, decoder: decoder),
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             configuration: config
         )
@@ -204,6 +224,8 @@ import Foundation
         appVersion = params.appVersion
         self.routerConfig = routerConfig
         isLocalCachingEnabled = params.isLocalCachingEnabled
+        self.sessionProvider = params.sessionProvider ?? PersistentSessionProvider.shared
+        self.canRefreshSession = params.canRefreshSession
 
         self.sessionHandler = sessionHandler
 
@@ -213,7 +235,7 @@ import Foundation
 
         Logger.setLoggerLevel(logLevel)
 
-        SendbirdAuth.authDecoder.updateAuthDependency(self)
+        decoder.updateAuthDependency(self)
 
         sessionManager.resolve(with: self)
         sessionManager.delegate = self
@@ -309,7 +331,7 @@ extension SendbirdAuthMain: EventDelegate {
         case let command as ConnectionStateEvent.Connected:
             let loginEvent = command.loginEvent
 
-            SendbirdAuth.pref.set(
+            preference.set(
                 value: loginEvent.appInfo?.useNativeWS ?? false,
                 forKey: PreferenceKey.useNativeWS
             )
@@ -357,7 +379,7 @@ extension SendbirdAuthMain: SessionManagerDelegate {
 
         deviceConnectionManager.logout()
 
-        SendbirdAuth.pref.removeAll()
+        preference.removeAll()
         localCachePreference.removeAll()
     }
 
@@ -403,6 +425,18 @@ extension SendbirdAuthMain: SessionManagerDelegate {
         if router.webSocketManager.isReconnecting {
             deviceConnectionManager.broadcaster.failedReconnection()
             disconnect()
+        }
+    }
+}
+
+// MARK: - Lifecycle
+
+extension SendbirdAuthMain {
+    /// Explicitly destroys this instance and removes it from the instances map
+    @_spi(SendbirdInternal) public func destroy(completionHandler: VoidHandler? = nil) {
+        disconnect { [weak self] in
+            self?.reset()
+            completionHandler?()
         }
     }
 }
@@ -485,7 +519,7 @@ extension SendbirdAuthMain {
 
         let cachedUser: AuthUser? = localCachePreference.value(forKey: LocalCachePreferenceKey.currentUser)
 
-        if sessionManager.userId.isEmpty ||
+        if sessionManager.userId?.isEmpty != false ||
             userId == cachedUser?.userId
         {
             userConnectionQueue.async {
@@ -512,13 +546,17 @@ extension SendbirdAuthMain {
             sessionHandler: sessionHandler,
             isLocalCachingEnabled: isLocalCachingEnabled,
             localCachePreference: localCachePreference,
-            config: config
+            config: config,
+            sessionProvider: self.sessionProvider,
+            canRefreshSession: canRefreshSession
         )
 
         self.sessionManager = sessionManager
         self.sessionManager.delegate = self
         self.sessionManager.resolve(with: self)
         self.sessionManager.requestHeaderDataSource = self
+        // API-only consumers can refresh sessions without going through connect/authenticate.
+        self.sessionManager.expirationHandler.delegate = self.sessionManager
         requestQueue.sessionValidator = sessionManager
 
         // Create new websocket
@@ -652,7 +690,7 @@ extension SendbirdAuthMain {
             return
         }
 
-        if sessionManager.userId.hasElements {
+        if sessionManager.userId?.hasElements == true {
             disconnect { [weak self] in
                 self?.userConnectionQueue.async {
                     self?.resetConnectionState(userId: userId)
@@ -688,7 +726,7 @@ extension SendbirdAuthMain {
             customAPIHost: apiHost ?? routerConfig.apiHost,
             bundle: hostBundle
         )
-        
+
         if routerConfig.apiHost != host.apiHost {
             routerConfig.updateHost(apiHost: host.apiHost, wsHost: nil)
         }
