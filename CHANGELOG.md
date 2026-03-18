@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.0.0) (Mar 18, 2026)
+### New Features
+
+- Multiple instance support
+
+### Improvements
+
+- Internal improvements
+
 ## [0.0.12](https://github.com/sendbird/sendbird-auth-ios/releases/tag/0.0.12) (Mar 10, 2026)
 ### Changes
 - Internal improvements only
