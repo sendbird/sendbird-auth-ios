@@ -26,6 +26,17 @@ runs:
           chat-ios/Configurations
         key: build-cache-${{ env.CACHE_KEY }}
 
+    - name: Install Homebrew if needed
+      shell: bash
+      run: |
+        if ! command -v /opt/homebrew/bin/brew &>/dev/null && ! command -v brew &>/dev/null; then
+          echo "Homebrew not found. Installing..."
+          NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        else
+          echo "Homebrew already installed."
+        fi
+        echo "/opt/homebrew/bin" >> $GITHUB_PATH
+
     - name: Ensure /opt/homebrew exists
       shell: bash
       run: |

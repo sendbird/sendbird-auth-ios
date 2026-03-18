@@ -121,7 +121,8 @@ extension Session {
         userDefaults.set(encryptedData, forKey: Constants.sessionKeyPath)
     }
     
-    @_spi(SendbirdInternal) public static func clearUserDefaults() {
+    @_spi(SendbirdInternal) public static func clearUserDefaults(for userId: String? = nil) {
+        // TODO: userId를 활용하여 해당 유저의 세션 데이터만 삭제하도록 구현
         guard let userDefaults = UserDefaults(suiteName: Constants.suiteName) else {
             Logger.session.verbose(" failed with invalid user defaults suite")
             return
