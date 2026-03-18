@@ -11,7 +11,7 @@ import Foundation
     @available(*, deprecated, message: "Use SendbirdAuthMain.decoder instead")
     @_spi(SendbirdInternal) public static let authDecoder = JSONDecoder()
 
-    @_spi(SendbirdInternal) public static var sdkVersion: String { "[NEXT_VERSION]" }
+    @_spi(SendbirdInternal) public static var sdkVersion: String { "1.0.0" }
 
     // MARK: - Multi-instance Support
 
