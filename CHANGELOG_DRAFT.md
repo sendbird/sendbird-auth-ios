@@ -1,2 +1,7 @@
-### Changes
-- Internal improvements only
+### New Features
+
+- Multiple instance support
+
+### Improvements
+
+- Internal improvements

@@ -36,14 +36,24 @@ import Foundation
     var keyStrategy: JSONEncoder.KeyEncodingStrategy { Self.keyStrategy }
 }
 
-extension JSONDecoder {
+@_spi(SendbirdInternal) public extension JSONDecoder {
     func updateAuthDependency(_ dependency: Dependency?) {
-        self.userInfo[DecoderInfoKey.dependency] = dependency
+        if let dependency = dependency {
+            self.userInfo[DecoderInfoKey.dependency] = WeakReference<AnyObject>(value: dependency)
+        } else {
+            self.userInfo[DecoderInfoKey.dependency] = nil
+        }
+    }
+}
+
+@_spi(SendbirdInternal) public extension Decoder {
+    func extractAuthDependency() -> Dependency? {
+        return (self.userInfo[DecoderInfoKey.dependency] as? WeakReference<AnyObject>)?.value as? Dependency
     }
 }
 
 extension Decoder {
     func extractDependency() -> Dependency? {
-        return self.userInfo[DecoderInfoKey.dependency] as? Dependency
+        return extractAuthDependency()
     }
 }

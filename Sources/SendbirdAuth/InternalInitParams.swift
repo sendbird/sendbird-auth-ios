@@ -27,18 +27,38 @@ import Foundation
 
     @_spi(SendbirdInternal) public var mainSDKInfo: SendbirdSDKInfo?
 
+    /// Custom exception parser for API error responses.
+    /// Default is `DefaultExceptionParser` which parses Chat API format.
+    @_spi(SendbirdInternal) public var exceptionParser: APIExceptionParser = DefaultExceptionParser()
+
+    /// Session provider for sharing session across multiple SDK instances.
+    @_spi(SendbirdInternal) public var sessionProvider: SessionProvider?
+
+    /// Header interceptor for overriding header names and injecting additional headers.
+    @_spi(SendbirdInternal) public var headerInterceptor: APIHeaderInterceptor?
+
+    /// Whether this SDK instance can refresh sessions on its own.
+    /// Set to `false` for SDKs (e.g. Desk) that delegate refresh to another SDK.
+    @_spi(SendbirdInternal) public var canRefreshSession: Bool = true
+
     @_spi(SendbirdInternal) public init(
         applicationId: String,
         isLocalCachingEnabled: Bool,
         logLevel: AuthLogLevel = .none,
         appVersion: String? = nil,
-        mainSDKInfo: SendbirdSDKInfo? = nil
+        mainSDKInfo: SendbirdSDKInfo? = nil,
+        exceptionParser: APIExceptionParser = DefaultExceptionParser(),
+        sessionProvider: SessionProvider? = nil,
+        canRefreshSession: Bool = true
     ) {
         self.applicationId = applicationId
         self.isLocalCachingEnabled = isLocalCachingEnabled
         self.logLevel = logLevel
         self.appVersion = appVersion
         self.mainSDKInfo = mainSDKInfo
+        self.exceptionParser = exceptionParser
+        self.sessionProvider = sessionProvider
+        self.canRefreshSession = canRefreshSession
     }
     
     @_spi(SendbirdInternal) public override func isEqual(_ object: Any?) -> Bool {

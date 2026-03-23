@@ -8,16 +8,17 @@
 import Foundation
 
 @_spi(SendbirdInternal) public final class LocalPreferences {
-    
+
     private let suiteName: String
     private let userDefault: UserDefaults?
-    
+    private let decoder = JSONDecoder()
+
     @_spi(SendbirdInternal) public init(suiteName: String) {
         self.suiteName = suiteName
         self.userDefault = UserDefaults(suiteName: suiteName)
         assert(userDefault != nil, "UserDefaults(suiteName: \(suiteName)) must not be nil")
     }
-    
+
     @_spi(SendbirdInternal) public func set<T: Encodable>(value: T?, forKey key: CustomStringConvertible) {
         if let encoded = try? JSONEncoder().encode(value) {
             userDefault?.set(encoded, forKey: key.description)
@@ -25,10 +26,10 @@ import Foundation
             userDefault?.set(value, forKey: key.description)
         }
     }
-    
+
     @_spi(SendbirdInternal) public func value<T: Decodable>(forKey key: CustomStringConvertible) -> T? {
         if let result = userDefault?.data(forKey: key.description),
-           let decoded = try? SendbirdAuth.authDecoder.decode(T.self, from: result) {
+           let decoded = try? decoder.decode(T.self, from: result) {
             return decoded
         } else {
             return userDefault?.value(forKey: key.description) as? T
@@ -62,6 +63,11 @@ import Foundation
     case customAPIHost = "KEY_CUSTOM_API_HOST"
     @available(*, deprecated, message: "This case value has been deprecated since 0.0.10")
     case customWsHost = "KEY_CUSTOM_WS_HOST"
+
+    // NOTE: The latest resolved host (default or custom) is saved to AppGroup UserDefaults
+    // so that NotificationExtension can reuse the main app's host for API calls (e.g., push delivery).
+    case latestAPIHost = "KEY_LATEST_API_HOST"
+    case latestWSHost = "KEY_LATEST_WS_HOST"
 }
 
 @_spi(SendbirdInternal) public enum LocalCachePreferenceKey: String, CustomStringConvertible {

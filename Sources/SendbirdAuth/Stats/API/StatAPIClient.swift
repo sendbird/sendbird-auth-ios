@@ -9,6 +9,7 @@ import Foundation
 
 @_spi(SendbirdInternal) public class StatAPIClient: StatAPIClientable {
     private weak var requestQueue: RequestQueue?
+    private let decoder: JSONDecoder
     @_spi(SendbirdInternal) public var deviceId: String = ""
 
 #if DEBUG
@@ -17,8 +18,9 @@ import Foundation
     @_spi(SendbirdInternal) public var mockError: AuthError?
 #endif
 
-    @_spi(SendbirdInternal) public init(requestQueue: RequestQueue) {
+    @_spi(SendbirdInternal) public init(requestQueue: RequestQueue, decoder: JSONDecoder = JSONDecoder()) {
         self.requestQueue = requestQueue
+        self.decoder = decoder
     }
 
     // NotificationStat을 제외한 Stat log 전송 (AIAgentStat은 별도 endpoint 사용)
@@ -34,7 +36,7 @@ import Foundation
         var aiAgentStats: [RecordStatType] = []
 
         for stat in stats {
-            let copiedStat = stat.makeCodableCopy(decoder: SendbirdAuth.authDecoder)
+            let copiedStat = stat.makeCodableCopy(decoder: self.decoder)
             Logger.stat.debug("\(String(describing: stat.description))")
             copiedStat.statId = nil
 
@@ -101,7 +103,7 @@ import Foundation
 
         var copiedStats: [NotificationStat] = []
         for stat in stats {
-            let copiedStat = stat.makeCodableCopy(decoder: SendbirdAuth.authDecoder)
+            let copiedStat = stat.makeCodableCopy(decoder: self.decoder)
             Logger.stat.debug("\(String(describing: stat.description))")
             copiedStat.statId = nil
             copiedStats.append(copiedStat)
