@@ -83,6 +83,6 @@ final class APIResultStat: DefaultRecordStat {
     }
     
     func copy(with zone: NSZone? = nil) -> Any {
-        return makeCodableCopy(decoder: SendbirdAuth.authDecoder)
+        return makeCodableCopy(decoder: decoder)
     }
 }

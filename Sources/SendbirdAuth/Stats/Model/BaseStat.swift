@@ -19,6 +19,8 @@ import Foundation
     /// Runtime ID (앱 실행 중 유지되는 고유 ID)
     var runtimeId: String? { get }
 
+    var decoder: JSONDecoder { get }
+
     func markAsUploaded()
     func copy(with zone: NSZone?) -> Any
 }
@@ -26,10 +28,10 @@ import Foundation
 @_spi(SendbirdInternal) public extension BaseStatType {
     func markAsUploaded() {
         isUploaded = true
-    }
-    
+    } 
+
     func copy(with zone: NSZone? = nil) -> Any {
-        return makeCodableCopy(decoder: SendbirdAuth.authDecoder)
+        return makeCodableCopy(decoder: decoder)
     }
     
     func nestedEncodeContainer<NestedKey>(
@@ -134,6 +136,8 @@ import Foundation
     /// When using Stat internally, it is used by inheriting BaseStat, and values ​​under `data` are directly mapped,
     /// so there is no need to save them in the form of a json dictionary.
     @_spi(SendbirdInternal) public let data: [String: AnyCodable]?
+
+    @_spi(SendbirdInternal) public var decoder: JSONDecoder { JSONDecoder() }
 
     @_spi(SendbirdInternal) public init(
         statType: StatType,

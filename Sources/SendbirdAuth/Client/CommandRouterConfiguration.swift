@@ -21,26 +21,31 @@ import Foundation
     private var applicationId: String?
     private var appGroupPreferences: LocalPreferences?
 
+    @_spi(SendbirdInternal) public var exceptionParser: APIExceptionParser
+
     @_spi(SendbirdInternal) public init(
         useNativeSocket: Bool? = nil,
         cachePolicy: NSURLRequest.CachePolicy,
         apiHost: String,
-        wsHost: String
+        wsHost: String,
+        exceptionParser: APIExceptionParser = DefaultExceptionParser()
     ) {
         self.cachePolicy = cachePolicy
         self.useNativeSocket = useNativeSocket
         self.apiHost = apiHost
         self.wsHost = wsHost
+        self.exceptionParser = exceptionParser
         Logger.main.info("API Host: \(apiHost)")
         Logger.main.info("WS Host: \(wsHost)")
     }
-    
+
     // Only used for before `SendbirdChat.initWithApplicationId` is called
     @_spi(SendbirdInternal) public static let `default` = CommandRouterConfiguration(
         useNativeSocket: nil,
         cachePolicy: .useProtocolCachePolicy,
         apiHost: "",
-        wsHost: ""
+        wsHost: "",
+        exceptionParser: DefaultExceptionParser()
     )
     
     // NOTE: Enables host persistence to AppGroup UserDefaults

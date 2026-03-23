@@ -126,7 +126,7 @@ import Foundation
                 completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
                 return
             }
-            
+
             self.cancellableTasks.remove(forKey: requestId)
             
             Logger.http.info("[Sendbird] Finish HTTP session: \(NSDate().timeIntervalSince1970)")
@@ -164,7 +164,11 @@ import Foundation
             
             switch httpURLResponse.statusCode {
             case 200..<300:
-                let result = request.decodeResult(from: data, decoder: SendbirdAuth.authDecoder)
+                guard let decoder = self.dependency?.decoder else {
+                    completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
+                    return
+                }
+                let result = request.decodeResult(from: data, decoder: decoder)
                 switch result {
                 case .success(let value):
                     completionHandler?(value, nil)
@@ -172,7 +176,9 @@ import Foundation
                     completionHandler?(nil, error)
                 }
             case 400..<500:
-                completionHandler?(nil, .error(from: data))
+                let error = self.routerConfig.exceptionParser.parse(data: data)
+                    ?? AuthError.error(from: data)
+                completionHandler?(nil, error)
             default:
                 completionHandler?(nil, AuthClientError.internalServerError.asAuthError)
             }
@@ -207,14 +213,16 @@ import Foundation
             case 200..<300:
                 completionHandler?(result, nil)
             case 400..<500:
-                completionHandler?(nil, .error(from: data))
+                let error = self.routerConfig.exceptionParser.parse(data: data)
+                    ?? AuthError.error(from: data)
+                completionHandler?(nil, error)
             default:
                 completionHandler?(nil, AuthCoreError.internalServerError.asAuthError)
             }
         }
         dataTask.resume()
     }
-    
+
     @_spi(SendbirdInternal) public func send<R: APIRequestable>(
         multipartRequest request: R,
         headers: [String: String] = [:],
@@ -264,17 +272,20 @@ import Foundation
             requestId: requestId,
             backgroundTask: task,
             transferTimeout: config?.transferTimeout ?? SendbirdConfiguration.transferTimeoutDefault,
-            progressTask: progressHandler) { (data, error) in
+            progressTask: progressHandler) { [weak self] (data, error) in
+                guard let self = self,
+                      let decoder = self.dependency?.decoder else {
+                    completionHandler?(nil, AuthClientError.connectionCanceled.asAuthError)
+                    return
+                }
+
                 guard let data = data, error == nil else {
                     completionHandler?(nil, error)
                     return
                 }
 
-                let result = request.decodeResult(
-                    from: data,
-                    decoder: SendbirdAuth.authDecoder
-                )
-                
+                let result = request.decodeResult(from: data, decoder: decoder)
+
                 switch result {
                 case .success(let value):
                     completionHandler?(value, nil)
@@ -706,9 +717,17 @@ extension URLSession {
 #if DEBUG
 extension HTTPClient {
     @_spi(SendbirdInternal) public var dependencyForTest: Dependency? { dependency }
-    
+
     @_spi(SendbirdInternal) public func createUrlRequestForTest(request: any APIRequestable) -> URLRequest? {
         return createURLRequest(request: request)
+    }
+
+    @_spi(SendbirdInternal) public func setURLSessionForTest(_ session: URLSession) {
+        self.urlSession = session
+    }
+
+    @_spi(SendbirdInternal) public func markDependencyResolvedForTest() {
+        _dependency.isResolved = true
     }
 }
 #endif
