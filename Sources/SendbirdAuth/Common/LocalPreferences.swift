@@ -63,6 +63,11 @@ import Foundation
     case customAPIHost = "KEY_CUSTOM_API_HOST"
     @available(*, deprecated, message: "This case value has been deprecated since 0.0.10")
     case customWsHost = "KEY_CUSTOM_WS_HOST"
+
+    // NOTE: The latest resolved host (default or custom) is saved to AppGroup UserDefaults
+    // so that NotificationExtension can reuse the main app's host for API calls (e.g., push delivery).
+    case latestAPIHost = "KEY_LATEST_API_HOST"
+    case latestWSHost = "KEY_LATEST_WS_HOST"
 }
 
 @_spi(SendbirdInternal) public enum LocalCachePreferenceKey: String, CustomStringConvertible {
