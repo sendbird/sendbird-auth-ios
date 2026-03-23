@@ -112,6 +112,33 @@ jobs:
           cd chat-ios
           bundle install
 
+      - name: Restore failed test list (re-run only)
+        if: github.run_attempt > 1
+        id: restore-failed
+        uses: actions/cache/restore@v3
+        with:
+          path: /tmp/ci-failed-tests/${{ github.run_id }}
+          key: failed-tests-${{ github.run_id }}-objc-${{ matrix.test-group }}-
+          restore-keys: |
+            failed-tests-${{ github.run_id }}-objc-${{ matrix.test-group }}-
+
+      - name: Prepare re-run test list
+        if: github.run_attempt > 1
+        id: rerun-tests
+        env:
+          MATRIX_TEST_GROUP: ${{ matrix.test-group }}
+        run: |
+          FAILED_FILE="/tmp/ci-failed-tests/${{ github.run_id }}/failed-objc-${MATRIX_TEST_GROUP}.txt"
+          if [ -f "$FAILED_FILE" ] && [ -s "$FAILED_FILE" ]; then
+            FAILED_TESTS=$(tr '\n' ',' < "$FAILED_FILE" | sed 's/,$//')
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "test_list=$FAILED_TESTS" >> $GITHUB_OUTPUT
+            echo "🔄 Re-run will execute only previously failed tests: $FAILED_TESTS"
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No failed test list found, will run all tests"
+          fi
+
       - name: Run test-${{ matrix.test-group }}
         id: run_tests
         env:
@@ -121,6 +148,8 @@ jobs:
           CONFIGURATION: ${{ inputs.configuration }}
           MATRIX_TEST_GROUP: ${{ matrix.test-group }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+          RERUN_TESTS_FOUND: ${{ steps.rerun-tests.outputs.found }}
+          RERUN_TEST_LIST: ${{ steps.rerun-tests.outputs.test_list }}
         run: |
           cd chat-ios
 
@@ -220,8 +249,16 @@ jobs:
           set +e
           set -o pipefail
 
+          # On re-run, override with previously failed tests only
+          if [ "${{ github.run_attempt }}" -gt 1 ] && [ "$RERUN_TESTS_FOUND" == "true" ]; then
+            echo "🔄 Re-run mode: running only previously failed tests"
+            TEST_CASES="$RERUN_TEST_LIST"
+          else
+            TEST_CASES="$(cat $TEST_FILE)"
+          fi
+
           bundle exec fastlane ios test_with_retry \
-            test_cases:"$(cat $TEST_FILE)" \
+            test_cases:"$TEST_CASES" \
             config:"$CONFIGURATION" \
             scheme:"SendbirdChatSDK" 2>&1 | tee test_output.log
 
@@ -253,6 +290,59 @@ jobs:
 
           echo "⏱️ Simulator creation time: ${CREATE_TIME}s"
           echo "🧪 Test execution time: ${TEST_TIME}s"
+
+      - name: Save failed test list for re-run
+        if: always() && steps.run_tests.outcome == 'failure' && steps.run_tests.outputs.exit_70_detected != 'true'
+        env:
+          MATRIX_TEST_GROUP: ${{ matrix.test-group }}
+          OBJC_TEST_TARGET: SendbirdChatObjcTests
+        run: |
+          FAILED_DIR="/tmp/ci-failed-tests/${{ github.run_id }}"
+          mkdir -p "$FAILED_DIR"
+
+          # Find the most recent xcresult (sorted by modification time, newest first)
+          XCRESULT=$(find chat-ios/fastlane/test_output chat-ios/test_output /tmp/scan/output -name "*.xcresult" -type d 2>/dev/null | xargs ls -td 2>/dev/null | head -1)
+          if [ -z "$XCRESULT" ]; then
+            echo "No xcresult found, skipping failed test extraction"
+            exit 0
+          fi
+
+          echo "Extracting failed tests from: $XCRESULT"
+
+          # Extract failed test names from xcresult
+          xcrun xcresulttool get --legacy --format json --path "$XCRESULT" 2>/dev/null | \
+            python3 -c "
+import os, sys, json, re
+data = json.load(sys.stdin)
+failed = set()
+objc_target = os.environ.get('OBJC_TEST_TARGET', 'SendbirdChatObjcTests')
+for a in data.get('actions',{}).get('_values',[]):
+    vals = a.get('actionResult',{}).get('issues',{}).get('testFailureSummaries',{}).get('_values',[])
+    for s in vals:
+        name = s.get('testCaseName',{}).get('_value','')
+        if not name: continue
+        if name.startswith('-['):
+            m = re.match(r'-\[(\w+)\s+(\w+)\]', name)
+            if m: failed.add(f'{objc_target}/{m.group(1)}/{m.group(2)}')
+        else:
+            parts = name.replace('()','').split('.')
+            if len(parts) == 2: failed.add(f'SendbirdChatTests/{parts[0]}/{parts[1]}')
+for t in sorted(failed): print(t)
+" > "$FAILED_DIR/failed-objc-${MATRIX_TEST_GROUP}.txt" 2>/dev/null || true
+
+          if [ -s "$FAILED_DIR/failed-objc-${MATRIX_TEST_GROUP}.txt" ]; then
+            echo "Saved $(wc -l < "$FAILED_DIR/failed-objc-${MATRIX_TEST_GROUP}.txt") failed tests:"
+            cat "$FAILED_DIR/failed-objc-${MATRIX_TEST_GROUP}.txt"
+          else
+            echo "No failed tests extracted"
+          fi
+
+      - name: Cache failed test list
+        if: always() && steps.run_tests.outcome == 'failure' && steps.run_tests.outputs.exit_70_detected != 'true'
+        uses: actions/cache/save@v3
+        with:
+          path: /tmp/ci-failed-tests/${{ github.run_id }}
+          key: failed-tests-${{ github.run_id }}-objc-${{ matrix.test-group }}-attempt${{ github.run_attempt }}
 
       # Cleanup simulator - runs even if tests fail/timeout/cancel
       - name: Cleanup simulator
