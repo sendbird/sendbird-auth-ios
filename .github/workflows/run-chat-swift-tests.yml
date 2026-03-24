@@ -257,6 +257,7 @@ jobs:
           END_CREATE=$(date +%s)
 
           START_TEST=$(date +%s)
+          echo "TEST_START_TIMESTAMP=$START_TEST" >> $GITHUB_ENV
 
           export SIMULATOR_ID=$DEVICE_ID
 
@@ -310,12 +311,13 @@ jobs:
           FAILED_DIR="/tmp/ci-failed-tests/${{ github.run_id }}"
           mkdir -p "$FAILED_DIR"
 
-          # Find the most recent xcresult (sorted by modification time, newest first)
+          # Find xcresult created AFTER test started (filter out stale results from previous runs)
           XCRESULT=$(find chat-ios/fastlane/test_output chat-ios/test_output /tmp/scan/output \
             -name "*.xcresult" -type d 2>/dev/null \
-            -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+            -exec stat -f "%m %N" {} \; 2>/dev/null | \
+            awk -v ts="$TEST_START_TIMESTAMP" '$1 >= ts' | sort -rn | head -1 | cut -d' ' -f2-)
           if [ -z "$XCRESULT" ]; then
-            echo "No xcresult found, skipping failed test extraction"
+            echo "No xcresult found after test start (ts=$TEST_START_TIMESTAMP), skipping"
             exit 0
           fi
 
