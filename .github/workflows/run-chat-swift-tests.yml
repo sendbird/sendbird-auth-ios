@@ -139,34 +139,56 @@ jobs:
             cat chat-ios/tests/swift-test-$MATRIX_TEST_GROUP.tests
           fi
 
-      - name: Restore failed test list (re-run only)
+      - name: Compute previous attempt number
         if: github.run_attempt > 1
-        id: restore-failed
+        id: prev-attempt
+        run: |
+          PREV=$(( ${{ github.run_attempt }} - 1 ))
+          echo "number=$PREV" >> $GITHUB_OUTPUT
+
+      - name: Restore passed test cache (re-run only)
+        if: github.run_attempt > 1
+        id: restore-passed
         uses: actions/cache/restore@v3
         with:
-          path: /tmp/ci-failed-tests/${{ github.run_id }}
-          key: failed-tests-${{ github.run_id }}-swift-${{ matrix.test-group }}-latest
-          restore-keys: |
-            failed-tests-${{ github.run_id }}-swift-${{ matrix.test-group }}-
+          path: /tmp/ci-test-cache/${{ github.run_id }}
+          key: passed-tests-${{ github.run_id }}-swift-${{ matrix.test-group }}-attempt${{ steps.prev-attempt.outputs.number }}
 
       - name: Prepare re-run test list
         if: github.run_attempt > 1
         id: rerun-tests
         env:
           MATRIX_TEST_GROUP: ${{ matrix.test-group }}
+          FULL_TESTS: ${{ steps.test-files.outputs.tests }}
         run: |
-          FAILED_FILE="/tmp/ci-failed-tests/${{ github.run_id }}/failed-swift-${MATRIX_TEST_GROUP}.txt"
-          if [ -f "$FAILED_FILE" ] && [ -s "$FAILED_FILE" ]; then
-            FAILED_TESTS=$(tr '\n' ',' < "$FAILED_FILE" | sed 's/,$//')
-            echo "found=true" >> $GITHUB_OUTPUT
-            echo "test_list=$FAILED_TESTS" >> $GITHUB_OUTPUT
-            echo "🔄 Re-run will execute only previously failed tests: $FAILED_TESTS"
+          PASSED_FILE="/tmp/ci-test-cache/${{ github.run_id }}/passed-swift-${MATRIX_TEST_GROUP}.txt"
+          if [ -f "$PASSED_FILE" ] && [ -s "$PASSED_FILE" ]; then
+            if [[ "$MATRIX_TEST_GROUP" == "chat-local-caching" ]]; then
+              echo "found=false" >> $GITHUB_OUTPUT
+              echo "⚠️ chat-local-caching: no test subset file, running all tests"
+              exit 0
+            fi
+
+            # Compute: full test list - passed = re-run targets
+            RERUN_TESTS=$(comm -23 \
+              <(echo "$FULL_TESTS" | tr ',' '\n' | sort) \
+              <(sort "$PASSED_FILE") | tr '\n' ',' | sed 's/,$//')
+
+            if [ -n "$RERUN_TESTS" ]; then
+              echo "found=true" >> $GITHUB_OUTPUT
+              echo "test_list=$RERUN_TESTS" >> $GITHUB_OUTPUT
+              RERUN_COUNT=$(echo "$RERUN_TESTS" | tr ',' '\n' | wc -l | tr -d ' ')
+              echo "🔄 Re-run: $RERUN_COUNT tests remaining (passed=$(wc -l < "$PASSED_FILE" | tr -d ' '))"
+            else
+              echo "found=false" >> $GITHUB_OUTPUT
+              echo "✅ All tests already passed in previous run"
+            fi
           else
             echo "found=false" >> $GITHUB_OUTPUT
-            echo "⚠️ No failed test list found, will run all tests"
+            echo "⚠️ No passed test cache found, running all tests"
           fi
 
-      - name: Run test ${{ matrix.test-group }}
+      - name: Run test ${{ matrix.test-group }}${{ steps.rerun-tests.outputs.found == 'true' && ' [re-run: ignore passed]' || '' }}
         id: run_tests
         env:
           FASTLANE_TEST_OUTPUT: true
@@ -302,14 +324,21 @@ jobs:
           echo "⏱️ Simulator creation time: ${CREATE_TIME}s"
           echo "🧪 Test execution time: ${TEST_TIME}s"
 
-      - name: Save failed test list for re-run
-        if: always() && steps.run_tests.outcome == 'failure' && steps.run_tests.outputs.exit_70_detected != 'true'
+      - name: Save passed test list for re-run
+        if: always() && steps.run_tests.outcome == 'failure'
         env:
           MATRIX_TEST_GROUP: ${{ matrix.test-group }}
           TEST_SCHEME: ${{ steps.test-files.outputs.test-scheme }}
         run: |
-          FAILED_DIR="/tmp/ci-failed-tests/${{ github.run_id }}"
-          mkdir -p "$FAILED_DIR"
+          CACHE_DIR="/tmp/ci-test-cache/${{ github.run_id }}"
+          mkdir -p "$CACHE_DIR"
+          PASSED_FILE="$CACHE_DIR/passed-swift-${MATRIX_TEST_GROUP}.txt"
+
+          # Preserve previously passed tests (from restored cache on re-run)
+          PREV_PASSED=""
+          if [ -f "$PASSED_FILE" ]; then
+            PREV_PASSED=$(cat "$PASSED_FILE")
+          fi
 
           # Find xcresult created AFTER test started (filter out stale results from previous runs)
           XCRESULT=$(find chat-ios/fastlane/test_output chat-ios/test_output /tmp/scan/output \
@@ -317,42 +346,75 @@ jobs:
             -exec stat -f "%m %N" {} \; 2>/dev/null | \
             awk -v ts="$TEST_START_TIMESTAMP" '$1 >= ts' | sort -rn | head -1 | cut -d' ' -f2-)
           if [ -z "$XCRESULT" ]; then
-            echo "No xcresult found after test start (ts=$TEST_START_TIMESTAMP), skipping"
+            echo "No xcresult found after test start (ts=$TEST_START_TIMESTAMP), preserving previous passed tests only"
             exit 0
           fi
 
-          echo "Extracting failed tests from: $XCRESULT"
+          echo "Extracting passed tests from: $XCRESULT"
 
-          # Extract failed Swift test names from xcresult
-          xcrun xcresulttool get --legacy --format json --path "$XCRESULT" 2>/dev/null | \
+          # Step 1: Get testsRef ID from top-level xcresult
+          TESTS_REF=$(xcrun xcresulttool get --legacy --format json --path "$XCRESULT" 2>/dev/null | \
             python3 -c "
-import os, sys, json
+import sys, json
 data = json.load(sys.stdin)
-failed = set()
-swift_target = os.environ.get('TEST_SCHEME', 'SendbirdChatTests')
 for a in data.get('actions',{}).get('_values',[]):
-    vals = a.get('actionResult',{}).get('issues',{}).get('testFailureSummaries',{}).get('_values',[])
-    for s in vals:
-        name = s.get('testCaseName',{}).get('_value','')
-        if not name or name.startswith('-['): continue
-        parts = name.replace('()','').split('.')
-        if len(parts) == 2: failed.add(f'{swift_target}/{parts[0]}/{parts[1]}')
-for t in sorted(failed): print(t)
-" > "$FAILED_DIR/failed-swift-${MATRIX_TEST_GROUP}.txt" 2>/dev/null || true
+    ref = a.get('actionResult',{}).get('testsRef',{}).get('id',{}).get('_value','')
+    if ref:
+        print(ref)
+        break
+" 2>/dev/null) || true
 
-          if [ -s "$FAILED_DIR/failed-swift-${MATRIX_TEST_GROUP}.txt" ]; then
-            echo "Saved $(wc -l < "$FAILED_DIR/failed-swift-${MATRIX_TEST_GROUP}.txt") failed tests:"
-            cat "$FAILED_DIR/failed-swift-${MATRIX_TEST_GROUP}.txt"
-          else
-            echo "No failed tests extracted"
+          if [ -z "$TESTS_REF" ]; then
+            echo "Could not extract testsRef, preserving previous passed tests only"
+            exit 0
           fi
 
-      - name: Cache failed test list
-        if: always() && steps.run_tests.outcome == 'failure' && steps.run_tests.outputs.exit_70_detected != 'true'
+          # Step 2: Extract passed test names from test results tree
+          NEW_PASSED=$(xcrun xcresulttool get --legacy --format json --path "$XCRESULT" --id "$TESTS_REF" 2>/dev/null | \
+            python3 -c "
+import os, sys, json
+
+def collect_passed(node, path=[]):
+    results = set()
+    name = node.get('name',{}).get('_value','')
+    status = node.get('testStatus',{}).get('_value','')
+    subtests = node.get('subtests',{}).get('_values',[])
+    if status == 'Success' and not subtests and path:
+        class_name = path[-1]
+        method_name = name.replace('()','')
+        results.add(f'{target}/{class_name}/{method_name}')
+    for sub in subtests:
+        results.update(collect_passed(sub, path + [name]))
+    return results
+
+target = os.environ.get('TEST_SCHEME', 'SendbirdChatTests')
+data = json.load(sys.stdin)
+passed = set()
+for summary in data.get('summaries',{}).get('_values',[]):
+    for testable in summary.get('testableSummaries',{}).get('_values',[]):
+        for test in testable.get('tests',{}).get('_values',[]):
+            passed.update(collect_passed(test))
+for t in sorted(passed): print(t)
+" 2>/dev/null) || true
+
+          # Merge previous + new passed tests (cumulative across attempts)
+          {
+            [ -n "$PREV_PASSED" ] && echo "$PREV_PASSED"
+            [ -n "$NEW_PASSED" ] && echo "$NEW_PASSED"
+          } | sort -u > "$PASSED_FILE"
+
+          if [ -s "$PASSED_FILE" ]; then
+            echo "Total passed tests (cumulative): $(wc -l < "$PASSED_FILE" | tr -d ' ')"
+          else
+            echo "No passed tests recorded"
+          fi
+
+      - name: Cache passed test list
+        if: always() && steps.run_tests.outcome == 'failure'
         uses: actions/cache/save@v3
         with:
-          path: /tmp/ci-failed-tests/${{ github.run_id }}
-          key: failed-tests-${{ github.run_id }}-swift-${{ matrix.test-group }}-attempt${{ github.run_attempt }}
+          path: /tmp/ci-test-cache/${{ github.run_id }}
+          key: passed-tests-${{ github.run_id }}-swift-${{ matrix.test-group }}-attempt${{ github.run_attempt }}
 
       # Cleanup simulator - runs even if tests fail/timeout/cancel
       - name: Cleanup simulator
