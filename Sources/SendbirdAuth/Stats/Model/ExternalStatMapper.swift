@@ -127,6 +127,6 @@ import Foundation
             "stat_type": type,
             "data": data
         ]
-        return T._make(from: wrapper, decoder: SendbirdAuth.authDecoder)
+        return T._make(from: wrapper, decoder: JSONDecoder())
     }
 }
