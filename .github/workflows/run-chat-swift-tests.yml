@@ -188,7 +188,7 @@ jobs:
             echo "⚠️ No passed test cache found, running all tests"
           fi
 
-      - name: Run test ${{ matrix.test-group }}${{ steps.rerun-tests.outputs.found == 'true' && ' [re-run: ignore passed]' || '' }}
+      - name: Run test ${{ matrix.test-group }}
         id: run_tests
         env:
           FASTLANE_TEST_OUTPUT: true
