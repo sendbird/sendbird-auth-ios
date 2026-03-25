@@ -124,8 +124,10 @@ jobs:
         id: restore-passed
         uses: actions/cache/restore@v3
         with:
-          path: /tmp/ci-test-cache/${{ github.run_id }}
+          path: /tmp/ci-test-cache/${{ github.run_id }}/objc-${{ matrix.test-group }}
           key: passed-tests-${{ github.run_id }}-objc-${{ matrix.test-group }}-attempt${{ steps.prev-attempt.outputs.number }}
+          restore-keys: |
+            passed-tests-${{ github.run_id }}-objc-${{ matrix.test-group }}-attempt
 
       - name: Prepare re-run test list
         if: github.run_attempt > 1
@@ -133,7 +135,7 @@ jobs:
         env:
           MATRIX_TEST_GROUP: ${{ matrix.test-group }}
         run: |
-          PASSED_FILE="/tmp/ci-test-cache/${{ github.run_id }}/passed-objc-${MATRIX_TEST_GROUP}.txt"
+          PASSED_FILE="/tmp/ci-test-cache/${{ github.run_id }}/objc-${MATRIX_TEST_GROUP}/passed-objc-${MATRIX_TEST_GROUP}.txt"
           if [ -f "$PASSED_FILE" ] && [ -s "$PASSED_FILE" ]; then
             # Determine test file name based on ordinal suffix
             ORDINAL=""
@@ -334,7 +336,7 @@ jobs:
           MATRIX_TEST_GROUP: ${{ matrix.test-group }}
           OBJC_TEST_TARGET: SendbirdChatObjcTests
         run: |
-          CACHE_DIR="/tmp/ci-test-cache/${{ github.run_id }}"
+          CACHE_DIR="/tmp/ci-test-cache/${{ github.run_id }}/objc-${MATRIX_TEST_GROUP}"
           mkdir -p "$CACHE_DIR"
           PASSED_FILE="$CACHE_DIR/passed-objc-${MATRIX_TEST_GROUP}.txt"
 
@@ -386,7 +388,7 @@ jobs:
         if: always() && steps.run_tests.outcome != 'success'
         uses: actions/cache/save@v3
         with:
-          path: /tmp/ci-test-cache/${{ github.run_id }}
+          path: /tmp/ci-test-cache/${{ github.run_id }}/objc-${{ matrix.test-group }}
           key: passed-tests-${{ github.run_id }}-objc-${{ matrix.test-group }}-attempt${{ github.run_attempt }}
 
       # Cleanup simulator - runs even if tests fail/timeout/cancel
