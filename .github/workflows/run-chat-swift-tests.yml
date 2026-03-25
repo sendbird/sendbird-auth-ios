@@ -354,15 +354,7 @@ jobs:
 
           # Step 1: Get testsRef ID from top-level xcresult
           TESTS_REF=$(xcrun xcresulttool get --legacy --format json --path "$XCRESULT" 2>/dev/null | \
-            python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for a in data.get('actions',{}).get('_values',[]):
-    ref = a.get('actionResult',{}).get('testsRef',{}).get('id',{}).get('_value','')
-    if ref:
-        print(ref)
-        break
-" 2>/dev/null) || true
+            python3 .github/scripts/extract_tests_ref.py 2>/dev/null) || true
 
           if [ -z "$TESTS_REF" ]; then
             echo "Could not extract testsRef, preserving previous passed tests only"
@@ -370,32 +362,9 @@ for a in data.get('actions',{}).get('_values',[]):
           fi
 
           # Step 2: Extract passed test names from test results tree
-          NEW_PASSED=$(xcrun xcresulttool get --legacy --format json --path "$XCRESULT" --id "$TESTS_REF" 2>/dev/null | \
-            python3 -c "
-import os, sys, json
-
-def collect_passed(node, path=[]):
-    results = set()
-    name = node.get('name',{}).get('_value','')
-    status = node.get('testStatus',{}).get('_value','')
-    subtests = node.get('subtests',{}).get('_values',[])
-    if status == 'Success' and not subtests and path:
-        class_name = path[-1]
-        method_name = name.replace('()','')
-        results.add(f'{target}/{class_name}/{method_name}')
-    for sub in subtests:
-        results.update(collect_passed(sub, path + [name]))
-    return results
-
-target = os.environ.get('TEST_SCHEME', 'SendbirdChatTests')
-data = json.load(sys.stdin)
-passed = set()
-for summary in data.get('summaries',{}).get('_values',[]):
-    for testable in summary.get('testableSummaries',{}).get('_values',[]):
-        for test in testable.get('tests',{}).get('_values',[]):
-            passed.update(collect_passed(test))
-for t in sorted(passed): print(t)
-" 2>/dev/null) || true
+          NEW_PASSED=$(TEST_TARGET="$TEST_SCHEME" \
+            xcrun xcresulttool get --legacy --format json --path "$XCRESULT" --id "$TESTS_REF" 2>/dev/null | \
+            python3 .github/scripts/collect_passed_tests.py 2>/dev/null) || true
 
           # Merge previous + new passed tests (cumulative across attempts)
           {
