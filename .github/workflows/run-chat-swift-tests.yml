@@ -172,7 +172,7 @@ jobs:
             # Compute: full test list - passed = re-run targets
             RERUN_TESTS=$(comm -23 \
               <(echo "$FULL_TESTS" | tr ',' '\n' | sort) \
-              <(sort "$PASSED_FILE") | tr '\n' ',' | sed 's/,$//')
+              <(sort "$PASSED_FILE") | tr '\n' ',' | sed 's/^,//;s/,$//')
 
             if [ -n "$RERUN_TESTS" ]; then
               echo "found=true" >> $GITHUB_OUTPUT
