@@ -329,7 +329,7 @@ jobs:
           echo "🧪 Test execution time: ${TEST_TIME}s"
 
       - name: Save passed test list for re-run
-        if: always() && steps.run_tests.outcome == 'failure'
+        if: always() && steps.run_tests.outcome != 'success'
         env:
           MATRIX_TEST_GROUP: ${{ matrix.test-group }}
           OBJC_TEST_TARGET: SendbirdChatObjcTests
@@ -383,7 +383,7 @@ jobs:
           fi
 
       - name: Cache passed test list
-        if: always() && steps.run_tests.outcome == 'failure'
+        if: always() && steps.run_tests.outcome != 'success'
         uses: actions/cache/save@v3
         with:
           path: /tmp/ci-test-cache/${{ github.run_id }}
