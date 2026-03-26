@@ -510,7 +510,7 @@ extension SendbirdAuthMain {
         Logger.main.debug("userId: \(userId), has authToken: \(accessToken != nil), apiHost: \(String(describing: apiHost)), wsHost: \(String(describing: wsHost))")
 
         Logger.main.debug("session userId: \(String(describing: sessionManager.userId)), currentUserId: \(userId)")
-        guard sessionManager.userId != userId else {
+        guard sessionManager.userId != userId || !sessionManager.canReuseConnectionState else {
             completionHandler()
             return
         }
@@ -537,6 +537,7 @@ extension SendbirdAuthMain {
     @_spi(SendbirdInternal) public func resetConnectionState(userId: String) {
         Logger.main.debug()
         let sessionManager = sessionManagerRegistry.sessionManager(applicationId: applicationId, userId: userId)
+        sessionManager.activateConnectionState()
         let sessionRuntime = SessionRuntime(
             sessionManager: sessionManager,
             router: router,
@@ -673,7 +674,7 @@ extension SendbirdAuthMain {
         authData _: AuthData?,
         completionHandler: @escaping AuthErrorHandler
     ) {
-        guard sessionManager.userId != userId else {
+        guard sessionManager.userId != userId || !sessionManager.canReuseConnectionState else {
             completionHandler(nil)
             return
         }

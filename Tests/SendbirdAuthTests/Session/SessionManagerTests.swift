@@ -174,6 +174,22 @@ final class SessionManagerTests: XCTestCase {
 
         XCTAssertFalse(first === second)
     }
+
+    func testClear_requiresConnectionStateResetBeforeReuse() {
+        XCTAssertTrue(sut.canReuseConnectionState)
+
+        sut.clear()
+
+        XCTAssertFalse(sut.canReuseConnectionState)
+    }
+
+    func testActivateConnectionState_restoresReusableStateAfterClear() {
+        sut.clear()
+
+        sut.activateConnectionState()
+
+        XCTAssertTrue(sut.canReuseConnectionState)
+    }
 }
 
 private final class MockSessionObserver: SessionObserver {

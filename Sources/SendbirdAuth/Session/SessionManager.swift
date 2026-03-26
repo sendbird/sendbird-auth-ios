@@ -12,6 +12,7 @@ import Foundation
     private var observers: [WeakReference<AnyObject>] = []
     private var knownKeys: Set<String> = []
     private var cachedSession: Session?
+    private var requiresConnectionStateReset = false
 
     @_spi(SendbirdInternal) public let applicationId: String?
     @_spi(SendbirdInternal) public let userId: String?
@@ -24,6 +25,10 @@ import Foundation
     @_spi(SendbirdInternal) public var session: Session? {
         get { loadSession() }
         set { setSession(newValue) }
+    }
+
+    @_spi(SendbirdInternal) public var canReuseConnectionState: Bool {
+        queue.sync { !requiresConnectionStateReset }
     }
 
     @discardableResult
@@ -88,10 +93,17 @@ import Foundation
         queue.sync {
             cachedSession = nil
             knownKeys.removeAll()
+            requiresConnectionStateReset = true
             Session.clearUserDefaults(for: userId)
         }
 
         notifyObservers(session: nil)
+    }
+
+    @_spi(SendbirdInternal) public func activateConnectionState() {
+        queue.sync {
+            requiresConnectionStateReset = false
+        }
     }
 
     @_spi(SendbirdInternal) public func hasRefreshedSession(current: Session) -> Bool {
