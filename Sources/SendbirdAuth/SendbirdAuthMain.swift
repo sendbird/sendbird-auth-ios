@@ -382,7 +382,7 @@ extension SendbirdAuthMain: SessionRuntimeDelegate {
     }
 
     @_spi(SendbirdInternal) public func disconnect(isExplicit: Bool = false, completionHandler: VoidHandler? = nil) {
-        Logger.main.debug("disconnect. currentUser: \(sessionManager.userId), services: \(String(describing: sessionManager.session?.services))")
+        Logger.main.debug("disconnect. currentUser: \(String(describing: sessionManager.userId)), services: \(String(describing: sessionManager.session?.services))")
         if sessionManager.session?.services == [.feed] {
             // If Websocket is not being used, call reset in order to clean up any resources from API Auth
             reset()
@@ -509,7 +509,7 @@ extension SendbirdAuthMain {
     ) {
         Logger.main.debug("userId: \(userId), has authToken: \(accessToken != nil), apiHost: \(String(describing: apiHost)), wsHost: \(String(describing: wsHost))")
 
-        Logger.main.debug("session userId: \(sessionManager.userId), currentUserId: \(userId)")
+        Logger.main.debug("session userId: \(String(describing: sessionManager.userId)), currentUserId: \(userId)")
         guard sessionManager.userId != userId else {
             completionHandler()
             return
