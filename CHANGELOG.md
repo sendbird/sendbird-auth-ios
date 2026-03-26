@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.1](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.0.1) (Mar 26, 2026)
+### New Features
+
+- Multiple instance support
+- Add `loadHostFromAppGroup` method for NotificationExtension (#100)
+
+### Improvements
+
+- Internal improvements
+
 ## [1.0.0](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.0.0) (Mar 18, 2026)
 ### New Features
 
