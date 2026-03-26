@@ -29,6 +29,7 @@ import Foundation
     }
 
     @_spi(SendbirdInternal) public var sessionManager: SessionManager
+    @_spi(SendbirdInternal) public var sessionRuntime: SessionRuntime
 
     @_spi(SendbirdInternal) public let config: SendbirdConfiguration
     @_spi(SendbirdInternal) public let service: QueueService
@@ -49,8 +50,8 @@ import Foundation
     @_spi(SendbirdInternal) public let applicationId: String
     let hostBundle: Bundle?
 
-    /// Session provider for sharing session across multiple SDK instances.
-    @_spi(SendbirdInternal) public private(set) var sessionProvider: SessionProvider
+    /// Shared session manager registry across multiple SDK instances.
+    @_spi(SendbirdInternal) public private(set) var sessionManagerRegistry: SessionManagerRegistry
 
     /// Whether this SDK instance can refresh sessions on its own.
     private let canRefreshSession: Bool
@@ -174,22 +175,22 @@ import Foundation
         router.headerInterceptor = params.headerInterceptor
 
         let sessionHandler = SessionEventBroadcaster(service, mapTableValueOption: .strongMemory)
-        let placeHolderSessionManager = SessionManager(
-            applicationId: "",
-            userId: "",
+        let placeHolderSessionManager = SessionManager(applicationId: "", userId: "")
+        let placeHolderSessionRuntime = SessionRuntime(
+            sessionManager: placeHolderSessionManager,
             router: router,
             sessionHandler: sessionHandler,
             isLocalCachingEnabled: params.isLocalCachingEnabled,
             localCachePreference: localCachePreference,
             config: config,
-            sessionProvider: params.sessionProvider ?? PersistentSessionProvider.shared,
             canRefreshSession: params.canRefreshSession
         )
         sessionManager = placeHolderSessionManager
+        sessionRuntime = placeHolderSessionRuntime
 
         let deviceConnectionManager = DeviceConnectionManager(
             commandRouter: router,
-            sessionManager: sessionManager,
+            sessionRuntime: sessionRuntime,
             eventDispatcher: dispatcher,
             broadcaster: ConnectionEventBroadcaster(service, mapTableValueOption: .strongMemory),
             networkBroadcaster: NetworkEventBroadcaster(service),
@@ -199,7 +200,7 @@ import Foundation
 
         let requestQueue = RequestQueue(
             commandRouter: router,
-            sessionValidator: sessionManager
+            sessionValidator: sessionRuntime
         )
         self.requestQueue = requestQueue
 
@@ -224,7 +225,7 @@ import Foundation
         appVersion = params.appVersion
         self.routerConfig = routerConfig
         isLocalCachingEnabled = params.isLocalCachingEnabled
-        self.sessionProvider = params.sessionProvider ?? PersistentSessionProvider.shared
+        self.sessionManagerRegistry = params.sessionManagerRegistry ?? DefaultSessionManagerRegistry.shared
         self.canRefreshSession = params.canRefreshSession
 
         self.sessionHandler = sessionHandler
@@ -237,8 +238,8 @@ import Foundation
 
         decoder.updateAuthDependency(self)
 
-        sessionManager.resolve(with: self)
-        sessionManager.delegate = self
+        sessionRuntime.resolve(with: self)
+        sessionRuntime.delegate = self
 
         self.router.resolve(with: self)
         self.requestQueue.resolve(with: self)
@@ -246,7 +247,7 @@ import Foundation
         placeHolderWebSocketManager.resolve(with: self)
         placeHolderWebSocketManager.requestHeaderDataSource = self
         router.requestHeaderDataSource = self
-        sessionManager.requestHeaderDataSource = self
+        sessionRuntime.requestHeaderDataSource = self
 
         self.statManager.resolve(with: self)
         httpClientForRouter.resolve(with: self)
@@ -282,7 +283,7 @@ import Foundation
     @_spi(SendbirdInternal) public func resolveDependency(with dependency: some Dependency) {
         Logger.main.debug("Resolving dependency with \(String(describing: dependency))")
 
-        sessionManager.resolve(with: dependency)
+        sessionRuntime.resolve(with: dependency)
         router.resolve(with: dependency)
         requestQueue.resolve(with: dependency)
     }
@@ -300,10 +301,7 @@ extension SendbirdAuthMain: EventDelegate {
                 self,
             ]
         )
-        eventDispatcher.add(
-            receiver: sessionManager,
-            forKey: "SendbirdAuth.SessionManager"
-        )
+        eventDispatcher.add(receiver: sessionRuntime, forKey: "SendbirdAuth.SessionRuntime")
     }
 
     @_spi(SendbirdInternal) public func didReceiveSBCommandEvent(command: SBCommand) async {
@@ -368,12 +366,12 @@ extension SendbirdAuthMain: EventDelegate {
     }
 }
 
-// MARK: - SessionManagerDelegate
+// MARK: - SessionRuntimeDelegate
 
-extension SendbirdAuthMain: SessionManagerDelegate {
+extension SendbirdAuthMain: SessionRuntimeDelegate {
     @_spi(SendbirdInternal) public func reset() {
         stateData.clear()
-        sessionManager.logout()
+        sessionRuntime.logout()
         requestQueue.stateData?.clear()
         router.apiClient.clear()
 
@@ -403,7 +401,7 @@ extension SendbirdAuthMain: SessionManagerDelegate {
     @discardableResult
     @_spi(SendbirdInternal) public func reconnect(reconnectedBy: ReconnectingTrigger?) -> Bool {
         Logger.main.debug("reconnect by \(String(describing: reconnectedBy?.rawValue))")
-        return sessionManager.reconnect(reconnectedBy: reconnectedBy)
+        return sessionRuntime.reconnect(reconnectedBy: reconnectedBy)
     }
 
     @_spi(SendbirdInternal) public func sessionReconnectRequired() {
@@ -538,26 +536,24 @@ extension SendbirdAuthMain {
 
     @_spi(SendbirdInternal) public func resetConnectionState(userId: String) {
         Logger.main.debug()
-        // Create new session manager
-        let sessionManager = SessionManager(
-            applicationId: applicationId,
-            userId: userId,
+        let sessionManager = sessionManagerRegistry.sessionManager(applicationId: applicationId, userId: userId)
+        let sessionRuntime = SessionRuntime(
+            sessionManager: sessionManager,
             router: router,
             sessionHandler: sessionHandler,
             isLocalCachingEnabled: isLocalCachingEnabled,
             localCachePreference: localCachePreference,
             config: config,
-            sessionProvider: self.sessionProvider,
             canRefreshSession: canRefreshSession
         )
 
         self.sessionManager = sessionManager
-        self.sessionManager.delegate = self
-        self.sessionManager.resolve(with: self)
-        self.sessionManager.requestHeaderDataSource = self
-        // API-only consumers can refresh sessions without going through connect/authenticate.
-        self.sessionManager.expirationHandler.delegate = self.sessionManager
-        requestQueue.sessionValidator = sessionManager
+        self.sessionRuntime = sessionRuntime
+        self.sessionRuntime.delegate = self
+        self.sessionRuntime.resolve(with: self)
+        self.sessionRuntime.requestHeaderDataSource = self
+        self.sessionRuntime.expirationHandler.delegate = self.sessionRuntime
+        requestQueue.sessionValidator = sessionRuntime
 
         // Create new websocket
         #if DEBUG // For testing
@@ -581,8 +577,8 @@ extension SendbirdAuthMain {
         router.webSocketManager = webSocketManager
         deviceConnectionManager.webSocketManager = router.webSocketManager
 
-        eventDispatcher.add(receivers: [sessionManager, webSocketManager])
-        deviceConnectionManager.sessionManager = sessionManager
+        eventDispatcher.add(receivers: [sessionRuntime, webSocketManager])
+        deviceConnectionManager.sessionRuntime = sessionRuntime
     }
 
     private func connect(
@@ -606,7 +602,7 @@ extension SendbirdAuthMain {
             routerConfig.updateHost(apiHost: host.apiHost, wsHost: host.wsHost)
         }
         
-        sessionManager.connect(authToken: accessToken, sessionKey: sessionKey, loginHandler: completionHandler)
+        sessionRuntime.connect(authToken: accessToken, sessionKey: sessionKey, loginHandler: completionHandler)
     }
 }
 
@@ -731,7 +727,7 @@ extension SendbirdAuthMain {
             routerConfig.updateHost(apiHost: host.apiHost, wsHost: nil)
         }
 
-        sessionManager.authenticate(authData: authData, loginHandler: completionHandler)
+        sessionRuntime.authenticate(authData: authData, loginHandler: completionHandler)
     }
 }
 
@@ -954,7 +950,7 @@ extension SendbirdAuthMain {
     }
 
     func ekey() -> String? {
-        return sessionManager.eKey
+        return sessionRuntime.eKey
     }
 }
     

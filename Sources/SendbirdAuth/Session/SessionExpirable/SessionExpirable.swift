@@ -16,7 +16,7 @@ import Foundation
     func refreshSessionToken()
 }
 
-extension SessionManager: InternalSessionDelegate {
+extension SessionRuntime: InternalSessionDelegate {
     @_spi(SendbirdInternal) public func didSessionTokenFailToRefresh(error: AuthClientError) {
         logout()
         delegate?.sessionRefreshFailed()
@@ -83,7 +83,7 @@ extension SessionManager: InternalSessionDelegate {
     @_spi(SendbirdInternal) public func refreshSessionKey(authToken: String?, expiringSession: Bool, expiresIn: Int64?, completionHandler: ((Bool, Session?, AuthError?) -> Void)?) {
         
         switch (router.webSocketConnectionState, expiresIn ?? 0) {
-        case (.open, let time) where time >= SessionManager.minimumExpiresInForWSRefresh:
+        case (.open, let time) where time >= SessionRuntime.minimumExpiresInForWSRefresh:
             requestQueue?.sendWS(
                 commandType: .login,
                 requestId: UUID().uuidString,

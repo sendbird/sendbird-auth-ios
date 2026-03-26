@@ -10,5 +10,5 @@ import Foundation
 @_spi(SendbirdInternal) public protocol SessionValidator: AnyObject {
     func validateSession(isSessionRequired: Bool) throws -> String?
     func validateResponse<R>(_ response: R?, error: AuthError?) -> Bool
-    var state: SessionManager.SessionState { get }
+    var state: SessionState { get }
 }

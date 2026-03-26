@@ -36,7 +36,7 @@ import AppKit
     private var currentHost: String = ""
     var hostBundle: Bundle?
     
-    @_spi(SendbirdInternal) public weak var sessionManager: SessionManager?
+    @_spi(SendbirdInternal) public weak var sessionRuntime: (any SessionRuntimeControlling)?
     @_spi(SendbirdInternal) public weak var webSocketManager: WebSocketManager? {
         didSet {
             webSocketManager?.changeNetworkStatus(to: networkConnection)
@@ -44,7 +44,7 @@ import AppKit
     }
     
     @_spi(SendbirdInternal) public var hasSessionDelegate: Bool {
-        sessionManager?.sessionHandler.delegate(forKey: DelegateKeys.session) != nil
+        sessionRuntime?.hasSessionDelegate ?? false
     }
     
     private let eventDispatcher: EventDispatcher
@@ -52,7 +52,7 @@ import AppKit
     
     @_spi(SendbirdInternal) public init(
         commandRouter: CommandRouter?,
-        sessionManager: SessionManager?,
+        sessionRuntime: (any SessionRuntimeControlling)?,
         eventDispatcher: EventDispatcher,
         broadcaster: ConnectionEventBroadcaster,
         networkBroadcaster: NetworkEventBroadcaster,
@@ -65,7 +65,7 @@ import AppKit
         
         timerBoard = SBTimerBoard(capacity: 1)
         webSocketManager = commandRouter?.webSocketManager
-        self.sessionManager = sessionManager
+        self.sessionRuntime = sessionRuntime
         
 #if os(iOS)
         NotificationCenter.default.addObserver(
@@ -128,7 +128,7 @@ extension DeviceConnectionManager {
         Logger.external.info("Entered foreground.")
         isForeground = true
         
-        let willReconnect = sessionManager?.reconnect(reconnectedBy: .enteringForeground)
+        let willReconnect = sessionRuntime?.reconnect(reconnectedBy: .enteringForeground)
         if willReconnect == false {
             refreshForFeed()
         }
@@ -201,7 +201,7 @@ extension DeviceConnectionManager {
         guard useReachability else { return }
         
         if networkConnection != newConnection, newConnection.isAvailable {
-            let willReconnect = sessionManager?.reconnect(reconnectedBy: .networkReachability)
+            let willReconnect = sessionRuntime?.reconnect(reconnectedBy: .networkReachability)
             if willReconnect == false {
                 refreshForFeed()
             }
@@ -211,12 +211,11 @@ extension DeviceConnectionManager {
     }
     
     @_spi(SendbirdInternal) public func refreshForFeed() {
-        guard let session = sessionManager?.session,
+        guard let session = sessionRuntime?.session,
               session.services.count == 1,
               session.services.contains(.feed) else { return }
-        
-        let authRefresh = AuthenticationStateEvent.Refresh()
-        sessionManager?.router.eventDispatcher.dispatch(command: authRefresh)
+
+        sessionRuntime?.dispatchFeedRefresh()
     }
 }
 

@@ -31,8 +31,8 @@ import Foundation
     /// Default is `DefaultExceptionParser` which parses Chat API format.
     @_spi(SendbirdInternal) public var exceptionParser: APIExceptionParser = DefaultExceptionParser()
 
-    /// Session provider for sharing session across multiple SDK instances.
-    @_spi(SendbirdInternal) public var sessionProvider: SessionProvider?
+    /// Session manager registry for sharing session state across multiple SDK instances.
+    @_spi(SendbirdInternal) public var sessionManagerRegistry: SessionManagerRegistry?
 
     /// Header interceptor for overriding header names and injecting additional headers.
     @_spi(SendbirdInternal) public var headerInterceptor: APIHeaderInterceptor?
@@ -48,7 +48,7 @@ import Foundation
         appVersion: String? = nil,
         mainSDKInfo: SendbirdSDKInfo? = nil,
         exceptionParser: APIExceptionParser = DefaultExceptionParser(),
-        sessionProvider: SessionProvider? = nil,
+        sessionManagerRegistry: SessionManagerRegistry? = nil,
         canRefreshSession: Bool = true
     ) {
         self.applicationId = applicationId
@@ -57,7 +57,7 @@ import Foundation
         self.appVersion = appVersion
         self.mainSDKInfo = mainSDKInfo
         self.exceptionParser = exceptionParser
-        self.sessionProvider = sessionProvider
+        self.sessionManagerRegistry = sessionManagerRegistry
         self.canRefreshSession = canRefreshSession
     }
     
