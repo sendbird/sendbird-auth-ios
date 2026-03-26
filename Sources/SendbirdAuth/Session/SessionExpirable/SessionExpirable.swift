@@ -33,17 +33,16 @@ extension SessionRuntime: InternalSessionDelegate {
             return
         }
 
-        // Non-refreshable SDK — delegate to a refreshable SDK via SessionProvider
+        // Non-refreshable runtime delegates refresh to another runtime through the shared SessionManager.
         delegateRefreshToExternalSDK(error: error)
     }
     
     @_spi(SendbirdInternal) public func didSessionKeyRefresh(key: Session, requireReconnect: Bool) {
-        // Submit the new session to `SessionProvider` (rollback prevention validation)
-        // `submitRefreshedSession` updates the provider's session and calls `onSessionChanged`
+        // Submit the new session to the shared SessionManager (rollback prevention validation).
         if submitRefreshedSession(key) {
             // Success
         } else if session?.key == key.key {
-            // Another SDK already stored the refreshed session in the shared provider.
+            // Another runtime already stored the refreshed session in the shared manager.
         } else {
             return
         }

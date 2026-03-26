@@ -208,14 +208,14 @@
   }
   ```
 
-### Cross-SDK Session Refresh Coordination — 2026-03-11
+### Cross-SDK Session Refresh Coordination — 2026-03-26
 - **왜**: Desk Auth는 세션 갱신 불가 (API 호스트가 다름). 401 시 Chat Auth에 위임 필요.
-- **결정**: `SessionProvider`를 중앙 코디네이터로 활용
+- **결정**: 공유 `SessionManager`를 세션 코어로 두고, 인스턴스별 `SessionRuntime`이 네트워크 실행을 담당
 - **핵심 구성요소**:
   - `SessionObserver.canRefreshSession: Bool` — observer의 갱신 가능 여부 (protocol, default: true)
   - `SessionObserver.sessionRefreshRequested(for:)` — 갱신 요청 수신 (default no-op)
-  - `SessionProvider.requestSessionRefresh(for:)` — 모든 observer에 브로드캐스트, `canRefreshSession == true`인 observer 존재 시 `true` 반환
-  - `SessionManager.canRefreshSession: Bool` — 인스턴스별 갱신 가능 여부 (let, protocol 충족)
+  - `SessionManager.requestSessionRefresh(for:)` — 모든 observer에 브로드캐스트, `canRefreshSession == true`인 observer 존재 시 `true` 반환
+  - `SessionRuntime.canRefreshSession: Bool` — 인스턴스별 갱신 가능 여부 (let)
   - `InternalInitParams.canRefreshSession` — 초기화 시 설정
 - **흐름** (Desk 401, atomic flag 기반):
   ```
@@ -224,7 +224,7 @@
   → didSessionKeyFailToRefresh
      → canRefreshSession == false → delegateRefreshToExternalSDK(error:)
      → isWaitingForExternalRefresh = true (atomic flag)
-     → sessionProvider.requestSessionRefresh(for: expiredSession)
+     → sessionManager.requestSessionRefresh(for: expiredSession)
         → Chat의 sessionRefreshRequested 호출 → Chat 갱신 시작
      → accepted == true이면 대기:
         → Chat 갱신 성공 → submitRefreshedSession → sessionDidChange
@@ -237,10 +237,10 @@
   - Chat 갱신 실패 → `broadcastSessionRefreshFailed()` → `sessionRefreshFailed()` → `claimExternalRefreshWait()` → `handleRefreshFailure`
   - 동시 401은 `isRefreshingSession` 가드로 중복 방지
   - `claimExternalRefreshWait()`의 atomic swap으로 `sessionDidChange`/`sessionRefreshFailed` 중 하나만 처리
-- **수정 파일**: SessionProvider.swift, SessionManager.swift, SessionExpirable.swift, InternalInitParams.swift, SendbirdAuthMain.swift
+- **수정 파일**: SessionManager.swift, SessionRuntime.swift, SessionObserver.swift, SessionExpirable.swift, InternalInitParams.swift, SendbirdAuthMain.swift
 
 ### EventDelegate 통합 — 2026-03-06
-- **SessionManager** (`priority: .highest`):
+- **SessionRuntime** (`priority: .highest`):
   - `SessionRefreshedEvent` → 세션 키 업데이트
   - `SessionExpiredEvent` → `consumeError()` 호출
   - `ConnectionStateEvent.Connected` → LoginEvent에서 세션 생성

@@ -1,5 +1,5 @@
 //
-//  SessionProvider.swift
+//  SessionObserver.swift
 //  SendbirdAuth
 //
 //  Created by Kai Lee on 2026/02/02.

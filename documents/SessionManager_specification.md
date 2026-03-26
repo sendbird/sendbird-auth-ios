@@ -1,36 +1,35 @@
-# SessionProvider Specification
+# SessionManager Specification
 
 ## 개요
 
-SessionProvider는 여러 SDK 간 세션을 공유하고 관리하는 컴포넌트입니다.
-세션 만료 시 한 SDK가 갱신한 세션을 다른 SDK들과 공유합니다.
+공유 `SessionManager`는 여러 SDK 간 세션을 저장하고 조정하는 코어입니다.
+세션 만료 시 한 `SessionRuntime`이 갱신한 세션을 다른 runtime들과 공유합니다.
 
 ---
 
 ## 메서드 스펙
 
-### `requestRefresh(current: Session) -> Session?`
+### `requestSessionRefresh(for: Session) -> Bool`
 
 | 항목          | 내용                                     |
 | ------------- | ---------------------------------------- |
 | **호출 시점** | API 응답이 401일 때                      |
 | **파라미터**  | `current` - 현재 SDK가 보유한 세션       |
-| **반환값**    | 더 최신 세션이 있으면 반환, 없으면 `nil` |
+| **반환값**    | 갱신 가능한 observer가 있으면 `true`, 없으면 `false` |
 
 **동작**:
 
 ```
-if 저장된 세션.key != current.key:
-    return 저장된 세션  // 이미 다른 SDK가 갱신함
-else:
-    return nil  // 갱신 필요
+for observer in observers where observer.canRefreshSession:
+    observer.sessionRefreshRequested(for: current)
+return observers.contains(where: \.canRefreshSession)
 ```
 
 **호출자 후속 처리**:
 | 반환값 | 처리 |
 |--------|------|
-| `Session` | 해당 세션으로 API 재요청 |
-| `nil` | 토큰 갱신 진행 (갱신 로직 있는 SDK만) 또는 `onSessionChanged` 콜백 대기 |
+| `true` | `sessionDidChange` 또는 `sessionRefreshFailed` 콜백 대기 |
+| `false` | 즉시 refresh failure 처리 |
 
 ---
 
@@ -92,31 +91,25 @@ else:
 sequenceDiagram
     participant Chat as Chat SDK
     participant Desk as Desk SDK
-    participant Provider as SessionProvider
+    participant Manager as Shared SessionManager
     participant API as API Server
 
     Note over Chat,Desk: 초기화 시 콜백 등록
-    Chat->>Provider: onSessionChanged(handler)
-    Desk->>Provider: onSessionChanged(handler)
+    Chat->>Manager: addSessionObserver(runtime)
+    Desk->>Manager: addSessionObserver(runtime)
 
     Note over Chat,API: 두 SDK가 동시에 401 받음
 
-    Chat->>Provider: requestRefresh(v1)
-    Provider-->>Chat: nil (갱신 필요)
-
-    Desk->>Provider: requestRefresh(v1)
-    Provider-->>Desk: nil (갱신 필요)
-
-    Note over Chat: 갱신 로직 구현됨
-    Note over Desk: 갱신 로직 없음 (콜백 대기)
+    Desk->>Manager: requestSessionRefresh(v1)
+    Manager--)Chat: sessionRefreshRequested(v1)
 
     Chat->>API: 토큰 갱신
     API-->>Chat: session (v2)
 
-    Chat->>Provider: submitRefreshedSession(v2)
+    Chat->>Manager: submitRefreshedSession(v2)
 
-    Provider--)Chat: onSessionChanged(v2)
-    Provider--)Desk: onSessionChanged(v2)
+    Manager--)Chat: sessionDidChange(v2)
+    Manager--)Desk: sessionDidChange(v2)
 
     Note over Chat,Desk: 두 SDK 모두 v2 세션 사용
 ```
@@ -128,14 +121,14 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Desk as Desk SDK
-    participant Provider as SessionProvider
+    participant Manager as Shared SessionManager
     participant API as API Server
 
-    Note over Provider: 현재 저장된 세션: v2
+    Note over Manager: 현재 저장된 세션: v2
 
     Note over Desk: Desk가 오래된 v1으로 401 받음
-    Desk->>Provider: requestRefresh(v1)
-    Provider-->>Desk: v2 반환
+    Desk->>Manager: hasRefreshedSession(v1)
+    Manager-->>Desk: true
 
     Note over Desk: 갱신 불필요, 바로 v2 사용
     Desk->>API: API 재요청 (with v2)
@@ -148,22 +141,27 @@ sequenceDiagram
 
 ```mermaid
 classDiagram
-    class SessionProvider {
-        <<protocol>>
-        +setSession(session: Session?, userId: String)
-        +loadSession(userId: String) Session?
-        +requestRefresh(current: Session) Session?
+    class SessionManager {
+        +setSession(session: Session?)
+        +loadSession() Session?
+        +requestSessionRefresh(current: Session) Bool
         +submitRefreshedSession(newSession: Session) Bool
-        +onSessionChanged(handler)
+        +addSessionObserver(observer)
     }
 
-    class PersistentSessionProvider {
-        -session: Session?
+    class SessionRuntime {
+        +sessionDidChange(session: Session?)
+        +sessionRefreshRequested(session: Session)
+    }
+
+    class SessionManagerRegistry {
+        +sessionManager(applicationId: String, userId: String) SessionManager
+    }
+
+    class SessionManagerStore {
+        -cachedSession: Session?
         -knownKeys: Set~String~
-        -userId: String?
-        -handlers: [Handler]
         -queue: SafeSerialQueue
-        +shared: PersistentSessionProvider
     }
 
     class Session {
@@ -172,8 +170,9 @@ classDiagram
         +isDirty: Bool
     }
 
-    SessionProvider <|.. PersistentSessionProvider
-    PersistentSessionProvider --> Session
+    SessionManager --> SessionManagerStore
+    SessionRuntime --> SessionManager
+    SessionManagerRegistry --> SessionManager
 ```
 
 ---
@@ -193,7 +192,7 @@ stateDiagram-v2
     state HasSession {
         [*] --> Valid
         Valid --> Expired: API 401
-        Expired --> Valid: requestRefresh() → Session
-        Expired --> Valid: onSessionChanged 콜백
+        Expired --> Valid: hasRefreshedSession() == true
+        Expired --> Valid: sessionDidChange 콜백
     }
 ```
