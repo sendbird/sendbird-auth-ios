@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.2](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.0.2) (Apr 08, 2026)
+### Improvements
+
+- Built with Xcode 26 to comply with Apple's latest SDK requirements
+
 ## [1.0.1](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.0.1) (Mar 26, 2026)
 ### New Features
 
