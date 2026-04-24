@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.1) (Apr 24, 2026)
+### Changes
+- Add `sort(by:)` method to `SafeOrderedDictionary` (thread-safe, `@_spi(SendbirdInternal)`) (#139)
+- Add `/test check` workflow and PR template with SDK Branch Override section (#136)
+- Fix `/test check` workflow to mirror all chat sub-statuses (#137)
+
 ## [1.1.0](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.0) (Apr 09, 2026)
 ### Build Environment
 
