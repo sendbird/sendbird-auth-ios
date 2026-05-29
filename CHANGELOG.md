@@ -1,18 +1,5 @@
 # Changelog
 
-## [0.99.99](https://github.com/sendbird/sendbird-auth-ios/releases/tag/0.99.99) (May 29, 2026)
-### Added
-- `SendbirdLogger` — public, central log-level controller shared across all Sendbird iOS SDKs (Chat, UIKit, AI Agent, Desk).
-- `SendbirdLogger.setLevel(_:)` — sets a global default level.
-- `SendbirdLogger.setLevel(_:for:)` / `SendbirdLogger.level(for:)` — per-product overrides keyed by `ProductIdentifier` (`.chat`, `.uikit`, `.aiagent`, `.desk`).
-- `AuthLogLevel` and `ProductIdentifier` are now public.
-- Unified log format across SDKs: `<timestamp> [<level>] [<product>/<category>] <File>.swift:<line> - <message>`.
-
-### Changed
-- Default log level is `.none`. Apps that previously relied on implicit logging must now opt in via `SendbirdLogger.setLevel(...)`.
-- Once `SendbirdLogger.setLevel(...)` is called, any subsequent legacy per-SDK setter (`SendbirdChat.setLogLevel`, `SendbirdUI.setLogLevel`, `SBDSKMain.setSBDSKLogLevel`,
-`AIAgentMessenger.InitializeParams.logLevel`) becomes a no-op. Mixing the two APIs is safe; the new API always wins.
-
 ## [1.1.2](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.2) (May 14, 2026)
 ### Added
 - `SendbirdLogger` — public, central log-level controller shared across all Sendbird iOS SDKs (Chat, UIKit, AI Agent, Desk).
