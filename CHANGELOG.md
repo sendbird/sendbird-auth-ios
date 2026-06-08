@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.1.3](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.3) (Jun 08, 2026)
+Improved stability
+
 ## [1.1.2](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.2) (May 14, 2026)
 ### Added
 - `SendbirdLogger` — public, central log-level controller shared across all Sendbird iOS SDKs (Chat, UIKit, AI Agent, Desk).
