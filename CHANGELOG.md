@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.4](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.4) (Jul 20, 2026)
+### Changes
+- Fixed an issue where changing the host could leave a duplicate connection.
+- Improved stability during connection recovery.
+
 ## [1.1.3](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.3) (Jun 08, 2026)
 Improved stability
 
