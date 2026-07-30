@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.5](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.5) (Jul 30, 2026)
+### Changes
+- Fixed a crash caused by a request completing more than once.
+- Improved stability of internal statistics flushing.
+
 ## [1.1.4](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.4) (Jul 20, 2026)
 ### Changes
 - Fixed an issue where changing the host could leave a duplicate connection.
