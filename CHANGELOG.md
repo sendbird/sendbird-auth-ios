@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.0](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.2.0) (Aug 31, 2026)
+### Changes
+- Improved stability
+
 ## [1.1.5](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.1.5) (Jul 30, 2026)
 ### Changes
 - Fixed a crash caused by a request completing more than once.
