@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.2.1) (Nov 09, 2026)
+### Changes
+- Fixed an issue where an unrecognized WebSocket event, such as the one sent when a scheduled file message is created, closed and reconnected the connection and could drop realtime events. (#198)
+- Fixed crashes when timeouts, thumbnail sizes, the stat request delay, or a BUSY `retry_after` value were out of range for integer conversion. These values are now clamped or replaced with their defaults. (#197)
+- Fixed concurrency issues in connection, session, and event handling. (#195)
+- Improved logging: log messages are no longer built when logging is disabled, and logs no longer include session keys, auth tokens, or full command contents. (#194)
+
 ## [1.2.0](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.2.0) (Aug 31, 2026)
 ### Changes
 - Improved stability
