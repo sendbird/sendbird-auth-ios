@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.2.2) (Nov 13, 2026)
+### Changes
+- Fixed a possible crash from concurrent access to network reachability state. (#205)
+- Fixed an issue where the app could freeze at startup while checking network reachability. (#205)
+- Fixed an issue where the app could freeze, or be terminated by the system, when returning to the foreground or when the network came back while the connection was changing state. (#204)
+- Reduced memory use when uploading large files, which could cause the app to be terminated for using too much memory. (#203)
+- Fixed a crash that could occur when stat settings were updated on login while stats were being uploaded or saved. (#202)
+
 ## [1.2.1](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.2.1) (Nov 09, 2026)
 ### Changes
 - Fixed an issue where an unrecognized WebSocket event, such as the one sent when a scheduled file message is created, closed and reconnected the connection and could drop realtime events. (#198)
