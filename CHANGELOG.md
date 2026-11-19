@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.3](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.2.3) (Nov 19, 2026)
+### Changes
+- Fixed an issue where a `connect()` call still waiting to start was not answered, or opened a connection, after the user logged out. It now fails once with `connectionCanceled`. (#223)
+- Fixed an issue where `connect()` never called its completion handler when the WebSocket URL could not be parsed. It now fails with an error. (#222)
+- Fixed an issue where requests waiting in the queue when the user logged out never received a response. They now fail with `connectionCanceled`. (#219)
+- Fixed an issue where cleanup from a previous logout could close the connection of the next login. (#219)
+- Fixed a possible crash when the SDK was initialized again while commands were being dispatched. (#218)
+- Fixed an issue where retrying after a server BUSY response reconnected immediately and without limit, or logged the user out. Retries now use the reconnection backoff and retry limit. (#217)
+- Fixed an issue where all requests could stop responding when a session refresh never finished, such as when a session token arrived after the refresh timeout. (#217)
+- Fixed concurrency issues in session refresh and connection handling. (#217)
+- Reduced memory use when sending a large file, which could cause the app to be terminated for using too much memory. (#215)
+- Fixed an issue where a file upload succeeded on the server but was reported as failed when the server response arrived in multiple parts. (#214)
+- Fixed an issue where a request that had already failed with a timeout could still be sent, so retrying it sent the same message twice. (#214)
+- Fixed a crash that could occur when sending several file messages in a row to the same channel and one of the uploads failed. (#213)
+- Fixed an issue where file messages in a channel could stop being sent. (#213)
+
 ## [1.2.2](https://github.com/sendbird/sendbird-auth-ios/releases/tag/1.2.2) (Nov 13, 2026)
 ### Changes
 - Fixed a possible crash from concurrent access to network reachability state. (#205)
